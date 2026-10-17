@@ -18,7 +18,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 
-import androidx.activity.result.contract.ActivityResultContracts;
+import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
@@ -40,7 +40,7 @@ import java.util.List;
 import java.util.Locale;
 /**
 
-* Redesigned Native Android Home Screen for `run`:
+* Redesigned Native Android Home Screen for `run`:
 * - Includes Audit Fixes:
 * - #1 & F1: Requests POST_NOTIFICATIONS permission on Android 13+ (API 33+).
 * - #10: Displays honest online/offline status without fake counts.
@@ -63,7 +63,7 @@ private MaterialButton btnThemeSettings;
 private EditText etUserName;
 private EditText etRoomName;
 
-private CheckBox cbPublicGroup;
+private CheckBox cbPublicGroup;
 private EditText etPublicPassword;
 private MaterialButton btnCreateRoom;
 private MaterialButton btnJoinByCode;
@@ -86,14 +86,14 @@ refreshRecentRoomsUI();
 requestNotificationPermissionIfNeeded();
 mqttManager.ensureConnected();
 
-handleIncomingDeepLink(getIntent());
+handleIncomingDeepLink(getIntent());
 }
 private void setupAvatarPicker() {
 avatarPickerLauncher = registerForActivityResult(
 new ActivityResultContracts.GetContent(),
 uri -> {
 if (uri != null) {
-Toast.makeText(this, "‫جاري تحديث صورة البروفايل‬...", Toast.LENGTH_SHORT).show();
+Toast.makeText(this, "جاري تحديث صورة البروفايل...", Toast.LENGTH_SHORT).show();
 catboxUploader.processAndUploadUri(this, uri, new
 CatboxUploader.UploadCallback() {
 @Override
@@ -102,9 +102,7 @@ String mimeType) {
 prefs.setUserAvatarUrl(fileUrlOrDataUrl);
 mqttManager.syncLocalProfileToActiveRoom();
 
-✅ ‫"!تم حفظ صورة البروفايل بنجاح‬,
-
-Toast.makeText(MainActivity.this, "
+            Toast.makeText(MainActivity.this, "تم حفظ صورة البروفايل بنجاح!", Toast.LENGTH_SHORT).show();
 Toast.LENGTH_SHORT).show();
 }
 @Override
@@ -114,7 +112,7 @@ Toast.makeText(MainActivity.this, errorMessage,
 Toast.LENGTH_LONG).show();
 }
 
-});
+});
 }
 }
 );
@@ -137,7 +135,7 @@ protected void onNewIntent(Intent intent) {
 super.onNewIntent(intent);
 setIntent(intent);
 
-handleIncomingDeepLink(intent);
+handleIncomingDeepLink(intent);
 }
 @Override
 protected void onResume() {
@@ -160,7 +158,7 @@ tvOnlineStatus = findViewById(R.id.tvOnlineStatus);
 btnThemeSettings = findViewById(R.id.btnThemeSettings);
 etUserName = findViewById(R.id.etUserName);
 
-etRoomName = findViewById(R.id.etRoomName);
+etRoomName = findViewById(R.id.etRoomName);
 cbPublicGroup = findViewById(R.id.cbPublicGroup);
 etPublicPassword = findViewById(R.id.etPublicPassword);
 btnCreateRoom = findViewById(R.id.btnCreateRoom);
@@ -182,7 +180,7 @@ etUserName.setText(prefs.getUserName());
 private void saveUserNameFromInput() {
 String name = etUserName.getText().toString().trim();
 
-if (name.isEmpty()) name = "Guest";
+if (name.isEmpty()) name = "Guest";
 prefs.setUserName(name);
 }
 private void onCreateRoomClicked() {
@@ -196,7 +194,7 @@ openRoomActivity(code, roomName.isEmpty() ? ("Room " + code) : roomName);
 private void showJoinRoomDialog() {
 saveUserNameFromInput();
 EditText input = new EditText(this);
-input.setHint("‫ حرفاً) أو الصق الرابط‬12 ‫ أو‬6( ‫;)"أدخل كود الغرفة‬
+input.setHint("\u0623\u062F\u062E\u0644 \u0643\u0648\u062F \u0627\u0644\u063A\u0631\u0641\u0629 (6 \u0623\u0648 12 \u062D\u0631\u0641\u064B\u0627) \u0623\u0648 \u0627\u0644\u0635\u0642 \u0627\u0644\u0631\u0627\u0628\u0637");
 input.setSingleLine(true);
 input.setFilters(new InputFilter[]{new InputFilter.LengthFilter(120)});
 int pad = (int) (18 * getResources().getDisplayMetrics().density);
@@ -205,22 +203,26 @@ container.setOrientation(LinearLayout.VERTICAL);
 container.setPadding(pad, pad / 2, pad, 0);
 container.addView(input);
 
-new MaterialAlertDialogBuilder(this)
-.setTitle("‫)"االنضمام إلى غرفة‬
-.setMessage("‫ أحرف (أو الصق رابط الدعوة‬6 ‫)أدخل كود الغرفة المكون من‬:")
+                new MaterialAlertDialogBuilder(this)
+                        .setTitle("\uD83D\uDD12 \u0645\u062C\u0645\u0648\u0639\u0629 \u0645\u062D\u0645\u064A\u0629: " + group.name)
+                        .setMessage("\u0623\u062F\u062E\u0644 \u0643\u0644\u0645\u0629 \u0627\u0644\u0645\u0631\u0648\u0631 \u0644\u0644\u062A\u062D\u0642\u0642 \u0648\u0627\u0634\u062A\u0642\u0627\u0642 \u0645\u0641\u062A\u0627\u062D \u0627\u0644\u063A\u0631\u0641\u0629 \u0627\u0644\u0645\u0634\u0641\u0631:")
+                        .setView(container)
+                        .setPositiveButton("\u062F\u062E\u0648\u0644", (d, w) -> {
+.setTitle("\u0627\u0644\u0627\u0646\u0636\u0645\u0627\u0645 \u0625\u0644\u0649 \u063A\u0631\u0641\u0629")
+        .setMessage("\u0623\u062F\u062E\u0644 \u0643\u0648\u062F \u0627\u0644\u063A\u0631\u0641\u0629 \u0627\u0644\u0645\u0643\u0648\u0646 \u0645\u0646 6 \u0623\u062D\u0631\u0641 (\u0623\u0648 \u0627\u0644\u0635\u0642 \u0631\u0627\u0628\u0637 \u0627\u0644\u062F\u0639\u0648\u0629):")
 .setView(container)
-.setPositiveButton("‫"انضمام‬, (d, w) -> {
+.setPositiveButton(""انضمام, (d, w) -> {
 String raw = input.getText().toString().trim();
 String extracted = extractCodeFromInputOrLink(raw);
 if (!RoomCryptoUtils.isValidRoomCode(extracted)) {
-Toast.makeText(this, "ً ‫ حرفا‬12 ‫ أو‬6( ‫)كود الغرفة غير صالح! تأكد من الكود‬.",
+Toast.makeText(this, "ً  حرفا12  أو6( )كود الغرفة غير صالح! تأكد من الكود.",
 Toast.LENGTH_LONG).show();
 return;
 }
 mqttManager.joinRoom(extracted, "Room " + extracted, null);
 openRoomActivity(extracted, "Room " + extracted);
 })
-.setNegativeButton("‫"إلغاء‬, null)
+.setNegativeButton(""إلغاء, null)
 .show();
 }
 private String extractCodeFromInputOrLink(String raw) {
@@ -228,7 +230,7 @@ if (raw == null) return "";
 String trimmed = raw.trim();
 if (trimmed.contains("room=")) {
 
-try {
+try {
 Uri uri = Uri.parse(trimmed);
 String q = uri.getQueryParameter("room");
 if (q != null) return q.trim().toUpperCase(Locale.US);
@@ -243,26 +245,25 @@ List<DirectoryData.PublicGroupEntry> groups = (dir != null && dir.groups != null
 dir.groups : null;
 if (groups == null || groups.isEmpty()) {
 new MaterialAlertDialogBuilder(this)
-.setTitle("‫)"المجموعات العامة النشطة‬
-.setMessage("‫ يمكنك إنشاء أول مجموعة عامة بتفعيل خيار 'إدراج‬.ً‫ال توجد مجموعات عامة مدرجة حاليا‬
-‫)"!'كمجموعة عامة‬
-.setPositiveButton("ً‫"حسنا‬, null)
+.setTitle(")"المجموعات العامة النشطة
+.setMessage("لا توجد مجموعات عامة مدرجة حاليًا. يمكنك إنشاء أول مجموعة عامة بتفعيل خيار 'إدراج كمجموعة عامة'!")
+.setPositiveButton("حسنًا", null)
 .show();
 return;
 }
 
-String[] labels = new String[groups.size()];
+String[] labels = new String[groups.size()];
 for (int i = 0; i < groups.size(); i++) {
 DirectoryData.PublicGroupEntry g = groups.get(i);
 
-🔒 " : "🌐 ";
+String prefix = g.isLocked ? "\uD83D\uDD12 " : "\uD83C\uDF10 ";
 
-String lockIcon = g.hasPassword ? "
+String lockIcon = g.hasPassword ? "\uD83D\uDD12 " : "";
 
 labels[i] = lockIcon + (g.name != null ? g.name : "Public Room");
 }
 new MaterialAlertDialogBuilder(this)
-.setTitle("‫ "( تصفح المجموعات العامة‬+ groups.size() + ")")
+.setTitle(" "( تصفح المجموعات العامة+ groups.size() + ")")
 .setItems(labels, (dialog, which) -> {
 DirectoryData.PublicGroupEntry selected = groups.get(which);
 if (selected.hasPassword) {
@@ -272,13 +273,13 @@ mqttManager.joinRoom(selected.key, selected.name, null);
 openRoomActivity(selected.key, selected.name);
 }
 })
-.setNegativeButton("‫"إغالق‬, null)
+.setNegativeButton(""إغالق, null)
 .show();
 }
 private void promptPasswordForPublicGroup(DirectoryData.PublicGroupEntry group) {
 EditText pwInput = new EditText(this);
 
-pwInput.setHint("‫;)"كلمة مرور المجموعة‬
+pwInput.setHint("كلمة مرور المجموعة");
 pwInput.setSingleLine(true);
 int pad = (int) (18 * getResources().getDisplayMetrics().density);
 LinearLayout container = new LinearLayout(this);
@@ -286,14 +287,11 @@ container.setOrientation(LinearLayout.VERTICAL);
 container.setPadding(pad, pad / 2, pad, 0);
 container.addView(pwInput);
 new MaterialAlertDialogBuilder(this)
+        .setTitle("\uD83D\uDD12 \u0645\u062C\u0645\u0648\u0639\u0629 \u0645\u062D\u0645\u064A\u0629: " + group.name)
 
-🔒 ‫مجموعة محمية‬: " + group.name)
-
-.setTitle("
-
-.setMessage("‫أدخل كلمة المرور للتحقق واشتقاق مفتاح الغرفة المشفر‬:")
+.setMessage("أدخل كلمة المرور للتحقق واشتقاق مفتاح الغرفة المشفر:")
 .setView(container)
-.setPositiveButton("‫"دخول‬, (d, w) -> {
+.setPositiveButton(""دخول, (d, w) -> {
 String pw = pwInput.getText().toString().trim();
 String computedVerifier = RoomCryptoUtils.computePasswordVerifier(group.seed,
 pw);
@@ -303,11 +301,11 @@ RoomCryptoUtils.deriveProtectedGroupTopicKey(group.seed, pw);
 mqttManager.joinRoom(derivedTopicKey, group.name, null);
 openRoomActivity(derivedTopicKey, group.name);
 } else {
-Toast.makeText(this, "‫"!كلمة المرور غير صحيحة‬, Toast.LENGTH_LONG).show();
+Toast.makeText(this, ""!كلمة المرور غير صحيحة, Toast.LENGTH_LONG).show();
 
-}
+}
 })
-.setNegativeButton("‫"إلغاء‬, null)
+.setNegativeButton(""إلغاء, null)
 .show();
 }
 private void showSettingsDialog() {
@@ -319,26 +317,24 @@ layout.setPadding(pad, pad / 2, pad, pad / 2);
 MaterialButton btnPickAvatar = new MaterialButton(this);
 boolean hasAvatar = !prefs.getUserAvatarUrl().isEmpty();
 
-🖼 ‫ "🖼 اختي صو بروفا‬: ")‫تغيير صورة البروفايل (مفعّلة‬
+🖼  "🖼 اختي صو بروفا: ")تغيير صورة البروفايل (مفعّلة
 
-btnPickAvatar.setText(hasAvatar ? "
-(Avatar)
+btnPickAvatar.setText(hasAvatar ? "\uD83D\uDDBC \u062A\u063A\u064A\u064A\u0631 \u0635\u0648\u0631\u0629 \u0627\u0644\u0628\u0631\u0648\u0641\u0627\u064A\u0644" : "\uD83D\uDDBC \u0627\u062E\u062A\u064A\u0627\u0631 \u0635\u0648\u0631\u0629 \u0628\u0631\u0648\u0641\u0627\u064A\u0644");
 
 btnPickAvatar.setOnClickListener(v -> avatarPickerLauncher.launch("image/*"));
 layout.addView(btnPickAvatar);
 // Bio input
 EditText etBio = new EditText(this);
-etBio.setHint("‫( نبذة قصيرة‬Bio)");
+etBio.setHint("( نبذة قصيرةBio)");
 etBio.setText(prefs.getUserBio());
 layout.addView(etBio);
 
-// Theme selector
+// Theme selector
 TextView tvThemeLabel = new TextView(this);
-tvThemeLabel.setText("‫( السمة واأللوان‬Theme):");
+tvThemeLabel.setText("( السمة واأللوانTheme):");
 tvThemeLabel.setPadding(0, pad / 2, 0, 8);
 layout.addView(tvThemeLabel);
-String[] themeNames = {"‫( الوضع الداكن االفتراضي‬Dark Lime)", "‫( وضع الشاشات السوداء‬AMOLED
-Black)", "‫( الوضع الفاتح‬Light Blue)"};
+String[] themeNames = {"Dark Lime", "AMOLED Black", "Light Blue"};
 String[] themeValues = {"dark", "amoled", "light"};
 Spinner spTheme = new Spinner(this);
 spTheme.setAdapter(new ArrayAdapter<>(this,
@@ -350,13 +346,12 @@ if (themeValues[i].equalsIgnoreCase(currentTheme)) spTheme.setSelection(i);
 layout.addView(spTheme);
 // Language selector for Auto-Translate
 TextView tvLangLabel = new TextView(this);
-tvLangLabel.setText("‫لغة الترجمة المفضلة‬:");
+tvLangLabel.setText("لغة الترجمة المفضلة:");
 tvLangLabel.setPadding(0, pad / 2, 0, 8);
 layout.addView(tvLangLabel);
-String[] langNames = {"‫( العربية‬ar)", "English (en)", "Français (fr)", "Español (es)", "Türkçe
-(tr)"};
+String[] langNames = {"\u0627\u0644\u0639\u0631\u0628\u064A\u0629 (ar)", "English (en)", "Fran\u00E7ais (fr)", "Espa\u00F1ol (es)", "T\u00FCrk\u00E7e (tr)"};
 
-String[] langCodes = {"ar", "en", "fr", "es", "tr"};
+String[] langCodes = {"ar", "en", "fr", "es", "tr"};
 Spinner spLang = new Spinner(this);
 spLang.setAdapter(new ArrayAdapter<>(this,
 android.R.layout.simple_spinner_dropdown_item, langNames));
@@ -367,20 +362,20 @@ if (langCodes[i].equalsIgnoreCase(currentLang)) spLang.setSelection(i);
 layout.addView(spLang);
 // Auto-translate switch
 SwitchMaterial swAutoTranslate = new SwitchMaterial(this);
-swAutoTranslate.setText("ً ‫;)"ترجمة الرسائل الواردة تلقائيا‬
+swAutoTranslate.setText("\u062A\u0631\u062C\u0645\u0629 \u0627\u0644\u0631\u0633\u0627\u0626\u0644 \u0627\u0644\u0648\u0627\u0631\u062F\u0629 \u062A\u0644\u0642\u0627\u0626\u064A\u0627");
 swAutoTranslate.setChecked(prefs.isAutoTranslateEnabled());
 swAutoTranslate.setPadding(0, pad / 2, 0, 0);
 layout.addView(swAutoTranslate);
 // Notifications switch
 SwitchMaterial swNotifications = new SwitchMaterial(this);
-swNotifications.setText("‫;)"تفعيل إشعارات الرسائل الجديدة‬
+swNotifications.setText("تفعيل إشعارات الرسائل الجديدة");
 swNotifications.setChecked(prefs.isNotificationsEnabled());
 layout.addView(swNotifications);
 new MaterialAlertDialogBuilder(this)
-.setTitle("‫)"إعدادات الحساب والمظهر‬
+.setTitle(")"إعدادات الحساب والمظهر
 
-.setView(layout)
-.setPositiveButton("‫"حفظ وتطبيق‬, (d, w) -> {
+.setView(layout)
+.setPositiveButton(""حفظ وتطبيق, (d, w) -> {
 prefs.setUserBio(etBio.getText().toString().trim());
 String chosenTheme = themeValues[spTheme.getSelectedItemPosition()];
 String chosenLang = langCodes[spLang.getSelectedItemPosition()];
@@ -395,14 +390,14 @@ ThemeHelper.applyAppNightMode(chosenTheme);
 applyCurrentTheme();
 refreshRecentRoomsUI();
 })
-.setNegativeButton("‫"إلغاء‬, null)
+.setNegativeButton(""إلغاء, null)
 .show();
 }
 private void refreshRecentRoomsUI() {
 List<RecentRoom> recent = prefs.getRecentRooms();
 chipGroupRecentRooms.removeAllViews();
 
-if (recent.isEmpty()) {
+if (recent.isEmpty()) {
 recentRoomsCard.setVisibility(View.GONE);
 return;
 }
@@ -424,7 +419,7 @@ openRoomActivity(r.code, r.name);
 chip.setOnCloseIconClickListener(v -> {
 prefs.removeRecentRoom(r.code);
 
-refreshRecentRoomsUI();
+refreshRecentRoomsUI();
 });
 chipGroupRecentRooms.addView(chip);
 }
@@ -447,7 +442,7 @@ i.putExtra("room_name", roomName);
 startActivity(i);
 }
 
-private void applyCurrentTheme() {
+private void applyCurrentTheme() {
 palette = ThemeHelper.getPalette(prefs.getThemeMode());
 getWindow().setStatusBarColor(palette.bg);
 getWindow().setNavigationBarColor(palette.bg);
@@ -469,7 +464,7 @@ etPublicPassword.setTextColor(palette.text);
 etPublicPassword.setHintTextColor(palette.subtle);
 cbPublicGroup.setTextColor(palette.text);
 
-cbPublicGroup.setButtonTintList(ColorStateList.valueOf(palette.accent));
+cbPublicGroup.setButtonTintList(ColorStateList.valueOf(palette.accent));
 btnCreateRoom.setBackgroundTintList(ColorStateList.valueOf(palette.accent));
 btnCreateRoom.setTextColor(palette.accentInk);
 btnJoinByCode.setStrokeColor(ColorStateList.valueOf(palette.accent));
@@ -482,29 +477,27 @@ btnThemeSettings.setStrokeColor(ColorStateList.valueOf(palette.panelHover));
 public void onConnectionChanged(boolean connected, String brokerUrl) {
 int count = mqttManager.getGlobalOnlineCount();
 if (connected) {
-tvOnlineStatus.setText("● " + count + " ‫( متصل اآلن‬Synced)");
+tvOnlineStatus.setText("● " + count + " ( متصل اآلنSynced)");
 tvOnlineStatus.setTextColor(palette.accent);
 } else {
 // Fix #10: Honest offline status
-tvOnlineStatus.setText("◌ ‫غير متصل — جاري االتصال‬...");
+tvOnlineStatus.setText("\u25CC \u063A\u064A\u0631 \u0645\u062A\u0635\u0644");
 tvOnlineStatus.setTextColor(palette.muted);
 }
 }
 @Override
 
-public void onGlobalPresenceChanged(int onlineCount) {
+public void onGlobalPresenceChanged(int onlineCount) {
 if (mqttManager.isConnected()) {
-tvOnlineStatus.setText("● " + onlineCount + " ‫( متصل اآلن‬Synced)");
+tvOnlineStatus.setText("● " + onlineCount + " ( متصل اآلنSynced)");
 } else {
-tvOnlineStatus.setText("◌ ‫;)"غير متصل‬
+tvOnlineStatus.setText("\u25CC \u063A\u064A\u0631 \u0645\u062A\u0635\u0644");
 }
 }
 @Override
 public void onDirectoryUpdated(DirectoryData directory) {
 int count = (directory != null && directory.groups != null) ? directory.groups.size() : 0;
 
-🌐 ‫ "( تصفح المجموعات العامة النشطة‬+ count + ")");
-
-btnBrowsePublicGroups.setText("
+        btnBrowsePublicGroups.setText("\uD83C\uDF10 \u062A\u0635\u0641\u062D \u0627\u0644\u0645\u062C\u0645\u0648\u0639\u0627\u062A \u0627\u0644\u0639\u0627\u0645\u0629 \u0627\u0644\u0646\u0634\u0637\u0629 (" + count + ")");
 }
 }
