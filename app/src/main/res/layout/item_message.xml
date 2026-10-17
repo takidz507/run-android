@@ -1,0 +1,174 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:paddingVertical="4dp">
+
+    <com.google.android.material.card.MaterialCardView
+        android:id="@+id/bubbleCard"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:layout_marginHorizontal="4dp"
+        app:cardBackgroundColor="@color/run_panel"
+        app:cardCornerRadius="16dp"
+        app:cardElevation="0dp"
+        app:strokeColor="@color/run_panel_soft"
+        app:strokeWidth="1dp">
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:minWidth="160dp"
+            android:maxWidth="310dp"
+            android:orientation="vertical"
+            android:padding="12dp">
+
+            <!-- Header: Author & Timestamp -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:layout_marginBottom="4dp">
+
+                <TextView
+                    android:id="@+id/tvAuthor"
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_weight="1"
+                    android:text="تقي"
+                    android:textColor="@color/run_accent"
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="14:20"
+                    android:textColor="@color/run_subtle"
+                    android:textSize="11sp" />
+            </LinearLayout>
+
+            <!-- Quoted Reply Container -->
+            <LinearLayout
+                android:id="@+id/replyContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginBottom="6dp"
+                android:background="@color/run_bg_elevated"
+                android:orientation="vertical"
+                android:padding="8dp"
+                android:visibility="gone">
+
+                <TextView
+                    android:id="@+id/tvReplyAuthor"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:textColor="@color/run_accent"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/tvReplyText"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:ellipsize="end"
+                    android:maxLines="2"
+                    android:textColor="@color/run_muted"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- Attached Image -->
+            <ImageView
+                android:id="@+id/ivAttachmentImage"
+                android:layout_width="240dp"
+                android:layout_height="180dp"
+                android:layout_marginBottom="6dp"
+                android:adjustViewBounds="true"
+                android:scaleType="centerCrop"
+                android:visibility="gone" />
+
+            <!-- Voice Note Player -->
+            <LinearLayout
+                android:id="@+id/voiceContainer"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:layout_marginBottom="6dp"
+                android:visibility="gone">
+
+                <com.google.android.material.button.MaterialButton
+                    android:id="@+id/btnPlayVoice"
+                    android:layout_width="wrap_content"
+                    android:layout_height="38dp"
+                    android:text="تشغيل 🔊"
+                    android:textSize="12sp"
+                    app:cornerRadius="10dp" />
+
+                <TextView
+                    android:id="@+id/tvVoiceDuration"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="10dp"
+                    android:text="0 ثانية"
+                    android:textColor="@color/run_muted"
+                    android:textSize="12sp" />
+            </LinearLayout>
+
+            <!-- External File Link Button -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnOpenExternalFile"
+                style="@style/Widget.MaterialComponents.Button.TextButton"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="📎 فتح الملف المرفق"
+                android:textSize="12sp"
+                android:visibility="gone" />
+
+            <!-- Message Text -->
+            <TextView
+                android:id="@+id/tvMessageText"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:autoLink="web"
+                android:text="مرحباً بالجميع"
+                android:textColor="@color/run_text"
+                android:textSize="14sp" />
+
+            <!-- Footer Actions: Reply & Translate -->
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:gravity="end"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:id="@+id/btnReply"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:padding="4dp"
+                    android:text="↩ رد"
+                    android:textColor="@color/run_muted"
+                    android:textSize="11sp" />
+
+                <TextView
+                    android:id="@+id/btnTranslate"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:padding="4dp"
+                    android:text="ترجمة الرسالة"
+                    android:textColor="@color/run_accent"
+                    android:textSize="11sp"
+                    android:textStyle="bold" />
+            </LinearLayout>
+
+        </LinearLayout>
+    </com.google.android.material.card.MaterialCardView>
+</LinearLayout>
