@@ -6,7 +6,7 @@ import android.os.Build;
 import android.os.Handler;
 import android.os.Looper;
 
-import android.util.Base64;
+import android.util.Base64;
 import java.io.File;
 import java.io.FileOutputStream;
 public class VoiceRecorderHelper {
@@ -28,7 +28,7 @@ public interface PlaybackListener {
 void onStarted(String messageId);
 void onCompleted(String messageId);
 
-void onError(String error);
+void onError(String error);
 }
 private final Runnable recordingTimerRunnable = new Runnable() {
 @Override
@@ -51,7 +51,7 @@ timerHandler.postDelayed(this, 1000L);
 };
 public VoiceRecorderHelper(Context context) {
 
-cleanupStaleAudioCache(context);
+cleanupStaleAudioCache(context);
 }
 private void cleanupStaleAudioCache(Context context) {
 if (context == null) return;
@@ -74,7 +74,7 @@ this.recordingListener = listener;
 File cacheDir = context.getCacheDir();
 currentOutputFile = new File(cacheDir, "voice_" + System.currentTimeMillis() + ".m4a");
 
-if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
 recorder = new MediaRecorder(context);
 } else {
 recorder = new MediaRecorder();
@@ -96,7 +96,7 @@ return currentOutputFile;
 public int stopRecording() {
 timerHandler.removeCallbacks(recordingTimerRunnable);
 
-if (!isRecording || recorder == null) return 0;
+if (!isRecording || recorder == null) return 0;
 int durationSec = (int) Math.min(MAX_RECORD_DURATION_SEC, Math.max(1,
 (System.currentTimeMillis() - startTimeMs) / 1000));
 try {
@@ -119,7 +119,7 @@ try {
 recorder.stop();
 } catch (Exception ignored) {}
 
-try {
+try {
 recorder.release();
 } catch (Exception ignored) {}
 recorder = null;
@@ -142,7 +142,7 @@ PlaybackListener listener) {
 stopPlayback();
 try {
 
-activePlayer = new MediaPlayer();
+activePlayer = new MediaPlayer();
 playingMessageId = messageId;
 if (urlOrDataUri.startsWith("data:")) {
 int commaIdx = urlOrDataUri.indexOf(',');
@@ -165,20 +165,20 @@ if (listener != null) listener.onStarted(messageId);
 activePlayer.setOnCompletionListener(mp -> {
 deleteActiveTempPlaybackFile();
 
-playingMessageId = null;
+playingMessageId = null;
 if (listener != null) listener.onCompleted(messageId);
 });
 activePlayer.setOnErrorListener((mp, what, extra) -> {
 deleteActiveTempPlaybackFile();
 playingMessageId = null;
-if (listener != null) listener.onError("‫;)"تعذر تشغيل المقطع الصوتي‬
+if (listener != null) listener.onError("تعذر تشغيل المقطع الصوتي");
 return true;
 });
 activePlayer.prepareAsync();
 } catch (Exception e) {
 deleteActiveTempPlaybackFile();
 playingMessageId = null;
-if (listener != null) listener.onError("‫خطأ في تشغيل الصوت‬: " + e.getMessage());
+if (listener != null) listener.onError("خطأ في تشغيل الصوت: " + e.getMessage());
 }
 }
 public void stopPlayback() {
@@ -188,7 +188,7 @@ if (activePlayer.isPlaying()) activePlayer.stop();
 } catch (Exception ignored) {}
 try {
 
-activePlayer.release();
+activePlayer.release();
 } catch (Exception ignored) {}
 activePlayer = null;
 playingMessageId = null;
