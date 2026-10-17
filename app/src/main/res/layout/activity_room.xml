@@ -164,6 +164,31 @@
             android:textSize="12sp"
             android:visibility="gone" />
 
+        <TextView
+            android:id="@+id/tvRecordingTimerBanner"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:background="@color/run_panel_soft"
+            android:gravity="center"
+            android:paddingVertical="6dp"
+            android:textColor="@color/run_accent"
+            android:textSize="13sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnScrollToBottom"
+            android:layout_width="wrap_content"
+            android:layout_height="38dp"
+            android:layout_gravity="center_horizontal"
+            android:layout_marginBottom="10dp"
+            android:backgroundTint="@color/run_accent"
+            android:text="↓ رسائل جديدة"
+            android:textColor="@color/run_accent_ink"
+            android:textSize="12sp"
+            android:textStyle="bold"
+            android:visibility="gone" />
+
         <!-- Reply Preview Banner -->
         <LinearLayout
             android:id="@+id/replyBanner"
