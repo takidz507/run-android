@@ -5,7 +5,7 @@ import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 
-import android.content.Intent;
+import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
@@ -27,7 +27,7 @@ import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
-import android.widget.Toast;
+import android.widget.Toast;
 import androidx.activity.result.ActivityResultLauncher;
 import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.annotation.NonNull;
@@ -50,7 +50,7 @@ import com.takidz.run.network.TranslationHelper;
 import com.takidz.run.ui.adapters.MessagesAdapter;
 import com.takidz.run.ui.adapters.TasksAdapter;
 
-import com.takidz.run.ui.views.TaskProgressRingView;
+import com.takidz.run.ui.views.TaskProgressRingView;
 import com.takidz.run.utils.PrefsManager;
 import com.takidz.run.utils.ThemeHelper;
 import com.takidz.run.utils.VoiceRecorderHelper;
@@ -62,8 +62,8 @@ import java.util.Locale;
 * - #2: Bounded auto-translation + ID-based adapter notifications (notifyMessageUpdatedById).
 * - #3 & #8: Stops voice recording safely in onPause() + 120s max timer with live countdown
 banner.
-* - #5: Smart auto-scroll (only scrolls when near bottom or sending own message; shows "‫رسائل‬
-‫ "↓ جديدة‬button otherwise).
+* - #5: Smart auto-scroll (only scrolls when near bottom or sending own message; shows "رسائل
+ "↓ جديدةbutton otherwise).
 * - #13 / F2: Fullscreen image viewer dialog on image click.
 * - #14 / F3: Tap quoted reply to scroll to & highlight original message.
 * - #15 / F4: Pre-upload attachment preview & optional caption dialog.
@@ -74,7 +74,7 @@ private static final int REQ_RECORD_AUDIO = 201;
 private PrefsManager prefs;
 private MqttRoomManager mqttManager;
 
-private CatboxUploader catboxUploader;
+private CatboxUploader catboxUploader;
 private TranslationHelper translationHelper;
 private VoiceRecorderHelper voiceHelper;
 private ThemeHelper.Palette palette;
@@ -96,7 +96,7 @@ private ImageButton btnDeleteRoom;
 // Tab Switcher Buttons
 private MaterialButton btnTabChat;
 
-private MaterialButton btnTabTasks;
+private MaterialButton btnTabTasks;
 // Chat Panel Views
 private LinearLayout chatPanel;
 private RecyclerView rvMessages;
@@ -119,7 +119,7 @@ private TextView tvTasksSummarySub;
 private EditText etNewTaskInput;
 private MaterialButton btnAddTask;
 
-private RecyclerView rvTasks;
+private RecyclerView rvTasks;
 private MessagesAdapter messagesAdapter;
 private TasksAdapter tasksAdapter;
 private ActivityResultLauncher<String> filePickerLauncher;
@@ -141,7 +141,7 @@ return;
 }
 setupFilePicker();
 
-initViews();
+initViews();
 applyTheme();
 switchTab(true);
 }
@@ -164,7 +164,7 @@ tvRoomTitle = findViewById(R.id.tvRoomTitle);
 tvRoomCodeBadge = findViewById(R.id.tvRoomCodeBadge);
 tvRoomSyncStatus = findViewById(R.id.tvRoomSyncStatus);
 
-btnShareRoom = findViewById(R.id.btnShareRoom);
+btnShareRoom = findViewById(R.id.btnShareRoom);
 btnDeleteRoom = findViewById(R.id.btnDeleteRoom);
 btnTabChat = findViewById(R.id.btnTabChat);
 btnTabTasks = findViewById(R.id.btnTabTasks);
@@ -186,7 +186,7 @@ tasksPanel = findViewById(R.id.tasksPanel);
 progressHeaderCard = findViewById(R.id.progressHeaderCard);
 progressRingView = findViewById(R.id.progressRingView);
 
-tvTasksSummaryTitle = findViewById(R.id.tvTasksSummaryTitle);
+tvTasksSummaryTitle = findViewById(R.id.tvTasksSummaryTitle);
 tvTasksSummarySub = findViewById(R.id.tvTasksSummarySub);
 etNewTaskInput = findViewById(R.id.etNewTaskInput);
 btnAddTask = findViewById(R.id.btnAddTask);
@@ -194,8 +194,7 @@ rvTasks = findViewById(R.id.rvTasks);
 tvRoomTitle.setText(roomName != null ? roomName : ("Room " + roomCode));
 tvRoomCodeBadge.setText("#" + roomCode);
 btnBack.setOnClickListener(v -> finish());
-tvRoomCodeBadge.setOnClickListener(v -> copyToClipboard("Room Code", roomCode, "‫تم‬
-‫نسخ كود الغرفة‬: " + roomCode));
+tvRoomCodeBadge.setOnClickListener(v -> copyToClipboard("Room Code", roomCode, "تم نسخ كود الغرفة: " + roomCode));
 btnShareRoom.setOnClickListener(v -> showInviteShareDialog());
 btnDeleteRoom.setOnClickListener(v -> confirmDeleteRoom());
 btnTabChat.setOnClickListener(v -> switchTab(true));
@@ -209,10 +208,10 @@ MessagesAdapter.MessageInteractionListener() {
 @Override
 public void onReplyClicked(Message message) {
 
-activeReplyRef = new Message.ReplyRef(message.id, message.text,
+activeReplyRef = new Message.ReplyRef(message.id, message.text,
 message.author);
 replyBanner.setVisibility(View.VISIBLE);
-tvReplyingToText.setText("‫ " الرد على‬+ message.author + ": " + message.text);
+tvReplyingToText.setText(" " الرد على+ message.author + ": " + message.text);
 etMessageInput.requestFocus();
 }
 @Override
@@ -232,7 +231,7 @@ handleVoicePlayback(message);
 public void onImageClicked(String imageUrlOrDataUri, String caption) {
 // Fix #13 / F2: Fullscreen image viewer
 
-showFullscreenImageDialog(imageUrlOrDataUri, caption);
+showFullscreenImageDialog(imageUrlOrDataUri, caption);
 }
 });
 rvMessages.setAdapter(messagesAdapter);
@@ -255,7 +254,7 @@ rvMessages.smoothScrollToPosition(count - 1);
 // Setup Tasks RecyclerView
 rvTasks.setLayoutManager(new LinearLayoutManager(this));
 
-tasksAdapter = new TasksAdapter(palette, new TasksAdapter.TaskActionListener() {
+tasksAdapter = new TasksAdapter(palette, new TasksAdapter.TaskActionListener() {
 @Override
 public void onTaskToggled(TaskItem task, boolean isDone) {
 mqttManager.toggleTask(task.id, isDone);
@@ -277,7 +276,7 @@ public void beforeTextChanged(CharSequence s, int start, int count, int after) {
 public void onTextChanged(CharSequence s, int start, int before, int count) {
 if (s != null && s.length() > 0) {
 
-mqttManager.sendTypingSignal();
+mqttManager.sendTypingSignal();
 }
 }
 @Override
@@ -300,7 +299,7 @@ btnAddTask.setOnClickListener(v -> {
 String taskTitle = etNewTaskInput.getText().toString().trim();
 if (taskTitle.isEmpty()) return;
 
-mqttManager.addTask(taskTitle);
+mqttManager.addTask(taskTitle);
 etNewTaskInput.setText("");
 });
 }
@@ -322,8 +321,8 @@ rvMessages.smoothScrollToPosition(pos);
 messagesAdapter.highlightMessageTemporarily(targetId);
 mainHandler.postDelayed(() -> messagesAdapter.clearHighlight(targetId), 1500);
 
-} else {
-Toast.makeText(this, "‫"الرسالة األصلية غير موجودة في السجل الحالي‬,
+} else {
+Toast.makeText(this, ""الرسالة األصلية غير موجودة في السجل الحالي,
 Toast.LENGTH_SHORT).show();
 }
 }
@@ -345,7 +344,7 @@ if (urlOrDataUri.startsWith("data:image/")) {
 try {
 int comma = urlOrDataUri.indexOf(',');
 
-byte[] decoded = Base64.decode(urlOrDataUri.substring(comma + 1),
+byte[] decoded = Base64.decode(urlOrDataUri.substring(comma + 1),
 Base64.DEFAULT);
 Glide.with(this).load(decoded).into(fullImageView);
 } catch (Exception ignored) {}
@@ -368,7 +367,7 @@ tvCap.setPadding(32, 24, 32, 36);
 tvCap.setText(caption);
 root.addView(tvCap);
 
-}
+}
 fullImageView.setOnClickListener(v -> dialog.dismiss());
 dialog.setContentView(root);
 dialog.show();
@@ -391,29 +390,29 @@ ViewGroup.LayoutParams.MATCH_PARENT,
 lp.bottomMargin = pad / 2;
 preview.setLayoutParams(lp);
 
-preview.setScaleType(ImageView.ScaleType.CENTER_CROP);
+preview.setScaleType(ImageView.ScaleType.CENTER_CROP);
 Glide.with(this).load(uri).into(preview);
 container.addView(preview);
 }
 EditText etCaption = new EditText(this);
-etCaption.setHint("‫)أضف وصفا ً أو تعليقا ً مع المرفق (اختياري‬...");
+etCaption.setHint(")أضف وصفا ً أو تعليقا ً مع المرفق (اختياري...");
 etCaption.setSingleLine(false);
 etCaption.setMaxLines(3);
 container.addView(etCaption);
 new MaterialAlertDialogBuilder(this)
-.setTitle("‫)"إرسال مرفق‬
+.setTitle(")"إرسال مرفق
 .setView(container)
-.setPositiveButton("‫"رفع وإرسال‬, (d, w) -> {
+.setPositiveButton(""رفع وإرسال, (d, w) -> {
 String caption = etCaption.getText().toString().trim();
 uploadAndSendAttachment(uri, caption);
 })
-.setNegativeButton("‫"إلغاء‬, null)
+.setNegativeButton(""إلغاء, null)
 .show();
 }
 private void switchTab(boolean showChat) {
 this.showingChatTab = showChat;
 
-chatPanel.setVisibility(showChat ? View.VISIBLE : View.GONE);
+chatPanel.setVisibility(showChat ? View.VISIBLE : View.GONE);
 tasksPanel.setVisibility(showChat ? View.GONE : View.VISIBLE);
 if (showChat) {
 btnTabChat.setBackgroundTintList(ColorStateList.valueOf(palette.accent));
@@ -428,7 +427,7 @@ btnTabChat.setTextColor(palette.text);
 }
 }
 private void uploadAndSendAttachment(Uri uri, String optionalCaption) {
-Toast.makeText(this, "‫جاري معالجة ورفع المرفق‬...", Toast.LENGTH_SHORT).show();
+Toast.makeText(this, "جاري معالجة ورفع المرفق...", Toast.LENGTH_SHORT).show();
 catboxUploader.processAndUploadUri(this, uri, new CatboxUploader.UploadCallback() {
 @Override
 public void onSuccess(String fileUrlOrDataUrl, String fileName, long fileSize, String
@@ -436,7 +435,7 @@ mimeType) {
 Message.FileAttachment att = new Message.FileAttachment();
 att.url = fileUrlOrDataUrl;
 
-att.name = fileName;
+att.name = fileName;
 att.size = fileSize;
 att.mime = mimeType;
 String finalCaption = (optionalCaption != null && !optionalCaption.isEmpty()) ?
@@ -460,27 +459,22 @@ return;
 }
 if (!voiceHelper.isRecording()) {
 
-try {
+try {
 // Fix #8: Start recording with 120s max timer and live countdown banner
 voiceHelper.startRecording(this, new
 VoiceRecorderHelper.RecordingProgressListener() {
 @Override
 public void onTick(int elapsedSeconds, int maxSeconds) {
 tvRecordingTimerBanner.setVisibility(View.VISIBLE);
-tvRecordingTimerBanner.setText(String.format(Locale.US,
-
-🔴 02% ...‫جاري التسجيل الصوتي‬d:%02d / %02d:%02d (‫")اضغط لإلرسال‬,
-
-"
-
+                    tvRecordingTimerBanner.setText(String.format(Locale.US,
+                        "\uD83D\uDD34 \u062C\u0627\u0631\u064A \u0627\u0644\u062A\u0633\u062C\u064A\u0644 \u0627\u0644\u0635\u0648\u062A\u064A %02d:%02d / %02d:%02d",
 elapsedSeconds / 60, elapsedSeconds % 60,
 maxSeconds / 60, maxSeconds % 60));
 }
 @Override
 public void onMaxDurationReached(File outputFile, int durationSeconds) {
 resetVoiceRecordingUI();
-Toast.makeText(RoomActivity.this, "‫ ثانية) — جاري إرسال‬120( ‫تم الوصول للحد األقصى‬
-‫التسجيل‬...", Toast.LENGTH_SHORT).show();
+                Toast.makeText(RoomActivity.this, "تم الوصول للحد الأقصى (120 ثانية) — جاري إرسال التسجيل...", Toast.LENGTH_SHORT).show();
 uploadRecordedVoiceFile(outputFile, durationSeconds);
 }
 });
@@ -488,8 +482,8 @@ btnRecordVoice.setColorFilter(palette.danger);
 tvRecordingTimerBanner.setVisibility(View.VISIBLE);
 } catch (Exception e) {
 
-resetVoiceRecordingUI();
-Toast.makeText(this, "‫تعذر بدء التسجيل‬: " + e.getMessage(),
+resetVoiceRecordingUI();
+Toast.makeText(this, "تعذر بدء التسجيل: " + e.getMessage(),
 Toast.LENGTH_SHORT).show();
 }
 } else {
@@ -505,13 +499,13 @@ tvRecordingTimerBanner.setVisibility(View.GONE);
 }
 private void uploadRecordedVoiceFile(File audioFile, int durationSec) {
 if (audioFile != null && audioFile.exists()) {
-Toast.makeText(this, "‫ "( جاري إرسال المقطع الصوتي‬+ durationSec + " ‫)ثانية‬...",
+Toast.makeText(this, " "( جاري إرسال المقطع الصوتي+ durationSec + " )ثانية...",
 Toast.LENGTH_SHORT).show();
 catboxUploader.processAndUploadFile(audioFile, "audio/mp4", new
 CatboxUploader.UploadCallback() {
 @Override
 
-public void onSuccess(String fileUrlOrDataUrl, String fileName, long fileSize, String
+public void onSuccess(String fileUrlOrDataUrl, String fileName, long fileSize, String
 mimeType) {
 Message.FileAttachment att = new Message.FileAttachment();
 att.url = fileUrlOrDataUrl;
@@ -519,7 +513,7 @@ att.name = fileName;
 att.size = fileSize;
 att.mime = mimeType;
 att.duration = durationSec;
-mqttManager.sendFileOrVoiceMessage("voice", att, "‫ "( رسالة صوتية‬+ durationSec +
+mqttManager.sendFileOrVoiceMessage("voice", att, " "( رسالة صوتية+ durationSec +
 "s)", activeReplyRef);
 // Clean up local recording file after upload
 try { audioFile.delete(); } catch (Exception ignored) {}
@@ -535,7 +529,7 @@ Toast.makeText(RoomActivity.this, errorMessage, Toast.LENGTH_LONG).show();
 * Fix #2: Uses notifyMessageUpdatedById(message.id) instead of stale position index.
 */
 
-private void handleTranslateMessage(Message message) {
+private void handleTranslateMessage(Message message) {
 if (message.showingTranslated) {
 message.showingTranslated = false;
 messagesAdapter.notifyMessageUpdatedById(message.id);
@@ -558,7 +552,7 @@ messagesAdapter.notifyMessageUpdatedById(message.id);
 @Override
 public void onError(String error) {
 
-Toast.makeText(RoomActivity.this, error, Toast.LENGTH_SHORT).show();
+Toast.makeText(RoomActivity.this, error, Toast.LENGTH_SHORT).show();
 }
 });
 }
@@ -581,7 +575,7 @@ messagesAdapter.setPlayingMessageId(null);
 }
 @Override
 
-public void onError(String error) {
+public void onError(String error) {
 messagesAdapter.setPlayingMessageId(null);
 Toast.makeText(RoomActivity.this, error, Toast.LENGTH_SHORT).show();
 }
@@ -590,30 +584,25 @@ Toast.makeText(RoomActivity.this, error, Toast.LENGTH_SHORT).show();
 private void showInviteShareDialog() {
 String shareUrl = "https://takidz507.github.io/run/?room=" + roomCode;
 new MaterialAlertDialogBuilder(this)
-.setTitle("‫ "( مشاركة الغرفة‬+ roomCode + ")")
-.setMessage("‫الكود المباشر‬: " + roomCode + "
-‫رابط الدعوة المباشر‬:
-" + shareUrl)
-.setPositiveButton("‫"مشاركة الرابط‬, (d, w) -> {
+.setTitle("\u0645\u0634\u0627\u0631\u0643\u0629 \u0627\u0644\u063A\u0631\u0641\u0629 (" + roomCode + ")")
+.setMessage("\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0645\u0628\u0627\u0634\u0631: " + roomCode + "\n\u0631\u0627\u0628\u0637 \u0627\u0644\u062F\u0639\u0648\u0629 \u0627\u0644\u0645\u0628\u0627\u0634\u0631:\n" + shareUrl)
+.setPositiveButton("\u0645\u0634\u0627\u0631\u0643\u0629 \u0627\u0644\u0631\u0627\u0628\u0637", (d, w) -> {
 Intent sendIntent = new Intent(Intent.ACTION_SEND);
 sendIntent.setType("text/plain");
-sendIntent.putExtra(Intent.EXTRA_TEXT, "‫ انضم إلى غرفتي على تطبيق‬run:
-‫الكود‬: " + roomCode + "
-‫الرابط‬: " + shareUrl);
-startActivity(Intent.createChooser(sendIntent, "‫;))"مشاركة الغرفة عبر‬
+sendIntent.putExtra(Intent.EXTRA_TEXT, "\u0627\u0646\u0636\u0645 \u0625\u0644\u0649 \u063A\u0631\u0641\u062A\u064A \u0639\u0644\u0649 \u062A\u0637\u0628\u064A\u0642 run:\n\u0627\u0644\u0643\u0648\u062F: " + roomCode + "\n\u0627\u0644\u0631\u0627\u0628\u0637: " + shareUrl);
+startActivity(Intent.createChooser(sendIntent, ";))"مشاركة الغرفة عبر
 })
 
-.setNeutralButton("‫"نسخ الكود‬, (d, w) -> copyToClipboard("Room Code", roomCode, "‫تم‬
-‫نسخ الكود‬: " + roomCode))
-.setNegativeButton("‫"إغالق‬, null)
+.setNeutralButton("\u0646\u0633\u062E \u0627\u0644\u0643\u0648\u062F", (d, w) -> copyToClipboard("Room Code", roomCode, "\u0646\u0633\u062E \u0627\u0644\u0643\u0648\u062F: " + roomCode));
+.setNegativeButton(""إغالق, null)
 .show();
 }
 private void confirmDeleteRoom() {
 new MaterialAlertDialogBuilder(this)
-.setTitle("‫)"حذف الغرفة نهائياً؟‬
-.setMessage("‫سيتم مسح حالة الغرفة وحضورها من الخادم لجميع المشاركين وإزالتها من الغرف األخيرة‬.")
-.setPositiveButton("‫"حذف الغرفة‬, (d, w) -> mqttManager.deleteActiveRoom())
-.setNegativeButton("‫"إلغاء‬, null)
+.setTitle(")"حذف الغرفة نهائياً؟
+.setMessage("سيتم مسح حالة الغرفة وحضورها من الخادم لجميع المشاركين وإزالتها من الغرف األخيرة.")
+.setPositiveButton(""حذف الغرفة, (d, w) -> mqttManager.deleteActiveRoom())
+.setNegativeButton(""إلغاء, null)
 .show();
 }
 private void copyToClipboard(String label, String value, String toastMsg) {
@@ -627,7 +616,7 @@ Toast.makeText(this, toastMsg, Toast.LENGTH_SHORT).show();
 private void applyTheme() {
 getWindow().setStatusBarColor(palette.bg);
 
-getWindow().setNavigationBarColor(palette.bg);
+getWindow().setNavigationBarColor(palette.bg);
 rootRoomLayout.setBackgroundColor(palette.bg);
 topBarCard.setCardBackgroundColor(palette.panel);
 topBarCard.setStrokeColor(palette.panelHover);
@@ -649,7 +638,7 @@ btnSendMessage.setTextColor(palette.accentInk);
 btnAttachFile.setColorFilter(palette.accent);
 btnRecordVoice.setColorFilter(palette.accent);
 
-etNewTaskInput.setTextColor(palette.text);
+etNewTaskInput.setTextColor(palette.text);
 etNewTaskInput.setHintTextColor(palette.subtle);
 btnAddTask.setBackgroundTintList(ColorStateList.valueOf(palette.accent));
 btnAddTask.setTextColor(palette.accentInk);
@@ -672,7 +661,7 @@ if (voiceHelper.isRecording()) {
 voiceHelper.cancelRecording();
 resetVoiceRecordingUI();
 
-Toast.makeText(this, "‫تم إلغاء التسجيل الصوتي بسبب مغادرة الشاشة‬.",
+Toast.makeText(this, "تم إلغاء التسجيل الصوتي بسبب مغادرة الشاشة.",
 Toast.LENGTH_SHORT).show();
 }
 }
@@ -695,7 +684,7 @@ Message latest = roomData.messages.get(newCount - 1);
 boolean sentByMe = latest.userId != null && latest.userId.equals(prefs.getUserId());
 if (wasNearBottom || sentByMe) {
 
-rvMessages.scrollToPosition(newCount - 1);
+rvMessages.scrollToPosition(newCount - 1);
 btnScrollToBottom.setVisibility(View.GONE);
 } else {
 btnScrollToBottom.setVisibility(View.VISIBLE);
@@ -718,7 +707,7 @@ messagesAdapter.notifyMessageUpdatedById(m.id);
 }
 @Override
 
-public void onError(String error) {}
+public void onError(String error) {}
 });
 }
 }
@@ -732,22 +721,20 @@ if (t.done) doneTasks++;
 }
 }
 progressRingView.setProgress(doneTasks, totalTasks);
-tvTasksSummarySub.setText(doneTasks + " / " + totalTasks + " ‫;)"مهام مكتملة‬
+tvTasksSummarySub.setText(doneTasks + " / " + totalTasks + " \u0645\u0647\u0627\u0645 \u0645\u0643\u062A\u0645\u0644\u0629");
 
-💬 ‫ "( الدردشة‬+ newCount + ")");
+btnTabChat.setText("\uD83D\uDCAC \u0627\u0644\u062F\u0631\u062F\u0634\u0629 (" + newCount + ")");
 
-btnTabChat.setText("
-
-btnTabTasks.setText("✓ ‫ "( المهام‬+ doneTasks + "/" + totalTasks + ")");
+btnTabChat.setText("\uD83D\uDCAC \u0627\u0644\u062F\u0631\u062F\u0634\u0629 (" + newCount + ")");
 }
 @Override
 public void onRoomPresenceChanged(int roomOnlineCount) {
 if (mqttManager.isConnected()) {
-tvRoomSyncStatus.setText("● ‫ "( متصل‬+ roomOnlineCount + " ‫;)")بالغرفة‬
+tvRoomSyncStatus.setText("\u25CF \u0645\u062A\u0635\u0644 (" + roomOnlineCount + ") \u0628\u0627\u0644\u063A\u0631\u0641\u0629");
 
-tvRoomSyncStatus.setTextColor(palette.success);
+tvRoomSyncStatus.setTextColor(palette.success);
 } else {
-tvRoomSyncStatus.setText("◌ ‫;)"غير متصل‬
+tvRoomSyncStatus.setText("\u25CC \u063A\u064A\u0631 \u0645\u062A\u0635\u0644");
 tvRoomSyncStatus.setTextColor(palette.muted);
 }
 }
@@ -758,27 +745,24 @@ tvTypingIndicator.setVisibility(View.GONE);
 } else {
 tvTypingIndicator.setVisibility(View.VISIBLE);
 
-✍️ " + String.join("، ", typingNames) + " ‫يكتب اآلن‬...");
-
-tvTypingIndicator.setText("
+            tvTypingIndicator.setText("\u270D\uFE0F " + String.join(", ", typingNames) + " \u064A\u0643\u062A\u0628 \u0627\u0644\u0622\u0646...");
 }
 }
 @Override
 public void onRoomDeleted() {
 
-Toast.makeText(this, "‫لم تعد هذه الغرفة موجودة — تمت إزالتها من الغرف األخيرة‬.",
+Toast.makeText(this, "لم تعد هذه الغرفة موجودة — تمت إزالتها من الغرف األخيرة.",
 Toast.LENGTH_LONG).show();
 finish();
 }
 @Override
 
-public void onConnectionStateChanged(boolean connected) {
+public void onConnectionStateChanged(boolean connected) {
 if (connected) {
-tvRoomSyncStatus.setText("● ‫ "( متصل‬+ mqttManager.getRoomOnlineCount() + "
-‫;)")بالغرفة‬
+tvRoomSyncStatus.setText("\u25CF \u0645\u062A\u0635\u0644 (" + mqttManager.getRoomOnlineCount() + ") \u0628\u0627\u0644\u063A\u0631\u0641\u0629");
 tvRoomSyncStatus.setTextColor(palette.success);
 } else {
-tvRoomSyncStatus.setText("◌ ‫غير متصل — جاري إعادة االتصال‬...");
+tvRoomSyncStatus.setText("◌ غير متصل — جاري إعادة االتصال...");
 tvRoomSyncStatus.setTextColor(palette.muted);
 }
 }
