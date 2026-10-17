@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Default Dark Theme Tokens from Technical Spec -->
+    <color name="run_bg">#111218</color>
+    <color name="run_bg_elevated">#171820</color>
+    <color name="run_panel">#1b1d26</color>
+    <color name="run_panel_soft">#20222c</color>
+    <color name="run_panel_hover">#252733</color>
+    <color name="run_text">#f4f3f8</color>
+    <color name="run_muted">#9b9dac</color>
+    <color name="run_subtle">#747786</color>
+    <color name="run_accent">#c8f169</color>
+    <color name="run_accent_ink">#1d2810</color>
+    <color name="run_purple">#aaa2ff</color>
+    <color name="run_success">#a8ee9c</color>
+    <color name="run_danger">#ff8c96</color>
+</resources>
