@@ -1,7 +1,7 @@
 package com.takidz.run.network;
 import android.Manifest;
 
-import android.app.PendingIntent;
+import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
@@ -24,7 +24,7 @@ import com.takidz.run.ui.RoomActivity;
 import com.takidz.run.utils.PrefsManager;
 import com.takidz.run.utils.RoomCryptoUtils;
 
-import org.eclipse.paho.client.mqttv3.IMqttActionListener;
+import org.eclipse.paho.client.mqttv3.IMqttActionListener;
 import org.eclipse.paho.client.mqttv3.IMqttDeliveryToken;
 import org.eclipse.paho.client.mqttv3.IMqttToken;
 import org.eclipse.paho.client.mqttv3.MqttAsyncClient;
@@ -46,7 +46,7 @@ import java.util.concurrent.ConcurrentHashMap;
 /**
 * Full Native Android port of the `run` MQTT real-time synchronization engine.
 
-* Includes Audit Fixes:
+* Includes Audit Fixes:
 * - #1 & F1: Real local notifications when new messages arrive while chat is in background.
 * - #4: Offline pending state sync on reconnect (pendingRoomStatePublish).
 * - #6: Proper ghost/deleted room detection when joining a deleted room (joiningExistingRoom).
@@ -69,7 +69,7 @@ public static final String TOPIC_PRESENCE_PREFIX = "runapp/v1/presence/";
 public static final String TOPIC_ROOM_PREFIX = "runapp/v1/room/";
 private static final long HEARTBEAT_INTERVAL_MS = 20_000L; // 20s heartbeat
 
-private static final long PRESENCE_TTL_MS = 60_000L;
+private static final long PRESENCE_TTL_MS = 60_000L;
 
 // 60s offline threshold
 
@@ -101,7 +101,7 @@ private DirectoryData directoryData = new DirectoryData();
 private String activeRoomCode = null;
 private RoomData activeRoomData = null;
 
-private boolean receivedInitialRoomState = false;
+private boolean receivedInitialRoomState = false;
 // Presence & Typing maps
 private final Map<String, Long> globalPresence = new ConcurrentHashMap<>();
 private final Map<String, Long> roomPresence = new ConcurrentHashMap<>();
@@ -124,7 +124,7 @@ private final List<GlobalListener> globalListeners = new ArrayList<>();
 private final List<RoomListener> roomListeners = new ArrayList<>();
 private final Runnable heartbeatRunnable = new Runnable() {
 
-@Override
+@Override
 public void run() {
 if (!appInForeground) return;
 publishPresenceHeartbeat();
@@ -146,7 +146,7 @@ return instance;
 /**
 * Fix #11: Bind heartbeat to foreground lifecycle so it doesn't drain battery forever.
 
-*/
+*/
 public void setAppForeground(boolean inForeground) {
 if (this.appInForeground == inForeground) return;
 this.appInForeground = inForeground;
@@ -169,7 +169,7 @@ if (!globalListeners.contains(l)) globalListeners.add(l);
 l.onConnectionChanged(isConnected(), getCurrentBrokerUrl());
 l.onGlobalPresenceChanged(getGlobalOnlineCount());
 
-l.onDirectoryUpdated(directoryData);
+l.onDirectoryUpdated(directoryData);
 }
 public void removeGlobalListener(GlobalListener l) {
 globalListeners.remove(l);
@@ -191,7 +191,7 @@ return mqttClient != null && mqttClient.isConnected();
 public String getCurrentBrokerUrl() {
 return MQTT_BROKERS[currentBrokerIndex % MQTT_BROKERS.length];
 
-}
+}
 public DirectoryData getDirectoryData() {
 return directoryData;
 }
@@ -214,7 +214,7 @@ try {
 if (mqttClient != null) {
 try { mqttClient.close(); } catch (Exception ignored) {}
 
-}
+}
 mqttClient = new MqttAsyncClient(brokerUrl, clientId, new MemoryPersistence());
 mqttClient.setCallback(new MqttCallbackExtended() {
 @Override
@@ -237,7 +237,7 @@ notifyConnectionChanged(true, serverURI);
 public void connectionLost(Throwable cause) {
 mainHandler.post(() -> notifyConnectionChanged(false, brokerUrl));
 
-}
+}
 @Override
 public void messageArrived(String topic, MqttMessage message) {
 handleIncomingMessage(topic, message.getPayload());
@@ -259,7 +259,7 @@ isConnecting = false;
 public void onFailure(IMqttToken asyncActionToken, Throwable exception) {
 Log.w(TAG, "Broker failed: " + brokerUrl + ", trying fallback...", exception);
 
-isConnecting = false;
+isConnecting = false;
 int nextIdx = (currentBrokerIndex + 1) % MQTT_BROKERS.length;
 mainHandler.postDelayed(() -> connectToBroker(nextIdx), 1500);
 }
@@ -282,7 +282,7 @@ Log.e(TAG, "Subscribe error", e);
 }
 }
 
-private void subscribeRoomTopics(String code) {
+private void subscribeRoomTopics(String code) {
 if (!isConnected() || code == null) return;
 try {
 String roomTopic = TOPIC_ROOM_PREFIX + code;
@@ -304,7 +304,7 @@ roomTopic,
 roomTopic + "/typing",
 roomTopic + "/presence/+"
 
-});
+});
 } catch (Exception ignored) {}
 }
 public String createNewRoom(String roomName, boolean isPublic, String optionalPassword)
@@ -328,7 +328,7 @@ code = RoomCryptoUtils.randomCode6();
 RoomData room = new RoomData();
 room.meta.code = code;
 
-room.meta.name = (roomName == null || roomName.trim().isEmpty()) ? ("Room " + code) :
+room.meta.name = (roomName == null || roomName.trim().isEmpty()) ? ("Room " + code) :
 roomName.trim();
 room.meta.createdAt = RoomCryptoUtils.nowIso();
 if (isPublic) {
@@ -351,7 +351,7 @@ return code;
 public void joinRoom(String code, String fallbackName, RoomData initialCreatedRoom) {
 String cleanCode = code.trim().toUpperCase();
 
-if (activeRoomCode != null && !activeRoomCode.equals(cleanCode)) {
+if (activeRoomCode != null && !activeRoomCode.equals(cleanCode)) {
 clearRoomPresence(activeRoomCode);
 unsubscribeRoomTopics(activeRoomCode);
 }
@@ -374,7 +374,7 @@ activeRoomData.meta.createdAt = RoomCryptoUtils.nowIso();
 updateLocalAvatarInRoom(activeRoomData);
 prefs.saveRecentRoom(cleanCode, activeRoomData.meta.name);
 
-ensureConnected();
+ensureConnected();
 subscribeRoomTopics(cleanCode);
 if (appInForeground) {
 publishPresenceHeartbeat();
@@ -397,7 +397,7 @@ public void syncLocalProfileToActiveRoom() {
 if (activeRoomData != null) {
 updateLocalAvatarInRoom(activeRoomData);
 
-notifyRoomStateUpdated();
+notifyRoomStateUpdated();
 publishRoomState();
 }
 }
@@ -420,7 +420,7 @@ msg.text = text.trim();
 msg.author = prefs.getUserName().isEmpty() ? "Guest" : prefs.getUserName();
 msg.userId = prefs.getUserId();
 
-msg.createdAt = RoomCryptoUtils.nowIso();
+msg.createdAt = RoomCryptoUtils.nowIso();
 msg.replyTo = replyTo;
 appendMessageAndPublish(msg);
 }
@@ -443,7 +443,7 @@ appendMessageAndPublish(msg);
 }
 private void appendMessageAndPublish(Message msg) {
 
-updateLocalAvatarInRoom(activeRoomData);
+updateLocalAvatarInRoom(activeRoomData);
 knownMessageIds.add(msg.id);
 activeRoomData.messages.add(msg);
 if (activeRoomData.messages.size() > 600) {
@@ -466,7 +466,7 @@ task.userId = prefs.getUserId();
 task.createdAt = RoomCryptoUtils.nowIso();
 activeRoomData.tasks.add(task);
 
-if (activeRoomData.tasks.size() > 300) {
+if (activeRoomData.tasks.size() > 300) {
 activeRoomData.tasks = new ArrayList<>(
 activeRoomData.tasks.subList(activeRoomData.tasks.size() - 300,
 activeRoomData.tasks.size())
@@ -489,7 +489,7 @@ publishRoomState();
 public void deleteTask(String taskId) {
 if (activeRoomData == null) return;
 
-activeRoomData.tasks.removeIf(t -> t.id != null && t.id.equals(taskId));
+activeRoomData.tasks.removeIf(t -> t.id != null && t.id.equals(taskId));
 notifyRoomStateUpdated();
 publishRoomState();
 }
@@ -512,7 +512,7 @@ pendingRoomStatePublish = true;
 Log.e(TAG, "Publish room state failed", e);
 }
 
-}
+}
 /**
 * Fix #20: Clears all room presence topics on the broker before deleting the room state.
 */
@@ -535,7 +535,7 @@ mqttClient.publish(presTopic, new byte[0], 0, true);
 }
 // Clear retained room state
 
-mqttClient.publish(TOPIC_ROOM_PREFIX + codeToRemove, new byte[0], 1, true);
+mqttClient.publish(TOPIC_ROOM_PREFIX + codeToRemove, new byte[0], 1, true);
 } catch (Exception ignored) {}
 }
 if (dirId != null) {
@@ -557,7 +557,7 @@ private void removeDirectoryEntry(String dirId) {
 if (directoryData.groups == null) return;
 boolean removed = directoryData.groups.removeIf(g -> g.id != null && g.id.equals(dirId));
 
-if (removed) {
+if (removed) {
 publishDirectory();
 }
 }
@@ -580,7 +580,7 @@ lastTypingSentMs = now;
 try {
 JsonObject obj = new JsonObject();
 
-obj.addProperty("userId", prefs.getUserId());
+obj.addProperty("userId", prefs.getUserId());
 obj.addProperty("name", prefs.getUserName().isEmpty() ? "Guest" :
 prefs.getUserName());
 obj.addProperty("ts", now);
@@ -603,7 +603,7 @@ mqttClient.publish(TOPIC_PRESENCE_PREFIX + userId, bytes, 0, true);
 globalPresence.put(userId, now);
 if (activeRoomCode != null) {
 
-String roomPresTopic = TOPIC_ROOM_PREFIX + activeRoomCode + "/presence/" +
+String roomPresTopic = TOPIC_ROOM_PREFIX + activeRoomCode + "/presence/" +
 userId;
 mqttClient.publish(roomPresTopic, bytes, 0, true);
 roomPresence.put(userId, now);
@@ -626,7 +626,7 @@ String roomPresTopic = TOPIC_ROOM_PREFIX + roomCode + "/presence/" + userId;
 mqttClient.publish(roomPresTopic, new byte[0], 0, true);
 roomPresence.remove(userId);
 
-} catch (Exception ignored) {}
+} catch (Exception ignored) {}
 }
 private void clearAllTypingTimers() {
 for (Runnable r : typingExpiryRunnables.values()) {
@@ -649,7 +649,7 @@ l.onRoomPresenceChanged(getRoomOnlineCount());
 /**
 * Fix #10: Honest online count without artificial Math.max(1, count).
 
-*/
+*/
 public int getGlobalOnlineCount() {
 if (!isConnected()) return 0;
 long cutoff = System.currentTimeMillis() - PRESENCE_TTL_MS;
@@ -671,7 +671,7 @@ if (ts != null && ts >= cutoff) count++;
 }
 return count;
 
-}
+}
 private void handleIncomingMessage(String topic, byte[] payloadBytes) {
 String payload = payloadBytes != null ? new String(payloadBytes,
 StandardCharsets.UTF_8).trim() : "";
@@ -694,7 +694,7 @@ try {
 DirectoryData parsed = gson.fromJson(payload, DirectoryData.class);
 if (parsed != null && parsed.groups != null) {
 
-directoryData = parsed;
+directoryData = parsed;
 mainHandler.post(() -> {
 for (GlobalListener l : new ArrayList<>(globalListeners)) {
 l.onDirectoryUpdated(directoryData);
@@ -717,7 +717,7 @@ if (!uId.isEmpty() && !uId.equals(prefs.getUserId())) {
 typingUsers.put(uId, name);
 Runnable prev = typingExpiryRunnables.get(uId);
 
-if (prev != null) {
+if (prev != null) {
 mainHandler.removeCallbacks(prev);
 }
 Runnable expireTask = () -> {
@@ -739,7 +739,7 @@ updatePresenceMap(roomPresence, uId, payload);
 mainHandler.post(() -> {
 int count = getRoomOnlineCount();
 
-for (RoomListener l : new ArrayList<>(roomListeners)) {
+for (RoomListener l : new ArrayList<>(roomListeners)) {
 l.onRoomPresenceChanged(count);
 }
 });
@@ -762,7 +762,7 @@ l.onRoomDeleted();
 }
 return;
 
-}
+}
 try {
 RoomData remote = gson.fromJson(payload, RoomData.class);
 if (remote != null) {
@@ -786,7 +786,7 @@ newlyArrivedFromOthers.add(m);
 RoomData merged = mergeRoomData(remote, activeRoomData,
 activeRoomCode);
 
-activeRoomData = merged;
+activeRoomData = merged;
 if (merged.meta != null && merged.meta.name != null &&
 !merged.meta.name.isEmpty()) {
 prefs.saveRecentRoom(activeRoomCode, merged.meta.name);
@@ -809,7 +809,7 @@ Log.e(TAG, "Failed parsing room JSON", e);
 actively visible.
 */
 
-private void triggerLocalMessageNotification(String roomCode, String roomName, Message
+private void triggerLocalMessageNotification(String roomCode, String roomName, Message
 msg) {
 if (!prefs.isNotificationsEnabled() || chatActivelyVisible) return;
 if (Build.VERSION.SDK_INT >= 33) {
@@ -831,23 +831,15 @@ roomCode.hashCode(),
 intent,
 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
 );
-String author = (msg.author != null && !msg.author.isEmpty()) ? msg.author : "‫;"مستخدم‬
+String author = (msg.author != null && !msg.author.isEmpty()) ? msg.author : ";"مستخدم
 
-String body;
+String body;
 if ("voice".equals(msg.type)) {
-
-🎙 ‫;"أرسل رسالة صوتية‬
-
-body = "
-
+    body = "\uD83C\uDF99 أرسل رسالة صوتية";
 } else if ("file".equals(msg.type)) {
-
-📎 ً‫أرسل مرفقا‬: " + (msg.text != null ? msg.text : "");
-
-body = "
+    body = "\uD83D\uDCCE أرسل مرفقًا: " + (msg.text != null ? msg.text : "");
 } else {
-
-body = msg.text != null ? msg.text : "‫;"رسالة جديدة‬
+    body = msg.text != null ? msg.text : "رسالة جديدة";
 }
 NotificationCompat.Builder builder = new NotificationCompat.Builder(appContext,
 RunApplication.CHANNEL_ID_MESSAGES)
@@ -864,7 +856,7 @@ builder.build()
 } catch (Exception e) {
 Log.w(TAG, "Notification error", e);
 
-}
+}
 }
 private void updatePresenceMap(Map<String, Long> map, String userId, String payload) {
 if (payload == null || payload.isEmpty()) {
@@ -887,7 +879,7 @@ map.put(userId, System.currentTimeMillis());
 * Fix #9: Protects `out.meta` against NullPointerException if both remote.meta and local.meta
 are null.
 
-*/
+*/
 private RoomData mergeRoomData(RoomData remote, RoomData local, String code) {
 RoomData out = new RoomData();
 out.kind = "run-room";
@@ -910,7 +902,7 @@ if (local != null && local.messages != null) {
 for (Message m : local.messages) {
 if (m != null && m.id != null) msgMap.put(m.id, m);
 
-}
+}
 }
 if (remote != null && remote.messages != null) {
 for (Message m : remote.messages) {
@@ -933,7 +925,7 @@ mergedMsgs.size()));
 }
 out.messages = mergedMsgs;
 
-// Merge Tasks by ID
+// Merge Tasks by ID
 Map<String, TaskItem> taskMap = new LinkedHashMap<>();
 if (local != null && local.tasks != null) {
 for (TaskItem t : local.tasks) {
@@ -956,7 +948,7 @@ out.avatars = new HashMap<>();
 if (local != null && local.avatars != null) out.avatars.putAll(local.avatars);
 if (remote != null && remote.avatars != null) out.avatars.putAll(remote.avatars);
 
-return out;
+return out;
 }
 private void notifyConnectionChanged(boolean connected, String brokerUrl) {
 for (GlobalListener l : new ArrayList<>(globalListeners)) {
@@ -979,6 +971,6 @@ for (RoomListener l : new ArrayList<>(roomListeners)) {
 l.onTypingUsersChanged(names);
 }
 
-});
+});
 }
 }
