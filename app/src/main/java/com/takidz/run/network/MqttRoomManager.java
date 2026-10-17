@@ -792,7 +792,7 @@ if (merged.meta != null && merged.meta.name != null &&
 prefs.saveRecentRoom(activeRoomCode, merged.meta.name);
 }
 if (!newlyArrivedFromOthers.isEmpty()) {
-Message latest = newlyArrivedFromOthers.get(newlyArrivedFromOthers.size() 1);
+Message latest = newlyArrivedFromOthers.get(newlyArrivedFromOthers.size() - 1);
 String rName = (merged.meta != null && merged.meta.name != null) ?
 merged.meta.name : ("Room " + activeRoomCode);
 triggerLocalMessageNotification(activeRoomCode, rName, latest);
@@ -831,7 +831,7 @@ roomCode.hashCode(),
 intent,
 PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE
 );
-String author = (msg.author != null && !msg.author.isEmpty()) ? msg.author : ";"مستخدم
+String author = (msg.author != null && !msg.author.isEmpty()) ? msg.author : "\u0645\u0633\u062A\u062E\u062F\u0645";
 
 String body;
 if ("voice".equals(msg.type)) {
