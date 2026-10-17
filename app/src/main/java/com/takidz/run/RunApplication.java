@@ -1,4 +1,3 @@
-app/src/main/java/com/takidz/run/RunApplication.
 java
 package com.takidz.run;
 import android.app.Application;
@@ -13,7 +12,7 @@ public static final String CHANNEL_ID_MESSAGES = "run_room_messages";
 public void onCreate() {
 super.onCreate();
 
-PrefsManager prefs = new PrefsManager(this);
+PrefsManager prefs = new PrefsManager(this);
 ThemeHelper.applyAppNightMode(prefs.getThemeMode());
 createNotificationChannel();
 }
@@ -21,10 +20,10 @@ private void createNotificationChannel() {
 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
 NotificationChannel channel = new NotificationChannel(
 CHANNEL_ID_MESSAGES,
-"‫( رسائل ومهام الغرف‬Run)",
+"( رسائل ومهام الغرفRun)",
 NotificationManager.IMPORTANCE_DEFAULT
 );
-channel.setDescription("‫;)"إشعارات الرسائل والمهام الجديدة في الغرف المشتركة‬
+channel.setDescription("إشعارات الرسائل والمهام الجديدة في الغرف المشتركة");
 NotificationManager manager = getSystemService(NotificationManager.class);
 if (manager != null) {
 manager.createNotificationChannel(channel);
