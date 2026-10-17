@@ -1,5 +1,3 @@
-app/src/main/java/com/takidz/run/models/TaskItem
-.java
 package com.takidz.run.models;
 public class TaskItem {
 public String id;
