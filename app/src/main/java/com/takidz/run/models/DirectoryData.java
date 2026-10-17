@@ -1,5 +1,3 @@
-app/src/main/java/com/takidz/run/models/Director
-yData.java
 package com.takidz.run.models;
 import java.util.ArrayList;
 import java.util.List;
@@ -16,5 +14,5 @@ public String seed;
 public String verifier;
 public String createdAt;
 
-}
+}
 }
