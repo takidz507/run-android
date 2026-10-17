@@ -1,0 +1,12 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <style name="Theme.RunApp" parent="Theme.MaterialComponents.DayNight.NoActionBar">
+        <item name="colorPrimary">@color/run_accent</item>
+        <item name="colorPrimaryVariant">@color/run_panel</item>
+        <item name="colorOnPrimary">@color/run_accent_ink</item>
+        <item name="colorSecondary">@color/run_purple</item>
+        <item name="android:statusBarColor">@color/run_bg</item>
+        <item name="android:navigationBarColor">@color/run_bg</item>
+        <item name="android:windowBackground">@color/run_bg</item>
+    </style>
+</resources>
