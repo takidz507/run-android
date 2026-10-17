@@ -437,7 +437,8 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
     private void copyToClipboard(String label, String value, String toastMsg) {
         ClipboardManager cb = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
         if (cb != null) {
-            cb.setPrimaryClip(ClipData.newPlainClip(label, value));
+            //noinspection deprecation
+            cb.setText(value);
             Toast.makeText(this, toastMsg, Toast.LENGTH_SHORT).show();
         }
     }
