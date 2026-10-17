@@ -15,7 +15,7 @@ import okhttp3.Request;
 import okhttp3.Response;
 /**
 
-* Bounded & deduplicated translation engine:
+* Bounded & deduplicated translation engine:
 * - LRU Cache capped at 200 entries (#17).
 * - Fixed concurrency pool of 3 threads (#2).
 * - In-flight request deduplication (`PENDING_KEYS`) so rapid room state updates never trigger
@@ -38,7 +38,7 @@ private final OkHttpClient client = new OkHttpClient();
 private final Handler mainHandler = new Handler(Looper.getMainLooper());
 public interface TranslationCallback {
 
-void onTranslated(String translatedText);
+void onTranslated(String translatedText);
 void onError(String error);
 }
 public String getCached(String messageId, String targetLang) {
@@ -50,7 +50,7 @@ return PENDING_KEYS.contains(messageId + "::" + targetLang);
 public void translate(String messageId, String text, String targetLang, TranslationCallback
 callback) {
 if (text == null || text.trim().isEmpty()) {
-if (callback != null) callback.onError("‫;)"نص فارغ‬
+if (callback != null) callback.onError("نص فارغ");
 return;
 }
 final String cacheKey = messageId + "::" + targetLang;
@@ -61,7 +61,7 @@ return;
 }
 // Prevent duplicate concurrent requests for the same message
 
-if (!PENDING_KEYS.add(cacheKey)) {
+if (!PENDING_KEYS.add(cacheKey)) {
 return;
 }
 TRANSLATION_EXECUTOR.execute(() -> {
@@ -84,7 +84,7 @@ JSONArray outer = new JSONArray(jsonStr);
 JSONArray sentences = outer.getJSONArray(0);
 StringBuilder sb = new StringBuilder();
 
-for (int i = 0; i < sentences.length(); i++) {
+for (int i = 0; i < sentences.length(); i++) {
 JSONArray part = sentences.getJSONArray(i);
 if (!part.isNull(0)) {
 sb.append(part.getString(0));
@@ -100,7 +100,7 @@ mainHandler.post(() -> callback.onTranslated(result));
 } catch (Exception e) {
 PENDING_KEYS.remove(cacheKey);
 if (callback != null) {
-mainHandler.post(() -> callback.onError("‫تعذرت الترجمة‬: " + e.getMessage()));
+mainHandler.post(() -> callback.onError("تعذرت الترجمة: " + e.getMessage()));
 }
 }
 });
