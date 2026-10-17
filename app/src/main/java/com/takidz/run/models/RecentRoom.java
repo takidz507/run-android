@@ -1,9 +1,7 @@
-app/src/main/java/com/takidz/run/models/RecentRo
-om.java
 package com.takidz.run.models;
 public class RecentRoom {
 
-public String code;
+public String code;
 public String name;
 public String joinedAt;
 public RecentRoom() {}
