@@ -612,16 +612,11 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
         String shareUrl = "https://takidz507.github.io/run/?room=" + roomCode;
         new MaterialAlertDialogBuilder(this)
                 .setTitle("مشاركة الغرفة (" + roomCode + ")")
-                .setMessage("الكود المباشر: " + roomCode + "
-
-رابط الدعوة المباشر:
-" + shareUrl)
+                .setMessage("\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0645\u0628\u0627\u0634\u0631: " + roomCode + "\n\n\u0631\u0627\u0628\u0637 \u0627\u0644\u062F\u0639\u0648\u0629 \u0627\u0644\u0645\u0628\u0627\u0634\u0631:\n" + shareUrl)
                 .setPositiveButton("مشاركة الرابط", (d, w) -> {
                     Intent sendIntent = new Intent(Intent.ACTION_SEND);
                     sendIntent.setType("text/plain");
-                    sendIntent.putExtra(Intent.EXTRA_TEXT, "انضم إلى غرفتي على تطبيق run:
-الكود: " + roomCode + "
-الرابط: " + shareUrl);
+                    sendIntent.putExtra(Intent.EXTRA_TEXT, "\u0627\u0646\u0636\u0645 \u0625\u0644\u0649 \u063A\u0631\u0641\u062A\u064A \u0639\u0644\u0649 \u062A\u0637\u0628\u064A\u0642 run:\n\u0627\u0644\u0643\u0648\u062F: " + roomCode + "\n\u0627\u0644\u0631\u0627\u0628\u0637: " + shareUrl);
                     startActivity(Intent.createChooser(sendIntent, "مشاركة الغرفة عبر"));
                 })
                 .setNeutralButton("نسخ الكود", (d, w) -> copyToClipboard("Room Code", roomCode, "تم نسخ الكود: " + roomCode))
