@@ -25,13 +25,21 @@
             android:orientation="vertical"
             android:padding="12dp">
 
-            <!-- Header: Author & Timestamp -->
+            <!-- Header: Avatar + Author + Timestamp -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:layout_marginBottom="4dp">
+
+                <ImageView
+                    android:id="@+id/ivAuthorAvatar"
+                    android:layout_width="22dp"
+                    android:layout_height="22dp"
+                    android:layout_marginEnd="6dp"
+                    android:scaleType="centerCrop"
+                    android:visibility="gone" />
 
                 <TextView
                     android:id="@+id/tvAuthor"
@@ -53,13 +61,15 @@
                     android:textSize="11sp" />
             </LinearLayout>
 
-            <!-- Quoted Reply Container -->
+            <!-- Quoted Reply Container (Clickable to jump to original message - Fix #14 / F3) -->
             <LinearLayout
                 android:id="@+id/replyContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="6dp"
                 android:background="@color/run_bg_elevated"
+                android:clickable="true"
+                android:focusable="true"
                 android:orientation="vertical"
                 android:padding="8dp"
                 android:visibility="gone">
@@ -82,7 +92,7 @@
                     android:textSize="12sp" />
             </LinearLayout>
 
-            <!-- Attached Image -->
+            <!-- Attached Image (Clickable for Fullscreen viewer - Fix #13 / F2) -->
             <ImageView
                 android:id="@+id/ivAttachmentImage"
                 android:layout_width="240dp"
@@ -120,7 +130,7 @@
                     android:textSize="12sp" />
             </LinearLayout>
 
-            <!-- External File Link Button -->
+            <!-- External File / Video Link Button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnOpenExternalFile"
                 style="@style/Widget.MaterialComponents.Button.TextButton"
@@ -130,7 +140,7 @@
                 android:textSize="12sp"
                 android:visibility="gone" />
 
-            <!-- Message Text -->
+            <!-- Message Text / Caption -->
             <TextView
                 android:id="@+id/tvMessageText"
                 android:layout_width="wrap_content"
