@@ -1,10 +1,11 @@
+app/src/main/java/com/takidz/run/models/TaskItem
+.java
 package com.takidz.run.models;
-
 public class TaskItem {
-    public String id;
-    public String text = "";
-    public boolean done = false;
-    public String author = "Guest";
-    public String userId = "";
-    public String createdAt = "";
+public String id;
+public String text = "";
+public boolean done = false;
+public String author = "Guest";
+public String userId = "";
+public String createdAt = "";
 }
