@@ -1,0 +1,2 @@
+-keep class com.takidz.run.models.** { *; }
+-dontwarn org.eclipse.paho.**
