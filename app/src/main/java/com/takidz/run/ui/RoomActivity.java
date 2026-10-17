@@ -211,7 +211,7 @@ public void onReplyClicked(Message message) {
 activeReplyRef = new Message.ReplyRef(message.id, message.text,
 message.author);
 replyBanner.setVisibility(View.VISIBLE);
-tvReplyingToText.setText(" " الرد على+ message.author + ": " + message.text);
+tvReplyingToText.setText("\u0627\u0644\u0631\u062F \u0639\u0644\u0649 " + message.author + ": " + message.text);
 etMessageInput.requestFocus();
 }
 @Override
@@ -322,7 +322,7 @@ messagesAdapter.highlightMessageTemporarily(targetId);
 mainHandler.postDelayed(() -> messagesAdapter.clearHighlight(targetId), 1500);
 
 } else {
-Toast.makeText(this, ""الرسالة األصلية غير موجودة في السجل الحالي,
+Toast.makeText(this, "\u0627\u0644\u0631\u0633\u0627\u0644\u0629 \u0627\u0644\u0623\u0635\u0644\u064A\u0629 \u063A\u064A\u0631 \u0645\u0648\u062C\u0648\u062F\u0629 \u0641\u064A \u0627\u0644\u0633\u062C\u0644 \u0627\u0644\u062D\u0627\u0644\u064A", Toast.LENGTH_SHORT).show();
 Toast.LENGTH_SHORT).show();
 }
 }
