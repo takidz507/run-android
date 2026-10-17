@@ -1,6 +1,6 @@
 package com.takidz.run.network;
 
-import android.content.ContentResolver;
+import android.content.ContentResolver;
 import android.content.Context;
 import android.database.Cursor;
 import android.net.Uri;
@@ -22,7 +22,7 @@ import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 
-import okhttp3.RequestBody;
+import okhttp3.RequestBody;
 import okhttp3.Response;
 import okio.BufferedSink;
 /**
@@ -50,7 +50,7 @@ void onSuccess(String fileUrlOrDataUrl, String fileName, long fileSize, String m
 void onError(String errorMessage);
 }
 
-public CatboxUploader() {
+public CatboxUploader() {
 this.httpClient = new OkHttpClient.Builder()
 .connectTimeout(20, TimeUnit.SECONDS)
 .writeTimeout(180, TimeUnit.SECONDS)
@@ -66,7 +66,7 @@ if (mime == null) mime = "application/octet-stream";
 String fileName = queryFileName(resolver, uri);
 long fileSize = queryFileSize(resolver, uri);
 if (fileSize > MAX_UPLOAD_SIZE_BYTES) {
-postError(callback, "200( ‫حجم الملف يتجاوز الحد األقصى المسموح به‬MB)!");
+postError(callback, "200( حجم الملف يتجاوز الحد األقصى المسموح بهMB)!");
 return;
 }
 if (fileSize > 0 && fileSize <= INLINE_DATA_URL_MAX_BYTES &&
@@ -74,7 +74,7 @@ if (fileSize > 0 && fileSize <= INLINE_DATA_URL_MAX_BYTES &&
 byte[] bytes = readSmallStreamBounded(resolver.openInputStream(uri),
 INLINE_DATA_URL_MAX_BYTES);
 
-String base64 = Base64.encodeToString(bytes, Base64.NO_WRAP);
+String base64 = Base64.encodeToString(bytes, Base64.NO_WRAP);
 String dataUrl = "data:" + mime + ";base64," + base64;
 postSuccess(callback, dataUrl, fileName, bytes.length, mime);
 } else {
@@ -91,15 +91,15 @@ return fileSize > 0 ? fileSize : -1;
 @Override
 public void writeTo(@NonNull BufferedSink sink) throws IOException {
 try (InputStream in = resolver.openInputStream(uri)) {
-if (in == null) throw new IOException("‫;)"تعذر فتح الملف للقراءة‬
+if (in == null) throw new IOException("تعذر فتح الملف للقراءة");
 byte[] buf = new byte[16384];
 long totalRead = 0;
 int read;
 
-while ((read = in.read(buf)) != -1) {
+while ((read = in.read(buf)) != -1) {
 totalRead += read;
 if (totalRead > MAX_UPLOAD_SIZE_BYTES) {
-throw new IOException("200 ‫تجاوز الملف حد‬MB ‫;)"أثناء الرفع‬
+throw new IOException("تجاوز الملف حد 200MB أثناء الرفع");
 }
 sink.write(buf, 0, read);
 }
