@@ -1,5 +1,3 @@
-app/src/main/java/com/takidz/run/models/Message.
-java
 package com.takidz.run.models;
 public class Message {
 public String id;
@@ -18,7 +16,7 @@ public static class ReplyRef {
 public String id;
 public String text;
 
-public String author;
+public String author;
 public ReplyRef() {}
 public ReplyRef(String id, String text, String author) {
 this.id = id;
