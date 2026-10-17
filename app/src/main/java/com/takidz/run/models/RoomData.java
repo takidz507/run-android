@@ -1,5 +1,3 @@
-app/src/main/java/com/takidz/run/models/RoomData
-.java
 package com.takidz.run.models;
 import java.util.ArrayList;
 import java.util.HashMap;
@@ -10,7 +8,7 @@ public String kind = "run-room";
 public int version = 1;
 public Meta meta = new Meta();
 
-public List<Message> messages = new ArrayList<>();
+public List<Message> messages = new ArrayList<>();
 public List<TaskItem> tasks = new ArrayList<>();
 public Map<String, AvatarProfile> avatars = new HashMap<>();
 public static class Meta {
