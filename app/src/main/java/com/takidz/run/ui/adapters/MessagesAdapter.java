@@ -18,7 +18,7 @@ import com.google.android.material.button.MaterialButton;
 import com.google.android.material.card.MaterialCardView;
 import com.takidz.run.R;
 
-import com.takidz.run.models.Message;
+import com.takidz.run.models.Message;
 import com.takidz.run.models.RoomData;
 import com.takidz.run.utils.ThemeHelper;
 import java.text.SimpleDateFormat;
@@ -40,7 +40,7 @@ notifyMessageUpdatedById().
 * - F5: Displays sender profile avatar circle next to name when available.
 */
 
-public class MessagesAdapter extends
+public class MessagesAdapter extends
 RecyclerView.Adapter<MessagesAdapter.MsgViewHolder> {
 public interface MessageInteractionListener {
 void onReplyClicked(Message message);
@@ -64,7 +64,7 @@ this.currentUserId = currentUserId;
 this.palette = palette;
 this.listener = listener;
 
-}
+}
 public void updatePalette(ThemeHelper.Palette newPalette) {
 this.palette = newPalette;
 notifyItemRangeChanged(0, messages.size());
@@ -86,7 +86,7 @@ public void clearHighlight(String msgId) {
 if (Objects.equals(this.highlightedMessageId, msgId)) {
 this.highlightedMessageId = null;
 
-notifyMessageUpdatedById(msgId);
+notifyMessageUpdatedById(msgId);
 }
 }
 /**
@@ -109,7 +109,7 @@ Message m = messages.get(i);
 if (m != null && messageId.equals(m.id)) {
 return i;
 
-}
+}
 }
 return -1;
 }
@@ -132,7 +132,7 @@ return updated.size();
 @Override
 public boolean areItemsTheSame(int oldItemPosition, int newItemPosition) {
 
-Message o = oldList.get(oldItemPosition);
+Message o = oldList.get(oldItemPosition);
 Message n = updated.get(newItemPosition);
 return o != null && n != null && Objects.equals(o.id, n.id);
 }
@@ -154,7 +154,7 @@ diffResult.dispatchUpdatesTo(this);
 @Override
 public MsgViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
 
-View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_message, parent,
+View v = LayoutInflater.from(parent.getContext()).inflate(R.layout.item_message, parent,
 false);
 return new MsgViewHolder(v);
 }
@@ -172,14 +172,14 @@ palette.panelHover : palette.panel));
 holder.bubbleCard.setStrokeColor(isHighlighted ? palette.purple : (isMine ? palette.accent :
 palette.panelSoft));
 holder.bubbleCard.setStrokeWidth(isHighlighted ? 4 : 2);
-holder.tvAuthor.setText(isMine ? "‫ "( أنت‬+ msg.author + ")" : msg.author);
+holder.tvAuthor.setText(isMine ? " "( أنت+ msg.author + ")" : msg.author);
 holder.tvAuthor.setTextColor(isMine ? palette.accent : palette.purple);
 // Fix #16 & F5: Render author avatar if present in room avatars
 RoomData.AvatarProfile profile = (msg.userId != null && avatars != null) ?
 avatars.get(msg.userId) : null;
 if (profile != null && profile.avatarUrl != null && !profile.avatarUrl.isEmpty()) {
 
-holder.ivAuthorAvatar.setVisibility(View.VISIBLE);
+holder.ivAuthorAvatar.setVisibility(View.VISIBLE);
 loadImageOrDataUrl(holder.ivAuthorAvatar, profile.avatarUrl, true);
 } else {
 holder.ivAuthorAvatar.setVisibility(View.GONE);
@@ -191,7 +191,7 @@ holder.tvTime.setTextColor(palette.subtle);
 if (msg.replyTo != null && msg.replyTo.text != null) {
 holder.replyContainer.setVisibility(View.VISIBLE);
 holder.replyContainer.setBackgroundColor(palette.bgElevated);
-holder.tvReplyAuthor.setText(msg.replyTo.author != null ? msg.replyTo.author : "‫;)"مستخدم‬
+            holder.tvReplyAuthor.setText(msg.replyTo.author != null ? msg.replyTo.author : "مستخدم");
 holder.tvReplyAuthor.setTextColor(palette.accent);
 holder.tvReplyText.setText(msg.replyTo.text);
 holder.tvReplyText.setTextColor(palette.muted);
@@ -202,7 +202,7 @@ listener.onReplyQuoteClicked(msg.replyTo.id);
 });
 } else {
 
-holder.replyContainer.setVisibility(View.GONE);
+holder.replyContainer.setVisibility(View.GONE);
 holder.replyContainer.setOnClickListener(null);
 }
 // Main text / Translated text / Caption
@@ -224,19 +224,13 @@ if ("voice".equals(msg.type) && msg.file != null) {
 holder.voiceContainer.setVisibility(View.VISIBLE);
 boolean isPlaying = msg.id != null && msg.id.equals(playingMessageId);
 
-holder.btnPlayVoice.setText(isPlaying ? "
-
-⏹ ‫إيقاف‬
-
-: ""
-
-");
+            holder.btnPlayVoice.setText(isPlaying ? "\u23F9 \u0625\u064A\u0642\u0627\u0641" : "\u25B6 \u062A\u0634\u063A\u064A\u0644");
 
 holder.btnPlayVoice.setBackgroundTintList(android.content.res.ColorStateList.valueOf(palette.a
 ccent));
 holder.btnPlayVoice.setTextColor(palette.accentInk);
 int dur = msg.file.duration;
-holder.tvVoiceDuration.setText(dur > 0 ? (dur + " ‫ "تسجيل صوتي‬: )"‫;)"ثانية‬
+            holder.tvVoiceDuration.setText(dur > 0 ? (dur + " \u062B\u0627\u0646\u064A\u0629") : "\u062A\u0633\u062C\u064A\u0644 \u0635\u0648\u062A\u064A");
 holder.tvVoiceDuration.setTextColor(palette.muted);
 holder.btnPlayVoice.setOnClickListener(v -> listener.onPlayVoiceClicked(msg));
 } else if ("file".equals(msg.type) && msg.file != null && msg.file.url != null) {
@@ -253,12 +247,12 @@ listener.onImageClicked(url, msg.caption != null ? msg.caption : msg.text)
 holder.btnOpenExternalFile.setVisibility(View.VISIBLE);
 boolean isVideo = mime.startsWith("video/");
 
-🎬 ‫ "📎 ف الم‬: " :‫ تشغيل الفيديو‬:
+🎬  "📎 ف الم: " : تشغيل الفيديو:
 
-String label = isVideo ? "
+            String label = isVideo ? "\uD83C\uDFAC \u062A\u0634\u063A\u064A\u0644 \u0627\u0644\u0641\u064A\u062F\u064A\u0648: " : "\uD83D\uDCCE \u0641\u062A\u062D \u0627\u0644\u0645\u0644\u0641: ";
 
-holder.btnOpenExternalFile.setText(label + (msg.file.name != null ? msg.file.name :
-"‫;))"ملف مرفق‬
+holder.btnOpenExternalFile.setText(label + (msg.file.name != null ? msg.file.name :
+";))"ملف مرفق
 holder.btnOpenExternalFile.setTextColor(palette.accent);
 holder.btnOpenExternalFile.setOnClickListener(v -> {
 if (url.startsWith("http")) {
@@ -272,7 +266,7 @@ context.startActivity(browserIntent);
 holder.btnReply.setTextColor(palette.muted);
 holder.btnReply.setOnClickListener(v -> listener.onReplyClicked(msg));
 holder.btnTranslate.setTextColor(palette.accent);
-holder.btnTranslate.setText(msg.showingTranslated ? "‫ "ترجمة الرسالة‬: "‫;)"عرض النص األصلي‬
+holder.btnTranslate.setText(msg.showingTranslated ? "\u0639\u0631\u0636 \u0627\u0644\u0646\u0635 \u0627\u0644\u0623\u0635\u0644\u064A" : "\u062A\u0631\u062C\u0645\u0629 \u0627\u0644\u0631\u0633\u0627\u0644\u0629");
 holder.btnTranslate.setOnClickListener(v -> listener.onTranslateClicked(msg));
 }
 private void loadImageOrDataUrl(ImageView target, String url, boolean circleCrop) {
@@ -280,7 +274,7 @@ if (url.startsWith("data:image/")) {
 try {
 int comma = url.indexOf(',');
 
-byte[] decoded = Base64.decode(url.substring(comma + 1), Base64.DEFAULT);
+byte[] decoded = Base64.decode(url.substring(comma + 1), Base64.DEFAULT);
 if (circleCrop) {
 Glide.with(context).load(decoded).circleCrop().into(target);
 } else {
@@ -302,7 +296,7 @@ private String formatIsoTimeLocal(String iso) {
 if (iso == null || iso.isEmpty()) return "";
 try {
 
-SimpleDateFormat parser = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
+SimpleDateFormat parser = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss.SSS'Z'",
 Locale.US);
 parser.setTimeZone(TimeZone.getTimeZone("UTC"));
 Date date = parser.parse(iso);
@@ -326,7 +320,7 @@ static class MsgViewHolder extends RecyclerView.ViewHolder {
 final MaterialCardView bubbleCard;
 final ImageView ivAuthorAvatar;
 
-final TextView tvAuthor;
+final TextView tvAuthor;
 final TextView tvTime;
 final LinearLayout replyContainer;
 final TextView tvReplyAuthor;
@@ -348,7 +342,7 @@ tvTime = itemView.findViewById(R.id.tvTime);
 replyContainer = itemView.findViewById(R.id.replyContainer);
 tvReplyAuthor = itemView.findViewById(R.id.tvReplyAuthor);
 
-tvReplyText = itemView.findViewById(R.id.tvReplyText);
+tvReplyText = itemView.findViewById(R.id.tvReplyText);
 tvMessageText = itemView.findViewById(R.id.tvMessageText);
 ivAttachmentImage = itemView.findViewById(R.id.ivAttachmentImage);
 voiceContainer = itemView.findViewById(R.id.voiceContainer);
