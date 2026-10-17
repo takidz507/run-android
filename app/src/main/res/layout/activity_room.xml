@@ -82,7 +82,7 @@
                         android:layout_width="wrap_content"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="2dp"
-                        android:text="● متصل (1 بالغرفة)"
+                        android:text="● متصل"
                         android:textColor="@color/run_success"
                         android:textSize="11sp" />
                 </LinearLayout>
@@ -144,14 +144,34 @@
         android:layout_weight="1"
         android:orientation="vertical">
 
-        <androidx.recyclerview.widget.RecyclerView
-            android:id="@+id/rvMessages"
+        <FrameLayout
             android:layout_width="match_parent"
             android:layout_height="0dp"
-            android:layout_weight="1"
-            android:clipToPadding="false"
-            android:paddingHorizontal="12dp"
-            android:paddingVertical="8dp" />
+            android:layout_weight="1">
+
+            <androidx.recyclerview.widget.RecyclerView
+                android:id="@+id/rvMessages"
+                android:layout_width="match_parent"
+                android:layout_height="match_parent"
+                android:clipToPadding="false"
+                android:paddingHorizontal="12dp"
+                android:paddingVertical="8dp" />
+
+            <!-- Fix #5: Floating "New Messages ↓" pill when user is reading older messages -->
+            <com.google.android.material.button.MaterialButton
+                android:id="@+id/btnScrollToBottom"
+                android:layout_width="wrap_content"
+                android:layout_height="38dp"
+                android:layout_gravity="bottom|center_horizontal"
+                android:layout_marginBottom="10dp"
+                android:backgroundTint="@color/run_accent"
+                android:text="رسائل جديدة ↓"
+                android:textColor="@color/run_accent_ink"
+                android:textSize="12sp"
+                android:textStyle="bold"
+                android:visibility="gone"
+                app:cornerRadius="19dp" />
+        </FrameLayout>
 
         <TextView
             android:id="@+id/tvTypingIndicator"
@@ -164,6 +184,7 @@
             android:textSize="12sp"
             android:visibility="gone" />
 
+        <!-- Fix #8: Live Voice Recording Timer Banner (Max 120s) -->
         <TextView
             android:id="@+id/tvRecordingTimerBanner"
             android:layout_width="match_parent"
@@ -171,20 +192,8 @@
             android:background="@color/run_panel_soft"
             android:gravity="center"
             android:paddingVertical="6dp"
-            android:textColor="@color/run_accent"
-            android:textSize="13sp"
-            android:textStyle="bold"
-            android:visibility="gone" />
-
-        <com.google.android.material.button.MaterialButton
-            android:id="@+id/btnScrollToBottom"
-            android:layout_width="wrap_content"
-            android:layout_height="38dp"
-            android:layout_gravity="center_horizontal"
-            android:layout_marginBottom="10dp"
-            android:backgroundTint="@color/run_accent"
-            android:text="↓ رسائل جديدة"
-            android:textColor="@color/run_accent_ink"
+            android:text="🔴 جاري التسجيل الصوتي... 00:00 / 02:00 (اضغط الميكروفون للإرسال)"
+            android:textColor="@color/run_danger"
             android:textSize="12sp"
             android:textStyle="bold"
             android:visibility="gone" />
