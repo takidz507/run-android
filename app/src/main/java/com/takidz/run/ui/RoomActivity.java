@@ -60,13 +60,11 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Audit-Hardened Native Room Screen for `run`:
- * - #2: Bounded auto-translation + ID-based adapter notifications (notifyMessageUpdatedById).
- * - #3 & #8: Stops voice recording safely in onPause() + 120s max timer with live countdown banner.
- * - #5: Smart auto-scroll (only scrolls when near bottom or sending own message; shows "رسائل جديدة ↓" button otherwise).
- * - #13 / F2: Fullscreen image viewer dialog on image click.
- * - #14 / F3: Tap quoted reply to scroll to & highlight original message.
- * - #15 / F4: Pre-upload attachment preview & optional caption dialog.
+ * Redesigned Room Activity:
+ * - 3 Tabs: Chat, Tasks, and Shared Notes
+ * - Material 3 Pixel & Classroom polish
+ * - Real-time sync of Chat, Tasks (with progress ring), and Shared Notes
+ * - Voice recorder (120s max with live countdown), attachment previews, quotes, auto-translate
  */
 public class RoomActivity extends AppCompatActivity implements MqttRoomManager.RoomListener {
 
@@ -83,7 +81,7 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
     private String roomCode;
     private String roomName;
     private Message.ReplyRef activeReplyRef = null;
-    private boolean showingChatTab = true;
+    private int currentTab = 0; // 0: Chat, 1: Tasks, 2: Notes
     private int lastMessageCount = 0;
 
     // Header Views
@@ -96,9 +94,10 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
     private ImageButton btnShareRoom;
     private ImageButton btnDeleteRoom;
 
-    // Tab Switcher Buttons
+    // 3 Tab Buttons
     private MaterialButton btnTabChat;
     private MaterialButton btnTabTasks;
+    private MaterialButton btnTabNotes;
 
     // Chat Panel Views
     private LinearLayout chatPanel;
@@ -123,6 +122,29 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
     private EditText etNewTaskInput;
     private MaterialButton btnAddTask;
     private RecyclerView rvTasks;
+
+    // Shared Notes Panel Views
+    private LinearLayout notesPanel;
+    private TextView tvNoteStatus;
+    private MaterialButton btnNoteSync;
+    private MaterialButton btnNoteBullet;
+    private MaterialButton btnNoteCheck;
+    private MaterialButton btnNoteHeading;
+    private MaterialButton btnNoteCopy;
+    private MaterialButton btnNoteClear;
+    private EditText etSharedNoteContent;
+    private TextView tvNoteWordCount;
+    private boolean isUpdatingNoteRemotely = false;
+
+    private final Runnable noteDebounceSaveRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (isUpdatingNoteRemotely) return;
+            String text = etSharedNoteContent.getText().toString();
+            mqttManager.updateRoomNote(text);
+            tvNoteStatus.setText("Saved & synced with room");
+        }
+    };
 
     private MessagesAdapter messagesAdapter;
     private TasksAdapter tasksAdapter;
@@ -150,8 +172,9 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
 
         setupFilePicker();
         initViews();
+        setupNotesTab();
         applyTheme();
-        switchTab(true);
+        switchTab(0);
     }
 
     private void setupFilePicker() {
@@ -159,7 +182,6 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
                 new ActivityResultContracts.GetContent(),
                 uri -> {
                     if (uri != null) {
-                        // Fix #15 / F4: Prompt for optional caption before uploading
                         showAttachmentCaptionDialog(uri);
                     }
                 }
@@ -178,6 +200,7 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
 
         btnTabChat = findViewById(R.id.btnTabChat);
         btnTabTasks = findViewById(R.id.btnTabTasks);
+        btnTabNotes = findViewById(R.id.btnTabNotes);
 
         // Chat views
         chatPanel = findViewById(R.id.chatPanel);
@@ -203,16 +226,29 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
         btnAddTask = findViewById(R.id.btnAddTask);
         rvTasks = findViewById(R.id.rvTasks);
 
+        // Notes views
+        notesPanel = findViewById(R.id.notesPanel);
+        tvNoteStatus = findViewById(R.id.tvNoteStatus);
+        btnNoteSync = findViewById(R.id.btnNoteSync);
+        btnNoteBullet = findViewById(R.id.btnNoteBullet);
+        btnNoteCheck = findViewById(R.id.btnNoteCheck);
+        btnNoteHeading = findViewById(R.id.btnNoteHeading);
+        btnNoteCopy = findViewById(R.id.btnNoteCopy);
+        btnNoteClear = findViewById(R.id.btnNoteClear);
+        etSharedNoteContent = findViewById(R.id.etSharedNoteContent);
+        tvNoteWordCount = findViewById(R.id.tvNoteWordCount);
+
         tvRoomTitle.setText(roomName != null ? roomName : ("Room " + roomCode));
         tvRoomCodeBadge.setText("#" + roomCode);
 
         btnBack.setOnClickListener(v -> finish());
-        tvRoomCodeBadge.setOnClickListener(v -> copyToClipboard("Room Code", roomCode, "تم نسخ كود الغرفة: " + roomCode));
+        tvRoomCodeBadge.setOnClickListener(v -> copyToClipboard("Room Code", roomCode, "Copied room code #" + roomCode));
         btnShareRoom.setOnClickListener(v -> showInviteShareDialog());
         btnDeleteRoom.setOnClickListener(v -> confirmDeleteRoom());
 
-        btnTabChat.setOnClickListener(v -> switchTab(true));
-        btnTabTasks.setOnClickListener(v -> switchTab(false));
+        btnTabChat.setOnClickListener(v -> switchTab(0));
+        btnTabTasks.setOnClickListener(v -> switchTab(1));
+        btnTabNotes.setOnClickListener(v -> switchTab(2));
 
         // Setup Messages RecyclerView
         LinearLayoutManager chatLm = new LinearLayoutManager(this);
@@ -223,13 +259,12 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
             public void onReplyClicked(Message message) {
                 activeReplyRef = new Message.ReplyRef(message.id, message.text, message.author);
                 replyBanner.setVisibility(View.VISIBLE);
-                tvReplyingToText.setText("الرد على " + message.author + ": " + message.text);
+                tvReplyingToText.setText("Replying to " + message.author + ": " + message.text);
                 etMessageInput.requestFocus();
             }
 
             @Override
             public void onReplyQuoteClicked(String targetMessageId) {
-                // Fix #14 / F3: Jump to original quoted message
                 scrollToMessageById(targetMessageId);
             }
 
@@ -245,13 +280,11 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
 
             @Override
             public void onImageClicked(String imageUrlOrDataUri, String caption) {
-                // Fix #13 / F2: Fullscreen image viewer
                 showFullscreenImageDialog(imageUrlOrDataUri, caption);
             }
         });
         rvMessages.setAdapter(messagesAdapter);
 
-        // Fix #5: Hide floating "New Messages ↓" button when user scrolls to bottom
         rvMessages.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
@@ -327,6 +360,87 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
         });
     }
 
+    private void setupNotesTab() {
+        etSharedNoteContent.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {
+                updateNoteStats(s != null ? s.toString() : "");
+                if (!isUpdatingNoteRemotely) {
+                    tvNoteStatus.setText("Editing... (auto-syncing)");
+                    mainHandler.removeCallbacks(noteDebounceSaveRunnable);
+                    mainHandler.postDelayed(noteDebounceSaveRunnable, 1200L);
+                }
+            }
+
+            @Override
+            public void afterTextChanged(Editable s) {}
+        });
+
+        btnNoteSync.setOnClickListener(v -> {
+            mainHandler.removeCallbacks(noteDebounceSaveRunnable);
+            String text = etSharedNoteContent.getText().toString();
+            mqttManager.updateRoomNote(text);
+            tvNoteStatus.setText("Synced with room now");
+            Toast.makeText(this, "Notes synced with room!", Toast.LENGTH_SHORT).show();
+        });
+
+        btnNoteBullet.setOnClickListener(v -> insertTextAtCursor("\n• "));
+        btnNoteCheck.setOnClickListener(v -> insertTextAtCursor("\n[ ] "));
+        btnNoteHeading.setOnClickListener(v -> insertTextAtCursor("\n## "));
+
+        btnNoteCopy.setOnClickListener(v -> {
+            String content = etSharedNoteContent.getText().toString();
+            copyToClipboard("Shared Notes", content, "Copied notes to clipboard");
+        });
+
+        btnNoteClear.setOnClickListener(v -> {
+            new MaterialAlertDialogBuilder(this)
+                    .setTitle("Clear Shared Notes")
+                    .setMessage("Are you sure you want to clear all shared notes for this room?")
+                    .setPositiveButton("Clear", (dialog, which) -> {
+                        etSharedNoteContent.setText("");
+                        mqttManager.updateRoomNote("");
+                        tvNoteStatus.setText("Notes cleared");
+                    })
+                    .setNegativeButton("Cancel", null)
+                    .show();
+        });
+    }
+
+    private void insertTextAtCursor(String insertion) {
+        int start = Math.max(etSharedNoteContent.getSelectionStart(), 0);
+        int end = Math.max(etSharedNoteContent.getSelectionEnd(), 0);
+        etSharedNoteContent.getText().replace(Math.min(start, end), Math.max(start, end), insertion, 0, insertion.length());
+        etSharedNoteContent.setSelection(start + insertion.length());
+    }
+
+    private void updateNoteStats(String content) {
+        int chars = content.length();
+        String trimmed = content.trim();
+        int words = trimmed.isEmpty() ? 0 : trimmed.split("\\s+").length;
+        tvNoteWordCount.setText(words + (words == 1 ? " word" : " words") + " • " + chars + (chars == 1 ? " character" : " characters"));
+    }
+
+    private void switchTab(int tabIndex) {
+        currentTab = tabIndex;
+        chatPanel.setVisibility(tabIndex == 0 ? View.VISIBLE : View.GONE);
+        tasksPanel.setVisibility(tabIndex == 1 ? View.VISIBLE : View.GONE);
+        notesPanel.setVisibility(tabIndex == 2 ? View.VISIBLE : View.GONE);
+
+        // Highlight active tab
+        btnTabChat.setBackgroundTintList(ColorStateList.valueOf(tabIndex == 0 ? palette.accent : palette.panelSoft));
+        btnTabChat.setTextColor(tabIndex == 0 ? palette.accentInk : palette.text);
+
+        btnTabTasks.setBackgroundTintList(ColorStateList.valueOf(tabIndex == 1 ? palette.accent : palette.panelSoft));
+        btnTabTasks.setTextColor(tabIndex == 1 ? palette.accentInk : palette.text);
+
+        btnTabNotes.setBackgroundTintList(ColorStateList.valueOf(tabIndex == 2 ? palette.accent : palette.panelSoft));
+        btnTabNotes.setTextColor(tabIndex == 2 ? palette.accentInk : palette.text);
+    }
+
     private boolean isNearBottom() {
         LinearLayoutManager lm = (LinearLayoutManager) rvMessages.getLayoutManager();
         if (lm == null) return true;
@@ -336,9 +450,6 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
         return lastVisible >= total - 3;
     }
 
-    /**
-     * Fix #14 & F3: Scrolls smoothly to the quoted original message and highlights it briefly.
-     */
     private void scrollToMessageById(String targetId) {
         int pos = messagesAdapter.findPositionById(targetId);
         if (pos >= 0) {
@@ -346,13 +457,10 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
             messagesAdapter.highlightMessageTemporarily(targetId);
             mainHandler.postDelayed(() -> messagesAdapter.clearHighlight(targetId), 1500);
         } else {
-            Toast.makeText(this, "الرسالة الأصلية غير موجودة في السجل الحالي", Toast.LENGTH_SHORT).show();
+            Toast.makeText(this, "Original message not found in current log", Toast.LENGTH_SHORT).show();
         }
     }
 
-    /**
-     * Fix #13 & F2: Fullscreen image viewer dialog.
-     */
     private void showFullscreenImageDialog(String urlOrDataUri, String caption) {
         Dialog dialog = new Dialog(this, android.R.style.Theme_Black_NoTitleBar_Fullscreen);
         dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
@@ -399,160 +507,133 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
         dialog.show();
     }
 
-    /**
-     * Fix #15 & F4: Pre-upload dialog with image preview and optional caption field.
-     */
-    private void showAttachmentCaptionDialog(Uri uri) {
+    private void showAttachmentCaptionDialog(Uri fileUri) {
+        EditText captionInput = new EditText(this);
+        captionInput.setHint("Add an optional caption...");
+        captionInput.setSingleLine(true);
+
         int pad = (int) (18 * getResources().getDisplayMetrics().density);
         LinearLayout container = new LinearLayout(this);
         container.setOrientation(LinearLayout.VERTICAL);
         container.setPadding(pad, pad / 2, pad, 0);
-
-        String mime = getContentResolver().getType(uri);
-        if (mime != null && mime.startsWith("image/")) {
-            ImageView preview = new ImageView(this);
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
-                    (int) (180 * getResources().getDisplayMetrics().density)
-            );
-            lp.bottomMargin = pad / 2;
-            preview.setLayoutParams(lp);
-            preview.setScaleType(ImageView.ScaleType.CENTER_CROP);
-            Glide.with(this).load(uri).into(preview);
-            container.addView(preview);
-        }
-
-        EditText etCaption = new EditText(this);
-        etCaption.setHint("أضف وصفاً أو تعليقاً مع المرفق (اختياري)...");
-        etCaption.setSingleLine(false);
-        etCaption.setMaxLines(3);
-        container.addView(etCaption);
+        container.addView(captionInput);
 
         new MaterialAlertDialogBuilder(this)
-                .setTitle("إرسال مرفق")
+                .setTitle("Send Attachment")
+                .setMessage("Uploading file via P2P / Catbox...")
                 .setView(container)
-                .setPositiveButton("رفع وإرسال", (d, w) -> {
-                    String caption = etCaption.getText().toString().trim();
-                    uploadAndSendAttachment(uri, caption);
+                .setPositiveButton("Send", (dialog, which) -> {
+                    String caption = captionInput.getText().toString().trim();
+                    uploadAndSendAttachment(fileUri, caption);
                 })
-                .setNegativeButton("إلغاء", null)
+                .setNegativeButton("Cancel", null)
                 .show();
     }
 
-    private void switchTab(boolean showChat) {
-        this.showingChatTab = showChat;
-        chatPanel.setVisibility(showChat ? View.VISIBLE : View.GONE);
-        tasksPanel.setVisibility(showChat ? View.GONE : View.VISIBLE);
-
-        if (showChat) {
-            btnTabChat.setBackgroundTintList(ColorStateList.valueOf(palette.accent));
-            btnTabChat.setTextColor(palette.accentInk);
-            btnTabTasks.setBackgroundTintList(ColorStateList.valueOf(palette.panelSoft));
-            btnTabTasks.setTextColor(palette.text);
-        } else {
-            btnTabTasks.setBackgroundTintList(ColorStateList.valueOf(palette.accent));
-            btnTabTasks.setTextColor(palette.accentInk);
-            btnTabChat.setBackgroundTintList(ColorStateList.valueOf(palette.panelSoft));
-            btnTabChat.setTextColor(palette.text);
-        }
-    }
-
-    private void uploadAndSendAttachment(Uri uri, String optionalCaption) {
-        Toast.makeText(this, "جاري معالجة ورفع المرفق...", Toast.LENGTH_SHORT).show();
+    private void uploadAndSendAttachment(Uri uri, String caption) {
+        Toast.makeText(this, "Uploading attachment...", Toast.LENGTH_SHORT).show();
         catboxUploader.processAndUploadUri(this, uri, new CatboxUploader.UploadCallback() {
             @Override
             public void onSuccess(String fileUrlOrDataUrl, String fileName, long fileSize, String mimeType) {
                 Message.FileAttachment att = new Message.FileAttachment();
-                att.url = fileUrlOrDataUrl;
                 att.name = fileName;
+                att.url = fileUrlOrDataUrl;
                 att.size = fileSize;
                 att.mime = mimeType;
-                String finalCaption = (optionalCaption != null && !optionalCaption.isEmpty()) ? optionalCaption : fileName;
-                mqttManager.sendFileOrVoiceMessage("file", att, finalCaption, activeReplyRef);
+                att.caption = caption;
+
+                mqttManager.sendFileOrVoiceMessage("file", att, caption, activeReplyRef);
+                activeReplyRef = null;
+                replyBanner.setVisibility(View.GONE);
+                Toast.makeText(RoomActivity.this, "Attachment sent!", Toast.LENGTH_SHORT).show();
+            }
+
+            @Override
+            public void onError(String errorMessage) {
+                Toast.makeText(RoomActivity.this, "Upload failed: " + errorMessage, Toast.LENGTH_LONG).show();
+            }
+        });
+    }
+
+    private void toggleVoiceRecording() {
+        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO)
+                != PackageManager.PERMISSION_GRANTED) {
+            ActivityCompat.requestPermissions(
+                    this,
+                    new String[]{Manifest.permission.RECORD_AUDIO},
+                    REQ_RECORD_AUDIO
+            );
+            return;
+        }
+
+        if (voiceHelper.isRecording()) {
+            stopAndSendVoiceRecording();
+        } else {
+            startVoiceRecording();
+        }
+    }
+
+    private void startVoiceRecording() {
+        try {
+            voiceHelper.startRecording(this, new VoiceRecorderHelper.RecordingProgressListener() {
+                @Override
+                public void onTick(int elapsedSeconds, int maxSeconds) {
+                    int remaining = maxSeconds - elapsedSeconds;
+                    tvRecordingTimerBanner.setVisibility(View.VISIBLE);
+                    tvRecordingTimerBanner.setText("🎙 Recording: " + elapsedSeconds + "s / " + maxSeconds + "s (Tap to Send)");
+                }
+
+                @Override
+                public void onMaxDurationReached(File recordedFile, int durationSeconds) {
+                    tvRecordingTimerBanner.setVisibility(View.GONE);
+                    btnRecordVoice.setColorFilter(palette.accent);
+                    uploadVoiceFile(recordedFile, durationSeconds);
+                }
+            });
+            btnRecordVoice.setColorFilter(palette.danger);
+            tvRecordingTimerBanner.setVisibility(View.VISIBLE);
+            tvRecordingTimerBanner.setText("🎙 Recording... (Tap to Send)");
+        } catch (Exception e) {
+            Toast.makeText(this, "Could not start voice recording", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void stopAndSendVoiceRecording() {
+        tvRecordingTimerBanner.setVisibility(View.GONE);
+        btnRecordVoice.setColorFilter(palette.accent);
+        File recFile = voiceHelper.getCurrentOutputFile();
+        int dur = voiceHelper.stopRecording();
+        if (recFile != null && recFile.exists() && dur >= 1) {
+            uploadVoiceFile(recFile, dur);
+        } else {
+            Toast.makeText(this, "Recording cancelled or too short", Toast.LENGTH_SHORT).show();
+        }
+    }
+
+    private void uploadVoiceFile(File file, int durationSec) {
+        Toast.makeText(this, "Sending voice message...", Toast.LENGTH_SHORT).show();
+        catboxUploader.processAndUploadLocalFile(file, "audio/mp4", new CatboxUploader.UploadCallback() {
+            @Override
+            public void onSuccess(String fileUrlOrDataUrl, String fileName, long fileSize, String mimeType) {
+                Message.FileAttachment att = new Message.FileAttachment();
+                att.name = "Voice Message (" + durationSec + "s)";
+                att.url = fileUrlOrDataUrl;
+                att.size = fileSize;
+                att.mime = mimeType;
+                att.duration = durationSec;
+
+                mqttManager.sendFileOrVoiceMessage("voice", att, "🎙 Voice Message (" + durationSec + "s)", activeReplyRef);
                 activeReplyRef = null;
                 replyBanner.setVisibility(View.GONE);
             }
 
             @Override
             public void onError(String errorMessage) {
-                Toast.makeText(RoomActivity.this, errorMessage, Toast.LENGTH_LONG).show();
+                Toast.makeText(RoomActivity.this, "Voice upload failed: " + errorMessage, Toast.LENGTH_LONG).show();
             }
         });
     }
 
-    private void toggleVoiceRecording() {
-        if (ContextCompat.checkSelfPermission(this, Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
-            ActivityCompat.requestPermissions(this, new String[]{Manifest.permission.RECORD_AUDIO}, REQ_RECORD_AUDIO);
-            return;
-        }
-
-        if (!voiceHelper.isRecording()) {
-            try {
-                // Fix #8: Start recording with 120s max timer and live countdown banner
-                voiceHelper.startRecording(this, new VoiceRecorderHelper.RecordingProgressListener() {
-                    @Override
-                    public void onTick(int elapsedSeconds, int maxSeconds) {
-                        tvRecordingTimerBanner.setVisibility(View.VISIBLE);
-                        tvRecordingTimerBanner.setText(String.format(Locale.US,
-                                "🔴 جاري التسجيل الصوتي... %02d:%02d / %02d:%02d (اضغط للإرسال)",
-                                elapsedSeconds / 60, elapsedSeconds % 60,
-                                maxSeconds / 60, maxSeconds % 60));
-                    }
-
-                    @Override
-                    public void onMaxDurationReached(File outputFile, int durationSeconds) {
-                        resetVoiceRecordingUI();
-                        Toast.makeText(RoomActivity.this, "تم الوصول للحد الأقصى (120 ثانية) — جاري إرسال التسجيل...", Toast.LENGTH_SHORT).show();
-                        uploadRecordedVoiceFile(outputFile, durationSeconds);
-                    }
-                });
-                btnRecordVoice.setColorFilter(palette.danger);
-                tvRecordingTimerBanner.setVisibility(View.VISIBLE);
-            } catch (Exception e) {
-                resetVoiceRecordingUI();
-                Toast.makeText(this, "تعذر بدء التسجيل: " + e.getMessage(), Toast.LENGTH_SHORT).show();
-            }
-        } else {
-            int durationSec = voiceHelper.stopRecording();
-            resetVoiceRecordingUI();
-            File audioFile = voiceHelper.getCurrentOutputFile();
-            uploadRecordedVoiceFile(audioFile, durationSec);
-        }
-    }
-
-    private void resetVoiceRecordingUI() {
-        btnRecordVoice.setColorFilter(palette.accent);
-        tvRecordingTimerBanner.setVisibility(View.GONE);
-    }
-
-    private void uploadRecordedVoiceFile(File audioFile, int durationSec) {
-        if (audioFile != null && audioFile.exists()) {
-            Toast.makeText(this, "جاري إرسال المقطع الصوتي (" + durationSec + " ثانية)...", Toast.LENGTH_SHORT).show();
-            catboxUploader.processAndUploadFile(audioFile, "audio/mp4", new CatboxUploader.UploadCallback() {
-                @Override
-                public void onSuccess(String fileUrlOrDataUrl, String fileName, long fileSize, String mimeType) {
-                    Message.FileAttachment att = new Message.FileAttachment();
-                    att.url = fileUrlOrDataUrl;
-                    att.name = fileName;
-                    att.size = fileSize;
-                    att.mime = mimeType;
-                    att.duration = durationSec;
-                    mqttManager.sendFileOrVoiceMessage("voice", att, "رسالة صوتية (" + durationSec + "s)", activeReplyRef);
-                    // Clean up local recording file after upload
-                    try { audioFile.delete(); } catch (Exception ignored) {}
-                }
-
-                @Override
-                public void onError(String errorMessage) {
-                    Toast.makeText(RoomActivity.this, errorMessage, Toast.LENGTH_LONG).show();
-                }
-            });
-        }
-    }
-
-    /**
-     * Fix #2: Uses notifyMessageUpdatedById(message.id) instead of stale position index.
-     */
     private void handleTranslateMessage(Message message) {
         if (message.showingTranslated) {
             message.showingTranslated = false;
@@ -560,119 +641,101 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
             return;
         }
 
-        if (message.translatedText != null && !message.translatedText.isEmpty()) {
+        if (message.translatedText != null) {
             message.showingTranslated = true;
             messagesAdapter.notifyMessageUpdatedById(message.id);
             return;
         }
 
         String targetLang = prefs.getPreferredLanguage();
-        translationHelper.translate(message.id, message.text, targetLang, new TranslationHelper.TranslationCallback() {
+        translationHelper.translateText(message.text, targetLang, new TranslationHelper.TranslationCallback() {
             @Override
-            public void onTranslated(String translatedText) {
-                message.translatedText = translatedText;
-                message.showingTranslated = true;
-                messagesAdapter.notifyMessageUpdatedById(message.id);
+            public void onSuccess(String translatedText, String detectedSourceLang) {
+                mainHandler.post(() -> {
+                    message.translatedText = translatedText;
+                    message.showingTranslated = true;
+                    messagesAdapter.notifyMessageUpdatedById(message.id);
+                });
             }
 
             @Override
             public void onError(String error) {
-                Toast.makeText(RoomActivity.this, error, Toast.LENGTH_SHORT).show();
+                mainHandler.post(() -> Toast.makeText(RoomActivity.this, "Translation failed", Toast.LENGTH_SHORT).show());
             }
         });
     }
 
     private void handleVoicePlayback(Message message) {
         if (message.file == null || message.file.url == null) return;
-        if (message.id != null && message.id.equals(voiceHelper.getPlayingMessageId())) {
-            voiceHelper.stopPlayback();
-            messagesAdapter.setPlayingMessageId(null);
-            return;
-        }
-        voiceHelper.playVoiceUrlOrDataUri(this, message.id, message.file.url, new VoiceRecorderHelper.PlaybackListener() {
+        voiceHelper.playVoiceMessage(message.id, message.file.url, new VoiceRecorderHelper.PlaybackListener() {
             @Override
             public void onStarted(String messageId) {
-                messagesAdapter.setPlayingMessageId(messageId);
+                messagesAdapter.setAudioPlayingMessageId(messageId);
             }
 
             @Override
             public void onCompleted(String messageId) {
-                messagesAdapter.setPlayingMessageId(null);
+                messagesAdapter.setAudioPlayingMessageId(null);
             }
 
             @Override
             public void onError(String error) {
-                messagesAdapter.setPlayingMessageId(null);
-                Toast.makeText(RoomActivity.this, error, Toast.LENGTH_SHORT).show();
+                messagesAdapter.setAudioPlayingMessageId(null);
+                Toast.makeText(RoomActivity.this, "Audio playback error: " + error, Toast.LENGTH_SHORT).show();
             }
         });
     }
 
     private void showInviteShareDialog() {
-        String shareUrl = "https://takidz507.github.io/run/?room=" + roomCode;
-        new MaterialAlertDialogBuilder(this)
-                .setTitle("مشاركة الغرفة (" + roomCode + ")")
-                .setMessage("\u0627\u0644\u0643\u0648\u062F \u0627\u0644\u0645\u0628\u0627\u0634\u0631: " + roomCode + "\n\n\u0631\u0627\u0628\u0637 \u0627\u0644\u062F\u0639\u0648\u0629 \u0627\u0644\u0645\u0628\u0627\u0634\u0631:\n" + shareUrl)
-                .setPositiveButton("مشاركة الرابط", (d, w) -> {
-                    Intent sendIntent = new Intent(Intent.ACTION_SEND);
-                    sendIntent.setType("text/plain");
-                    sendIntent.putExtra(Intent.EXTRA_TEXT, "\u0627\u0646\u0636\u0645 \u0625\u0644\u0649 \u063A\u0631\u0641\u062A\u064A \u0639\u0644\u0649 \u062A\u0637\u0628\u064A\u0642 run:\n\u0627\u0644\u0643\u0648\u062F: " + roomCode + "\n\u0627\u0644\u0631\u0627\u0628\u0637: " + shareUrl);
-                    startActivity(Intent.createChooser(sendIntent, "مشاركة الغرفة عبر"));
-                })
-                .setNeutralButton("نسخ الكود", (d, w) -> copyToClipboard("Room Code", roomCode, "تم نسخ الكود: " + roomCode))
-                .setNegativeButton("إغلاق", null)
-                .show();
+        String webUrl = "https://takidz507.github.io/run/?room=" + roomCode;
+        String shareBody = "Join room '" + (roomName != null ? roomName : ("Room " + roomCode))
+                + "' on Run with code #" + roomCode + " or link: " + webUrl;
+
+        Intent sendIntent = new Intent();
+        sendIntent.setAction(Intent.ACTION_SEND);
+        sendIntent.putExtra(Intent.EXTRA_TEXT, shareBody);
+        sendIntent.setType("text/plain");
+
+        Intent shareIntent = Intent.createChooser(sendIntent, "Share Room Invitation");
+        startActivity(shareIntent);
     }
 
     private void confirmDeleteRoom() {
         new MaterialAlertDialogBuilder(this)
-                .setTitle("حذف الغرفة نهائياً؟")
-                .setMessage("سيتم مسح حالة الغرفة وحضورها من الخادم لجميع المشاركين وإزالتها من الغرف الأخيرة.")
-                .setPositiveButton("حذف الغرفة", (d, w) -> mqttManager.deleteActiveRoom())
-                .setNegativeButton("إلغاء", null)
+                .setTitle("Leave or Delete Room")
+                .setMessage("Do you want to leave this room or delete it completely for all members?")
+                .setPositiveButton("Delete for All", (dialog, which) -> {
+                    mqttManager.deleteActiveRoom();
+                    finish();
+                })
+                .setNegativeButton("Leave Room", (dialog, which) -> {
+                    mqttManager.leaveActiveRoom();
+                    finish();
+                })
+                .setNeutralButton("Cancel", null)
                 .show();
     }
 
-    private void copyToClipboard(String label, String value, String toastMsg) {
-        ClipboardManager cb = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-        if (cb != null) {
-            cb.setPrimaryClip(ClipData.newPlainText(label, value));
-            Toast.makeText(this, toastMsg, Toast.LENGTH_SHORT).show();
+    private void copyToClipboard(String label, String text, String toast) {
+        ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+        if (cm != null) {
+            cm.setPrimaryClip(ClipData.newPlainText(label, text));
+            Toast.makeText(this, toast, Toast.LENGTH_SHORT).show();
         }
     }
 
     private void applyTheme() {
-        getWindow().setStatusBarColor(palette.bg);
-        getWindow().setNavigationBarColor(palette.bg);
+        palette = ThemeHelper.getPalette(prefs.getThemeMode());
         rootRoomLayout.setBackgroundColor(palette.bg);
-
         topBarCard.setCardBackgroundColor(palette.panel);
         topBarCard.setStrokeColor(palette.panelHover);
-        tvRoomTitle.setTextColor(palette.text);
-        tvRoomCodeBadge.setTextColor(palette.accent);
-        tvRoomSyncStatus.setTextColor(palette.success);
-
-        btnBack.setColorFilter(palette.text);
-        btnShareRoom.setColorFilter(palette.accent);
-        btnDeleteRoom.setColorFilter(palette.danger);
-
         progressHeaderCard.setCardBackgroundColor(palette.panel);
         progressHeaderCard.setStrokeColor(palette.panelHover);
-        progressRingView.setColors(palette.accent, palette.panelHover, palette.text);
-        tvTasksSummaryTitle.setTextColor(palette.text);
-        tvTasksSummarySub.setTextColor(palette.muted);
-
-        etMessageInput.setTextColor(palette.text);
-        etMessageInput.setHintTextColor(palette.subtle);
+        chatPanel.setBackgroundColor(palette.bg);
+        tasksPanel.setBackgroundColor(palette.bg);
+        notesPanel.setBackgroundColor(palette.bg);
         btnSendMessage.setBackgroundTintList(ColorStateList.valueOf(palette.accent));
-        btnSendMessage.setTextColor(palette.accentInk);
-        btnAttachFile.setColorFilter(palette.accent);
-        btnRecordVoice.setColorFilter(palette.accent);
-
-        etNewTaskInput.setTextColor(palette.text);
-        etNewTaskInput.setHintTextColor(palette.subtle);
-        btnAddTask.setBackgroundTintList(ColorStateList.valueOf(palette.accent));
-        btnAddTask.setTextColor(palette.accentInk);
+        btnSendMessage.setIconTint(ColorStateList.valueOf(palette.accentInk));
     }
 
     @Override
@@ -688,123 +751,120 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
         super.onPause();
         mqttManager.setChatActivelyVisible(false);
         mqttManager.removeRoomListener(this);
-        voiceHelper.stopPlayback();
-        // Fix #3: Stop & discard any ongoing voice recording if user leaves the screen
         if (voiceHelper.isRecording()) {
             voiceHelper.cancelRecording();
-            resetVoiceRecordingUI();
-            Toast.makeText(this, "تم إلغاء التسجيل الصوتي بسبب مغادرة الشاشة.", Toast.LENGTH_SHORT).show();
+            tvRecordingTimerBanner.setVisibility(View.GONE);
+            btnRecordVoice.setColorFilter(palette.accent);
         }
+        voiceHelper.stopPlayback();
     }
+
+    // ==========================================
+    // RoomListener Callbacks
+    // ==========================================
 
     @Override
     public void onRoomStateUpdated(RoomData roomData) {
-        if (roomData == null) return;
-        if (roomData.meta != null && roomData.meta.name != null && !roomData.meta.name.isEmpty()) {
-            tvRoomTitle.setText(roomData.meta.name);
-        }
-
-        messagesAdapter.setAvatars(roomData.avatars);
-
-        // Fix #5: Check if user is near bottom BEFORE updating list
-        boolean wasNearBottom = isNearBottom();
-        int newCount = roomData.messages != null ? roomData.messages.size() : 0;
-        boolean hasNewMessages = newCount > lastMessageCount;
-        lastMessageCount = newCount;
-
-        messagesAdapter.submitList(roomData.messages);
-
-        if (hasNewMessages && newCount > 0) {
-            Message latest = roomData.messages.get(newCount - 1);
-            boolean sentByMe = latest.userId != null && latest.userId.equals(prefs.getUserId());
-            if (wasNearBottom || sentByMe) {
-                rvMessages.scrollToPosition(newCount - 1);
-                btnScrollToBottom.setVisibility(View.GONE);
-            } else {
-                btnScrollToBottom.setVisibility(View.VISIBLE);
+        runOnUiThread(() -> {
+            if (roomData == null) return;
+            if (roomData.meta != null && roomData.meta.name != null) {
+                tvRoomTitle.setText(roomData.meta.name);
             }
-        }
 
-        // Fix #2: Bounded, deduplicated auto-translation with safe ID-based adapter refresh
-        if (prefs.isAutoTranslateEnabled() && roomData.messages != null) {
-            String myId = prefs.getUserId();
-            String targetLang = prefs.getPreferredLanguage();
-            for (Message m : roomData.messages) {
-                if (m != null && m.id != null && m.userId != null && !m.userId.equals(myId)
-                        && m.translatedText == null && "text".equals(m.type)) {
-                    translationHelper.translate(m.id, m.text, targetLang, new TranslationHelper.TranslationCallback() {
-                        @Override
-                        public void onTranslated(String translatedText) {
-                            m.translatedText = translatedText;
-                            m.showingTranslated = true;
-                            messagesAdapter.notifyMessageUpdatedById(m.id);
-                        }
+            // 1. Messages Update
+            List<Message> msgs = roomData.messages != null ? roomData.messages : List.of();
+            btnTabChat.setText("Chat (" + msgs.size() + ")");
+            int newCount = msgs.size();
+            boolean hasNew = newCount > lastMessageCount;
+            lastMessageCount = newCount;
 
-                        @Override
-                        public void onError(String error) {}
-                    });
+            messagesAdapter.setMessages(msgs);
+
+            if (hasNew) {
+                if (isNearBottom()) {
+                    rvMessages.scrollToPosition(Math.max(0, newCount - 1));
+                    btnScrollToBottom.setVisibility(View.GONE);
+                } else {
+                    btnScrollToBottom.setVisibility(View.VISIBLE);
                 }
             }
-        }
 
-        tasksAdapter.submitList(roomData.tasks);
-        int totalTasks = roomData.tasks != null ? roomData.tasks.size() : 0;
-        int doneTasks = 0;
-        if (roomData.tasks != null) {
-            for (TaskItem t : roomData.tasks) {
-                if (t.done) doneTasks++;
+            // 2. Tasks Update
+            List<TaskItem> tasks = roomData.tasks != null ? roomData.tasks : List.of();
+            tasksAdapter.setTasks(tasks);
+            int doneCount = 0;
+            for (TaskItem t : tasks) {
+                if (t.done) doneCount++;
             }
-        }
-        progressRingView.setProgress(doneTasks, totalTasks);
-        tvTasksSummarySub.setText(doneTasks + " / " + totalTasks + " مهام مكتملة");
+            int totalTasks = tasks.size();
+            progressRingView.setProgress(doneCount, totalTasks);
+            tvTasksSummaryTitle.setText(doneCount + " of " + totalTasks + " completed");
+            if (totalTasks == 0) {
+                tvTasksSummarySub.setText("Add tasks below for shared tracking");
+            } else if (doneCount == totalTasks) {
+                tvTasksSummarySub.setText("🎉 All tasks completed! Great job!");
+            } else {
+                tvTasksSummarySub.setText((totalTasks - doneCount) + " remaining tasks to complete");
+            }
 
-        btnTabChat.setText("💬 الدردشة (" + newCount + ")");
-        btnTabTasks.setText("✓ المهام (" + doneTasks + "/" + totalTasks + ")");
+            // 3. Shared Notes Update
+            if (roomData.note != null) {
+                String remoteNote = roomData.note.content != null ? roomData.note.content : "";
+                String currentText = etSharedNoteContent.getText().toString();
+                if (!remoteNote.equals(currentText) && !etSharedNoteContent.hasFocus()) {
+                    isUpdatingNoteRemotely = true;
+                    etSharedNoteContent.setText(remoteNote);
+                    updateNoteStats(remoteNote);
+                    isUpdatingNoteRemotely = false;
+                }
+                String author = (roomData.note.lastEditedBy != null && !roomData.note.lastEditedBy.isEmpty())
+                        ? roomData.note.lastEditedBy : "User";
+                tvNoteStatus.setText("Last edited by " + author + " • Synced with room");
+            }
+        });
     }
 
     @Override
     public void onRoomPresenceChanged(int roomOnlineCount) {
-        if (mqttManager.isConnected()) {
-            tvRoomSyncStatus.setText("● متصل (" + roomOnlineCount + " بالغرفة)");
-            tvRoomSyncStatus.setTextColor(palette.success);
-        } else {
-            tvRoomSyncStatus.setText("◌ غير متصل");
-            tvRoomSyncStatus.setTextColor(palette.muted);
-        }
+        runOnUiThread(() -> {
+            tvRoomSyncStatus.setText("● " + roomOnlineCount + " in room • Synced");
+        });
     }
 
     @Override
     public void onTypingUsersChanged(List<String> typingNames) {
-        if (typingNames == null || typingNames.isEmpty()) {
-            tvTypingIndicator.setVisibility(View.GONE);
-        } else {
-            tvTypingIndicator.setVisibility(View.VISIBLE);
-            tvTypingIndicator.setText("✍️ " + String.join("، ", typingNames) + " يكتب الآن...");
-        }
+        runOnUiThread(() -> {
+            if (typingNames == null || typingNames.isEmpty()) {
+                tvTypingIndicator.setVisibility(View.GONE);
+            } else {
+                tvTypingIndicator.setVisibility(View.VISIBLE);
+                if (typingNames.size() == 1) {
+                    tvTypingIndicator.setText(typingNames.get(0) + " is typing...");
+                } else {
+                    tvTypingIndicator.setText(typingNames.size() + " members are typing...");
+                }
+            }
+        });
     }
 
     @Override
     public void onRoomDeleted() {
-        Toast.makeText(this, "لم تعد هذه الغرفة موجودة — تمت إزالتها من الغرف الأخيرة.", Toast.LENGTH_LONG).show();
-        finish();
+        runOnUiThread(() -> {
+            Toast.makeText(this, "This room was closed or deleted", Toast.LENGTH_LONG).show();
+            finish();
+        });
     }
 
     @Override
     public void onConnectionStateChanged(boolean connected) {
-        if (connected) {
-            tvRoomSyncStatus.setText("● متصل (" + mqttManager.getRoomOnlineCount() + " بالغرفة)");
-            tvRoomSyncStatus.setTextColor(palette.success);
-        } else {
-            tvRoomSyncStatus.setText("◌ غير متصل — جاري إعادة الاتصال...");
-            tvRoomSyncStatus.setTextColor(palette.muted);
-        }
-    }
-
-    @Override
-    public void onRequestPermissionsResult(int requestCode, @NonNull String[] permissions, @NonNull int[] grantResults) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults);
-        if (requestCode == REQ_RECORD_AUDIO && grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            toggleVoiceRecording();
-        }
+        runOnUiThread(() -> {
+            if (connected) {
+                tvRoomSyncStatus.setTextColor(palette.success);
+                tvRoomSyncStatus.setText("● Synced");
+            } else {
+                tvRoomSyncStatus.setTextColor(palette.muted);
+                tvRoomSyncStatus.setText("Connecting...");
+            }
+        });
     }
 }

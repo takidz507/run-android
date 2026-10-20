@@ -43,8 +43,15 @@ public class TranslationHelper {
     private final Handler mainHandler = new Handler(Looper.getMainLooper());
 
     public interface TranslationCallback {
-        void onTranslated(String translatedText);
+        default void onTranslated(String translatedText) {}
+        default void onSuccess(String translatedText, String detectedSourceLang) {
+            onTranslated(translatedText);
+        }
         void onError(String error);
+    }
+
+    public void translateText(String text, String targetLang, TranslationCallback callback) {
+        translate(String.valueOf(text != null ? text.hashCode() : 0), text, targetLang, callback);
     }
 
     public String getCached(String messageId, String targetLang) {
@@ -102,7 +109,7 @@ public class TranslationHelper {
                     LRU_CACHE.put(cacheKey, result);
                     PENDING_KEYS.remove(cacheKey);
                     if (callback != null) {
-                        mainHandler.post(() -> callback.onTranslated(result));
+                        mainHandler.post(() -> callback.onSuccess(result, "auto"));
                     }
                 }
             } catch (Exception e) {

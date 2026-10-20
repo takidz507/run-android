@@ -4,6 +4,7 @@ public class RecentRoom {
     public String code;
     public String name;
     public String joinedAt;
+    public String visitedAt;
 
     public RecentRoom() {}
 
@@ -11,5 +12,6 @@ public class RecentRoom {
         this.code = code;
         this.name = name;
         this.joinedAt = joinedAt;
+        this.visitedAt = joinedAt;
     }
 }

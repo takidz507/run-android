@@ -42,6 +42,10 @@ public class TasksAdapter extends RecyclerView.Adapter<TasksAdapter.TaskViewHold
         notifyItemRangeChanged(0, tasks.size());
     }
 
+    public void setTasks(List<TaskItem> newTasks) {
+        submitList(newTasks);
+    }
+
     /**
      * Fix #12: Uses DiffUtil for smooth task list updates without full redraws.
      */
@@ -106,7 +110,7 @@ public class TasksAdapter extends RecyclerView.Adapter<TasksAdapter.TaskViewHold
         }
 
         String creator = (task.author != null && !task.author.isEmpty()) ? task.author : "Guest";
-        holder.tvTaskAuthor.setText("أضافها: " + creator);
+        holder.tvTaskAuthor.setText("Added by " + creator);
         holder.tvTaskAuthor.setTextColor(palette.subtle);
 
         holder.cbTaskDone.setOnCheckedChangeListener((buttonView, isChecked) -> {

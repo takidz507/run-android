@@ -1,4 +1,57 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-<string name="app_name">run</string>
+    <string name="app_name">Run</string>
+    <string name="app_tagline">Serverless P2P Real-Time Rooms</string>
+    
+    <!-- Navigation & Tabs -->
+    <string name="tab_chat">Chat</string>
+    <string name="tab_tasks">Tasks</string>
+    <string name="tab_notes">Shared Notes</string>
+    <string name="tab_online_now">Online Now</string>
+    <string name="tab_friends_invites">Friends &amp; Invites</string>
+    
+    <!-- Home Screen -->
+    <string name="create_room">Create Room</string>
+    <string name="join_by_code">Join by Code</string>
+    <string name="public_groups">Public Groups</string>
+    <string name="feedback_board">Feedback Board</string>
+    <string name="online_now_format">%d Online</string>
+    <string name="room_name_hint">Room name (optional)</string>
+    <string name="user_name_hint">Your display name</string>
+    <string name="make_public_label">List in Public Directory</string>
+    <string name="password_optional_hint">Password protection (optional)</string>
+    <string name="recent_rooms_title">Recent Rooms</string>
+    <string name="no_recent_rooms">No recent rooms yet. Create or join one above!</string>
+    
+    <!-- Room Screen -->
+    <string name="send_message_hint">Type a message...</string>
+    <string name="add_task_hint">Add a new task...</string>
+    <string name="notes_placeholder">Write shared notes, meeting minutes, links, or ideas here. Everyone in the room sees updates live...</string>
+    <string name="room_code_copied">Room code copied: %s</string>
+    <string name="invite_link_copied">Invite link copied: %s</string>
+    
+    <!-- Online Directory -->
+    <string name="online_directory_title">Online Users</string>
+    <string name="search_users_hint">Search online users...</string>
+    <string name="invite_to_room">Invite</string>
+    <string name="add_friend">Add Friend</string>
+    <string name="friend_pending">Pending</string>
+    <string name="friend_status">Friends</string>
+    <string name="self_indicator">You</string>
+    <string name="accept">Accept</string>
+    <string name="decline">Decline</string>
+    <string name="active_now">Active now</string>
+    
+    <!-- Feedback -->
+    <string name="feedback_title">Feedback &amp; Ideas</string>
+    <string name="new_suggestion">New Suggestion</string>
+    <string name="category_idea">Idea</string>
+    <string name="category_feature">Feature</string>
+    <string name="category_bug">Bug</string>
+    <string name="category_improvement">Improvement</string>
+    <string name="suggestion_title_hint">Suggestion title</string>
+    <string name="suggestion_content_hint">Describe your idea or report...</string>
+    <string name="submit">Submit</string>
+    <string name="cancel">Cancel</string>
+    <string name="close">Close</string>
 </resources>

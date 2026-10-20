@@ -4,11 +4,11 @@
     android:id="@+id/taskCard"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:layout_marginVertical="5dp"
+    android:layout_marginVertical="4dp"
     app:cardBackgroundColor="@color/run_panel"
-    app:cardCornerRadius="14dp"
+    app:cardCornerRadius="16dp"
     app:cardElevation="0dp"
-    app:strokeColor="@color/run_panel_soft"
+    app:strokeColor="@color/run_panel_hover"
     app:strokeWidth="1dp">
 
     <LinearLayout
@@ -27,14 +27,15 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
-            android:layout_marginHorizontal="8dp"
+            android:layout_marginStart="8dp"
+            android:layout_marginEnd="8dp"
             android:orientation="vertical">
 
             <TextView
                 android:id="@+id/tvTaskText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="مهمة تجريبية"
+                android:text="Task text"
                 android:textColor="@color/run_text"
                 android:textSize="14sp"
                 android:textStyle="bold" />
@@ -44,7 +45,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="2dp"
-                android:text="أضافها: تقي"
+                android:text="Added by User"
                 android:textColor="@color/run_subtle"
                 android:textSize="11sp" />
         </LinearLayout>
@@ -54,7 +55,8 @@
             android:layout_width="36dp"
             android:layout_height="36dp"
             android:background="?attr/selectableItemBackgroundBorderless"
-            android:contentDescription="حذف المهمة"
-            android:src="@android:drawable/ic_menu_close_clear_cancel" />
+            android:contentDescription="Delete Task"
+            android:src="@drawable/ic_close"
+            app:tint="@color/run_subtle" />
     </LinearLayout>
 </com.google.android.material.card.MaterialCardView>

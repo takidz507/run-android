@@ -12,6 +12,7 @@ public class RoomData {
     public List<Message> messages = new ArrayList<>();
     public List<TaskItem> tasks = new ArrayList<>();
     public Map<String, AvatarProfile> avatars = new HashMap<>();
+    public NoteData note = new NoteData();
 
     public static class Meta {
         public String code = "";
@@ -31,6 +32,22 @@ public class RoomData {
             this.name = name;
             this.avatarUrl = avatarUrl;
             this.bio = bio;
+        }
+    }
+
+    public static class NoteData {
+        public String content = "";
+        public String lastEditedBy = "";
+        public String lastEditedAt = "";
+        public long version = 0L;
+
+        public NoteData() {}
+
+        public NoteData(String content, String lastEditedBy, String lastEditedAt, long version) {
+            this.content = content;
+            this.lastEditedBy = lastEditedBy;
+            this.lastEditedAt = lastEditedAt;
+            this.version = version;
         }
     }
 }

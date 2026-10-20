@@ -1,0 +1,73 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:layout_width="match_parent"
+    android:layout_height="wrap_content"
+    android:orientation="vertical"
+    android:background="#171821"
+    android:padding="20dp">
+
+    <TextView
+        android:id="@+id/tvInviteDialogTitle"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="#f4f3f8"
+        android:textSize="18sp"
+        android:textStyle="bold"
+        android:text="Invite User to Room" />
+
+    <TextView
+        android:id="@+id/tvInviteDialogSub"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:textColor="#9b9dac"
+        android:textSize="13sp"
+        android:layout_marginTop="2dp"
+        android:text="Select a room to invite this user into:" />
+
+    <!-- Radio or list of rooms -->
+    <LinearLayout
+        android:id="@+id/layoutRoomsList"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:layout_marginTop="14dp" />
+
+    <EditText
+        android:id="@+id/etCustomRoomCode"
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:layout_marginTop="10dp"
+        android:background="@drawable/bg_input_field"
+        android:paddingStart="14dp"
+        android:paddingEnd="14dp"
+        android:hint="Or enter room code (6 or 12 chars)"
+        android:textColorHint="#747786"
+        android:textColor="#f4f3f8"
+        android:textSize="14sp"
+        android:singleLine="true" />
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="horizontal"
+        android:gravity="end"
+        android:layout_marginTop="16dp">
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnCancelInvite"
+            style="@style/Widget.Material3.Button.TextButton"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:text="Cancel" />
+
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnSendInvite"
+            style="@style/Widget.Material3.Button"
+            android:layout_width="wrap_content"
+            android:layout_height="44dp"
+            android:layout_marginStart="8dp"
+            app:cornerRadius="12dp"
+            android:text="Send Invite" />
+    </LinearLayout>
+</LinearLayout>

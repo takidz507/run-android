@@ -57,7 +57,10 @@ public class VoiceRecorderHelper {
         }
     };
 
+    private Context context;
+
     public VoiceRecorderHelper(Context context) {
+        this.context = context != null ? context.getApplicationContext() : null;
         cleanupStaleAudioCache(context);
     }
 
@@ -146,6 +149,10 @@ public class VoiceRecorderHelper {
 
     public File getCurrentOutputFile() {
         return currentOutputFile;
+    }
+
+    public void playVoiceMessage(String messageId, String urlOrDataUri, PlaybackListener listener) {
+        playVoiceUrlOrDataUri(context, messageId, urlOrDataUri, listener);
     }
 
     public void playVoiceUrlOrDataUri(Context context, String messageId, String urlOrDataUri, PlaybackListener listener) {

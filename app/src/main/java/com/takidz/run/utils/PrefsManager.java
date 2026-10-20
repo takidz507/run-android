@@ -5,11 +5,15 @@ import android.content.SharedPreferences;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import com.takidz.run.models.OnlineUser;
 import com.takidz.run.models.RecentRoom;
+import com.takidz.run.models.SignalMessage;
 
 import java.lang.reflect.Type;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.UUID;
 
 public class PrefsManager {
@@ -23,6 +27,12 @@ public class PrefsManager {
     private static final String KEY_AUTO_TRANSLATE = "run_auto_translate";
     private static final String KEY_NOTIFICATIONS = "run_notifications_enabled";
     private static final String KEY_RECENT_ROOMS = "run_recent_rooms_v1";
+
+    // New Friend & Signaling Keys
+    private static final String KEY_FRIENDS_LIST = "run_friends_list_v1";
+    private static final String KEY_PENDING_REQUESTS = "run_pending_requests_v1";
+    private static final String KEY_SENT_REQUESTS = "run_sent_requests_v1";
+    private static final String KEY_PENDING_INVITES = "run_pending_invites_v1";
 
     private final SharedPreferences prefs;
     private final Gson gson = new Gson();
@@ -133,5 +143,131 @@ public class PrefsManager {
             }
         }
         prefs.edit().putString(KEY_RECENT_ROOMS, gson.toJson(filtered)).apply();
+    }
+
+    // ==========================================
+    // Friends & P2P Signaling Support
+    // ==========================================
+
+    public List<OnlineUser> getFriends() {
+        String json = prefs.getString(KEY_FRIENDS_LIST, null);
+        if (json == null || json.isEmpty()) return new ArrayList<>();
+        try {
+            Type listType = new TypeToken<ArrayList<OnlineUser>>() {}.getType();
+            List<OnlineUser> list = gson.fromJson(json, listType);
+            return list != null ? list : new ArrayList<>();
+        } catch (Exception e) {
+            return new ArrayList<>();
+        }
+    }
+
+    public boolean isFriend(String userId) {
+        if (userId == null || userId.isEmpty()) return false;
+        for (OnlineUser u : getFriends()) {
+            if (u.userId != null && u.userId.equals(userId)) return true;
+        }
+        return false;
+    }
+
+    public void addFriend(String userId, String name, String avatarUrl) {
+        if (userId == null || userId.isEmpty()) return;
+        List<OnlineUser> friends = getFriends();
+        friends.removeIf(u -> u.userId != null && u.userId.equals(userId));
+        OnlineUser newFriend = new OnlineUser(userId, name, avatarUrl, "", System.currentTimeMillis(), false);
+        friends.add(0, newFriend);
+        prefs.edit().putString(KEY_FRIENDS_LIST, gson.toJson(friends)).apply();
+        removePendingRequest(userId);
+        removeSentRequest(userId);
+    }
+
+    public void removeFriend(String userId) {
+        if (userId == null) return;
+        List<OnlineUser> friends = getFriends();
+        boolean removed = friends.removeIf(u -> u.userId != null && u.userId.equals(userId));
+        if (removed) {
+            prefs.edit().putString(KEY_FRIENDS_LIST, gson.toJson(friends)).apply();
+        }
+    }
+
+    public List<SignalMessage> getPendingRequestsReceived() {
+        String json = prefs.getString(KEY_PENDING_REQUESTS, null);
+        if (json == null || json.isEmpty()) return new ArrayList<>();
+        try {
+            Type listType = new TypeToken<ArrayList<SignalMessage>>() {}.getType();
+            List<SignalMessage> list = gson.fromJson(json, listType);
+            return list != null ? list : new ArrayList<>();
+        } catch (Exception e) {
+            return new ArrayList<>();
+        }
+    }
+
+    public void addPendingRequest(SignalMessage req) {
+        if (req == null || req.fromUserId == null) return;
+        List<SignalMessage> list = getPendingRequestsReceived();
+        list.removeIf(r -> r.fromUserId != null && r.fromUserId.equals(req.fromUserId));
+        list.add(0, req);
+        prefs.edit().putString(KEY_PENDING_REQUESTS, gson.toJson(list)).apply();
+    }
+
+    public void removePendingRequest(String fromUserId) {
+        if (fromUserId == null) return;
+        List<SignalMessage> list = getPendingRequestsReceived();
+        boolean removed = list.removeIf(r -> r.fromUserId != null && r.fromUserId.equals(fromUserId));
+        if (removed) {
+            prefs.edit().putString(KEY_PENDING_REQUESTS, gson.toJson(list)).apply();
+        }
+    }
+
+    public Set<String> getSentRequestUserIds() {
+        return prefs.getStringSet(KEY_SENT_REQUESTS, new HashSet<>());
+    }
+
+    public boolean hasSentRequest(String toUserId) {
+        if (toUserId == null) return false;
+        return getSentRequestUserIds().contains(toUserId);
+    }
+
+    public void addSentRequest(String toUserId) {
+        if (toUserId == null) return;
+        Set<String> set = new HashSet<>(getSentRequestUserIds());
+        set.add(toUserId);
+        prefs.edit().putStringSet(KEY_SENT_REQUESTS, set).apply();
+    }
+
+    public void removeSentRequest(String toUserId) {
+        if (toUserId == null) return;
+        Set<String> set = new HashSet<>(getSentRequestUserIds());
+        if (set.remove(toUserId)) {
+            prefs.edit().putStringSet(KEY_SENT_REQUESTS, set).apply();
+        }
+    }
+
+    public List<SignalMessage> getPendingRoomInvites() {
+        String json = prefs.getString(KEY_PENDING_INVITES, null);
+        if (json == null || json.isEmpty()) return new ArrayList<>();
+        try {
+            Type listType = new TypeToken<ArrayList<SignalMessage>>() {}.getType();
+            List<SignalMessage> list = gson.fromJson(json, listType);
+            return list != null ? list : new ArrayList<>();
+        } catch (Exception e) {
+            return new ArrayList<>();
+        }
+    }
+
+    public void addRoomInvite(SignalMessage invite) {
+        if (invite == null || invite.roomCode == null) return;
+        List<SignalMessage> list = getPendingRoomInvites();
+        list.removeIf(i -> i.roomCode != null && i.roomCode.equals(invite.roomCode));
+        list.add(0, invite);
+        prefs.edit().putString(KEY_PENDING_INVITES, gson.toJson(list)).apply();
+    }
+
+    public void removeRoomInvite(String inviteId) {
+        if (inviteId == null) return;
+        List<SignalMessage> list = getPendingRoomInvites();
+        boolean removed = list.removeIf(i -> (i.id != null && i.id.equals(inviteId)) || (i.roomCode != null && i.roomCode.equals(inviteId)));
+        if (removed) {
+            prefs.edit().putString(KEY_PENDING_INVITES, gson.toJson(list)).apply();
+        }
     }
 }

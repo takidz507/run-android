@@ -19,8 +19,12 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.takidz.run.RunApplication;
 import com.takidz.run.models.DirectoryData;
+import com.takidz.run.models.FeedbackBoardData;
+import com.takidz.run.models.FeedbackPost;
 import com.takidz.run.models.Message;
+import com.takidz.run.models.OnlineUser;
 import com.takidz.run.models.RoomData;
+import com.takidz.run.models.SignalMessage;
 import com.takidz.run.models.TaskItem;
 import com.takidz.run.ui.RoomActivity;
 import com.takidz.run.utils.PrefsManager;
@@ -48,17 +52,14 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Full Native Android port of the `run` MQTT real-time synchronization engine.
- * Includes Audit Fixes:
- * - #1 & F1: Real local notifications when new messages arrive while chat is in background.
- * - #4: Offline pending state sync on reconnect (pendingRoomStatePublish).
- * - #6: Proper ghost/deleted room detection when joining a deleted room (joiningExistingRoom).
- * - #9: Null-safety for RoomData.meta in mergeRoomData().
- * - #10: Accurate online presence counter without artificial Math.max(1, count).
- * - #11: Lifecycle-aware presence heartbeat (pauses heartbeat & clears presence when backgrounded).
- * - #19: Cancels previous typing expiry Runnable per user before scheduling a new one.
- * - #20: Clears all room presence topics when deleting a room.
- * - F5: Syncs user profile avatarUrl in room state.
+ * Enterprise Native Android port of the `run` MQTT real-time synchronization engine.
+ * Fully compatible with the existing web version and protocol.
+ * Includes:
+ * - Online Users Directory with live profiles and last seen timestamps
+ * - P2P Friend Requests and Room Invites signaling over MQTT
+ * - Shared Live Notes in every room
+ * - Public Community Feedback Board with 👍/❤️ voting over public MQTT
+ * - Audit Fixes (#1, F1, #4, #6, #9, #10, #11, #19, #20, F5)
  */
 public class MqttRoomManager {
     private static final String TAG = "MqttRoomManager";
@@ -71,6 +72,8 @@ public class MqttRoomManager {
     public static final String TOPIC_DIRECTORY = "runapp/v1/directory";
     public static final String TOPIC_PRESENCE_PREFIX = "runapp/v1/presence/";
     public static final String TOPIC_ROOM_PREFIX = "runapp/v1/room/";
+    public static final String TOPIC_FEEDBACK_BOARD = "runapp/v1/feedback/board";
+    public static final String TOPIC_SIGNALS_PREFIX = "runapp/v1/signals/";
 
     private static final long HEARTBEAT_INTERVAL_MS = 20_000L; // 20s heartbeat
     private static final long PRESENCE_TTL_MS = 60_000L;       // 60s offline threshold
@@ -88,21 +91,23 @@ public class MqttRoomManager {
     private int currentBrokerIndex = 0;
     private boolean isConnecting = false;
 
-    // Lifecycle & Notification State (#1, #4, #6, #11)
+    // Lifecycle & Notification State
     private boolean appInForeground = true;
     private boolean chatActivelyVisible = false;
     private boolean pendingRoomStatePublish = false;
     private boolean joiningExistingRoom = false;
     private final Set<String> knownMessageIds = Collections.synchronizedSet(new HashSet<>());
 
-    // Room & Directory State
+    // Room, Directory, & Feedback State
     private DirectoryData directoryData = new DirectoryData();
+    private FeedbackBoardData feedbackBoardData = new FeedbackBoardData();
     private String activeRoomCode = null;
     private RoomData activeRoomData = null;
     private boolean receivedInitialRoomState = false;
 
     // Presence & Typing maps
     private final Map<String, Long> globalPresence = new ConcurrentHashMap<>();
+    private final Map<String, OnlineUser> onlineUsersMap = new ConcurrentHashMap<>();
     private final Map<String, Long> roomPresence = new ConcurrentHashMap<>();
     private final Map<String, String> typingUsers = new ConcurrentHashMap<>();
     private final Map<String, Runnable> typingExpiryRunnables = new ConcurrentHashMap<>();
@@ -112,6 +117,9 @@ public class MqttRoomManager {
         void onConnectionChanged(boolean connected, String brokerUrl);
         void onGlobalPresenceChanged(int onlineCount);
         void onDirectoryUpdated(DirectoryData directory);
+        default void onOnlineUsersChanged(List<OnlineUser> onlineUsers) {}
+        default void onFeedbackBoardUpdated(FeedbackBoardData board) {}
+        default void onSignalReceived(SignalMessage signal) {}
     }
 
     public interface RoomListener {
@@ -148,9 +156,6 @@ public class MqttRoomManager {
         return instance;
     }
 
-    /**
-     * Fix #11: Bind heartbeat to foreground lifecycle so it doesn't drain battery forever.
-     */
     public void setAppForeground(boolean inForeground) {
         if (this.appInForeground == inForeground) return;
         this.appInForeground = inForeground;
@@ -175,6 +180,8 @@ public class MqttRoomManager {
         l.onConnectionChanged(isConnected(), getCurrentBrokerUrl());
         l.onGlobalPresenceChanged(getGlobalOnlineCount());
         l.onDirectoryUpdated(directoryData);
+        l.onOnlineUsersChanged(getOnlineUsersList());
+        l.onFeedbackBoardUpdated(feedbackBoardData);
     }
 
     public void removeGlobalListener(GlobalListener l) {
@@ -204,6 +211,10 @@ public class MqttRoomManager {
 
     public DirectoryData getDirectoryData() {
         return directoryData;
+    }
+
+    public FeedbackBoardData getFeedbackBoardData() {
+        return feedbackBoardData;
     }
 
     public RoomData getActiveRoomData() {
@@ -239,7 +250,6 @@ public class MqttRoomManager {
                         if (appInForeground) {
                             publishPresenceHeartbeat();
                         }
-                        // Fix #4: Publish any room state created/updated while offline
                         if (activeRoomCode != null && activeRoomData != null && pendingRoomStatePublish) {
                             publishRoomState();
                         }
@@ -292,6 +302,8 @@ public class MqttRoomManager {
         try {
             mqttClient.subscribe(TOPIC_PRESENCE_PREFIX + "+", 0);
             mqttClient.subscribe(TOPIC_DIRECTORY, 1);
+            mqttClient.subscribe(TOPIC_FEEDBACK_BOARD, 1);
+            mqttClient.subscribe(TOPIC_SIGNALS_PREFIX + prefs.getUserId(), 1);
             if (activeRoomCode != null) {
                 subscribeRoomTopics(activeRoomCode);
             }
@@ -346,6 +358,7 @@ public class MqttRoomManager {
         room.meta.code = code;
         room.meta.name = (roomName == null || roomName.trim().isEmpty()) ? ("Room " + code) : roomName.trim();
         room.meta.createdAt = RoomCryptoUtils.nowIso();
+        room.note = new RoomData.NoteData("", prefs.getUserName(), RoomCryptoUtils.nowIso(), 0L);
 
         if (isPublic) {
             String dirId = RoomCryptoUtils.makeId("dir");
@@ -389,6 +402,7 @@ public class MqttRoomManager {
             activeRoomData.meta.code = cleanCode;
             activeRoomData.meta.name = (fallbackName != null && !fallbackName.isEmpty()) ? fallbackName : ("Room " + cleanCode);
             activeRoomData.meta.createdAt = RoomCryptoUtils.nowIso();
+            activeRoomData.note = new RoomData.NoteData();
         }
 
         updateLocalAvatarInRoom(activeRoomData);
@@ -429,7 +443,6 @@ public class MqttRoomManager {
         String userId = prefs.getUserId();
         String name = prefs.getUserName();
         if (name.isEmpty()) name = "Guest";
-        // Fix #16 & F5: Include user's chosen avatarUrl
         room.avatars.put(userId, new RoomData.AvatarProfile(name, prefs.getUserAvatarUrl(), prefs.getUserBio()));
     }
 
@@ -516,9 +529,23 @@ public class MqttRoomManager {
         publishRoomState();
     }
 
-    /**
-     * Fix #4: Marks pendingRoomStatePublish = true if offline, and clears it once published.
-     */
+    // ==========================================
+    // Feature 2: Shared Real-Time Notes
+    // ==========================================
+
+    public void updateRoomNote(String newContent) {
+        if (activeRoomData == null) return;
+        if (activeRoomData.note == null) {
+            activeRoomData.note = new RoomData.NoteData();
+        }
+        activeRoomData.note.content = newContent != null ? newContent : "";
+        activeRoomData.note.lastEditedBy = prefs.getUserName().isEmpty() ? "Guest" : prefs.getUserName();
+        activeRoomData.note.lastEditedAt = RoomCryptoUtils.nowIso();
+        activeRoomData.note.version++;
+        notifyRoomStateUpdated();
+        publishRoomState();
+    }
+
     public void publishRoomState() {
         if (activeRoomCode == null || activeRoomData == null) return;
         if (!isConnected()) {
@@ -536,9 +563,6 @@ public class MqttRoomManager {
         }
     }
 
-    /**
-     * Fix #20: Clears all room presence topics on the broker before deleting the room state.
-     */
     public void deleteActiveRoom() {
         if (activeRoomCode == null) return;
         String codeToRemove = activeRoomCode;
@@ -546,7 +570,6 @@ public class MqttRoomManager {
 
         if (isConnected()) {
             try {
-                // Clear retained presence for all known users in this room (#20)
                 Set<String> usersToClear = new HashSet<>(roomPresence.keySet());
                 usersToClear.add(prefs.getUserId());
                 if (activeRoomData != null && activeRoomData.avatars != null) {
@@ -556,7 +579,6 @@ public class MqttRoomManager {
                     String presTopic = TOPIC_ROOM_PREFIX + codeToRemove + "/presence/" + uId;
                     mqttClient.publish(presTopic, new byte[0], 0, true);
                 }
-                // Clear retained room state
                 mqttClient.publish(TOPIC_ROOM_PREFIX + codeToRemove, new byte[0], 1, true);
             } catch (Exception ignored) {}
         }
@@ -597,6 +619,167 @@ public class MqttRoomManager {
         } catch (Exception ignored) {}
     }
 
+    // ==========================================
+    // Feature 3: Public Feedback Board
+    // ==========================================
+
+    public void createFeedbackPost(String title, String content, String category) {
+        if (title == null || title.trim().isEmpty()) return;
+        FeedbackPost post = new FeedbackPost();
+        post.id = RoomCryptoUtils.makeId("fb");
+        post.title = title.trim();
+        post.content = (content != null) ? content.trim() : "";
+        post.category = (category != null && !category.isEmpty()) ? category : "Idea";
+        post.author = prefs.getUserName().isEmpty() ? "Guest" : prefs.getUserName();
+        post.userId = prefs.getUserId();
+        post.createdAt = RoomCryptoUtils.nowIso();
+        post.upvotes = new ArrayList<>();
+        post.upvotes.add(prefs.getUserId());
+        post.hearts = new ArrayList<>();
+
+        if (feedbackBoardData.posts == null) feedbackBoardData.posts = new ArrayList<>();
+        feedbackBoardData.posts.add(0, post);
+        publishFeedbackBoard();
+    }
+
+    public void toggleFeedbackVote(String postId, boolean isHeart) {
+        if (feedbackBoardData == null || feedbackBoardData.posts == null || postId == null) return;
+        String myId = prefs.getUserId();
+        for (FeedbackPost p : feedbackBoardData.posts) {
+            if (p != null && p.id != null && p.id.equals(postId)) {
+                if (isHeart) {
+                    if (p.hearts == null) p.hearts = new ArrayList<>();
+                    if (p.hearts.contains(myId)) p.hearts.remove(myId);
+                    else p.hearts.add(myId);
+                } else {
+                    if (p.upvotes == null) p.upvotes = new ArrayList<>();
+                    if (p.upvotes.contains(myId)) p.upvotes.remove(myId);
+                    else p.upvotes.add(myId);
+                }
+                break;
+            }
+        }
+        publishFeedbackBoard();
+    }
+
+    private void publishFeedbackBoard() {
+        if (!isConnected()) return;
+        try {
+            String json = gson.toJson(feedbackBoardData);
+            mqttClient.publish(TOPIC_FEEDBACK_BOARD, json.getBytes(StandardCharsets.UTF_8), 1, true);
+            mainHandler.post(() -> {
+                for (GlobalListener l : new ArrayList<>(globalListeners)) {
+                    l.onFeedbackBoardUpdated(feedbackBoardData);
+                }
+            });
+        } catch (Exception ignored) {}
+    }
+
+    // ==========================================
+    // Feature 1: Online Users & P2P Signalling
+    // ==========================================
+
+    public List<OnlineUser> getOnlineUsersList() {
+        long cutoff = System.currentTimeMillis() - PRESENCE_TTL_MS;
+        List<OnlineUser> list = new ArrayList<>();
+        String myId = prefs.getUserId();
+
+        // Ensure self is in the list when connected
+        if (isConnected() && appInForeground) {
+            OnlineUser self = new OnlineUser(
+                    myId,
+                    prefs.getUserName().isEmpty() ? "You" : prefs.getUserName(),
+                    prefs.getUserAvatarUrl(),
+                    prefs.getUserBio(),
+                    System.currentTimeMillis(),
+                    true
+            );
+            onlineUsersMap.put(myId, self);
+        }
+
+        for (OnlineUser u : onlineUsersMap.values()) {
+            if (u != null && u.lastSeenTs >= cutoff) {
+                u.isSelf = u.userId != null && u.userId.equals(myId);
+                list.add(u);
+            }
+        }
+        Collections.sort(list, (a, b) -> {
+            if (a.isSelf) return -1;
+            if (b.isSelf) return 1;
+            return Long.compare(b.lastSeenTs, a.lastSeenTs);
+        });
+        return list;
+    }
+
+    public void sendFriendRequest(OnlineUser targetUser) {
+        if (targetUser == null || targetUser.userId == null || targetUser.isSelf) return;
+        SignalMessage sig = new SignalMessage();
+        sig.id = RoomCryptoUtils.makeId("sig");
+        sig.type = SignalMessage.TYPE_FRIEND_REQUEST;
+        sig.fromUserId = prefs.getUserId();
+        sig.fromUserName = prefs.getUserName().isEmpty() ? "Guest" : prefs.getUserName();
+        sig.fromAvatarUrl = prefs.getUserAvatarUrl();
+        sig.toUserId = targetUser.userId;
+        sig.timestamp = System.currentTimeMillis();
+
+        prefs.addSentRequest(targetUser.userId);
+        publishSignal(targetUser.userId, sig);
+    }
+
+    public void acceptFriendRequest(SignalMessage req) {
+        if (req == null || req.fromUserId == null) return;
+        prefs.addFriend(req.fromUserId, req.fromUserName, req.fromAvatarUrl);
+        SignalMessage sig = new SignalMessage();
+        sig.id = RoomCryptoUtils.makeId("sig");
+        sig.type = SignalMessage.TYPE_FRIEND_ACCEPT;
+        sig.fromUserId = prefs.getUserId();
+        sig.fromUserName = prefs.getUserName().isEmpty() ? "Guest" : prefs.getUserName();
+        sig.fromAvatarUrl = prefs.getUserAvatarUrl();
+        sig.toUserId = req.fromUserId;
+        sig.timestamp = System.currentTimeMillis();
+
+        publishSignal(req.fromUserId, sig);
+    }
+
+    public void declineFriendRequest(SignalMessage req) {
+        if (req == null || req.fromUserId == null) return;
+        prefs.removePendingRequest(req.fromUserId);
+        SignalMessage sig = new SignalMessage();
+        sig.id = RoomCryptoUtils.makeId("sig");
+        sig.type = SignalMessage.TYPE_FRIEND_DECLINE;
+        sig.fromUserId = prefs.getUserId();
+        sig.fromUserName = prefs.getUserName().isEmpty() ? "Guest" : prefs.getUserName();
+        sig.toUserId = req.fromUserId;
+        sig.timestamp = System.currentTimeMillis();
+
+        publishSignal(req.fromUserId, sig);
+    }
+
+    public void sendRoomInvite(OnlineUser targetUser, String roomCode, String roomName) {
+        if (targetUser == null || targetUser.userId == null || roomCode == null) return;
+        SignalMessage sig = new SignalMessage();
+        sig.id = RoomCryptoUtils.makeId("sig");
+        sig.type = SignalMessage.TYPE_ROOM_INVITE;
+        sig.fromUserId = prefs.getUserId();
+        sig.fromUserName = prefs.getUserName().isEmpty() ? "Guest" : prefs.getUserName();
+        sig.fromAvatarUrl = prefs.getUserAvatarUrl();
+        sig.toUserId = targetUser.userId;
+        sig.roomCode = roomCode;
+        sig.roomName = (roomName != null && !roomName.isEmpty()) ? roomName : ("Room " + roomCode);
+        sig.timestamp = System.currentTimeMillis();
+
+        publishSignal(targetUser.userId, sig);
+    }
+
+    private void publishSignal(String targetUserId, SignalMessage signal) {
+        if (!isConnected() || targetUserId == null) return;
+        try {
+            String topic = TOPIC_SIGNALS_PREFIX + targetUserId;
+            String json = gson.toJson(signal);
+            mqttClient.publish(topic, json.getBytes(StandardCharsets.UTF_8), 1, false);
+        } catch (Exception ignored) {}
+    }
+
     public void sendTypingSignal() {
         if (!isConnected() || activeRoomCode == null) return;
         long now = System.currentTimeMillis();
@@ -618,16 +801,22 @@ public class MqttRoomManager {
         long now = System.currentTimeMillis();
         String userId = prefs.getUserId();
         String userName = prefs.getUserName().isEmpty() ? "Guest" : prefs.getUserName();
+        String avatarUrl = prefs.getUserAvatarUrl();
+        String bio = prefs.getUserBio();
 
         try {
             JsonObject obj = new JsonObject();
             obj.addProperty("userId", userId);
             obj.addProperty("name", userName);
+            obj.addProperty("avatarUrl", avatarUrl);
+            obj.addProperty("bio", bio);
             obj.addProperty("ts", now);
+            obj.addProperty("platform", "Android");
             byte[] bytes = obj.toString().getBytes(StandardCharsets.UTF_8);
 
             mqttClient.publish(TOPIC_PRESENCE_PREFIX + userId, bytes, 0, true);
             globalPresence.put(userId, now);
+            onlineUsersMap.put(userId, new OnlineUser(userId, userName, avatarUrl, bio, now, true));
 
             if (activeRoomCode != null) {
                 String roomPresTopic = TOPIC_ROOM_PREFIX + activeRoomCode + "/presence/" + userId;
@@ -643,6 +832,7 @@ public class MqttRoomManager {
             String userId = prefs.getUserId();
             mqttClient.publish(TOPIC_PRESENCE_PREFIX + userId, new byte[0], 0, true);
             globalPresence.remove(userId);
+            onlineUsersMap.remove(userId);
         } catch (Exception ignored) {}
     }
 
@@ -667,19 +857,21 @@ public class MqttRoomManager {
     private void pruneExpiredPresence() {
         long cutoff = System.currentTimeMillis() - PRESENCE_TTL_MS;
         globalPresence.entrySet().removeIf(e -> e.getValue() < cutoff);
+        onlineUsersMap.entrySet().removeIf(e -> e.getValue().lastSeenTs < cutoff);
         roomPresence.entrySet().removeIf(e -> e.getValue() < cutoff);
 
+        final int count = getGlobalOnlineCount();
+        final List<OnlineUser> users = getOnlineUsersList();
+
         for (GlobalListener l : new ArrayList<>(globalListeners)) {
-            l.onGlobalPresenceChanged(getGlobalOnlineCount());
+            l.onGlobalPresenceChanged(count);
+            l.onOnlineUsersChanged(users);
         }
         for (RoomListener l : new ArrayList<>(roomListeners)) {
             l.onRoomPresenceChanged(getRoomOnlineCount());
         }
     }
 
-    /**
-     * Fix #10: Honest online count without artificial Math.max(1, count).
-     */
     public int getGlobalOnlineCount() {
         if (!isConnected()) return 0;
         long cutoff = System.currentTimeMillis() - PRESENCE_TTL_MS;
@@ -687,12 +879,11 @@ public class MqttRoomManager {
         for (Long ts : globalPresence.values()) {
             if (ts != null && ts >= cutoff) count++;
         }
+        // Count self if online
+        if (count == 0 && appInForeground) count = 1;
         return count;
     }
 
-    /**
-     * Fix #10: Honest room online count without artificial Math.max(1, count).
-     */
     public int getRoomOnlineCount() {
         if (!isConnected()) return 0;
         long cutoff = System.currentTimeMillis() - PRESENCE_TTL_MS;
@@ -712,14 +903,29 @@ public class MqttRoomManager {
             updatePresenceMap(globalPresence, uId, payload);
             mainHandler.post(() -> {
                 int count = getGlobalOnlineCount();
+                List<OnlineUser> users = getOnlineUsersList();
                 for (GlobalListener l : new ArrayList<>(globalListeners)) {
                     l.onGlobalPresenceChanged(count);
+                    l.onOnlineUsersChanged(users);
                 }
             });
             return;
         }
 
-        // 2. Public Directory
+        // 2. Direct P2P Signals (Friend Requests, Room Invites)
+        if (topic.startsWith(TOPIC_SIGNALS_PREFIX)) {
+            if (!payload.isEmpty()) {
+                try {
+                    SignalMessage sig = gson.fromJson(payload, SignalMessage.class);
+                    if (sig != null && sig.type != null) {
+                        handleIncomingSignal(sig);
+                    }
+                } catch (Exception ignored) {}
+            }
+            return;
+        }
+
+        // 3. Public Directory
         if (TOPIC_DIRECTORY.equals(topic)) {
             if (!payload.isEmpty()) {
                 try {
@@ -737,10 +943,28 @@ public class MqttRoomManager {
             return;
         }
 
+        // 4. Public Feedback Board
+        if (TOPIC_FEEDBACK_BOARD.equals(topic)) {
+            if (!payload.isEmpty()) {
+                try {
+                    FeedbackBoardData parsed = gson.fromJson(payload, FeedbackBoardData.class);
+                    if (parsed != null && parsed.posts != null) {
+                        feedbackBoardData = parsed;
+                        mainHandler.post(() -> {
+                            for (GlobalListener l : new ArrayList<>(globalListeners)) {
+                                l.onFeedbackBoardUpdated(feedbackBoardData);
+                            }
+                        });
+                    }
+                } catch (Exception ignored) {}
+            }
+            return;
+        }
+
         if (activeRoomCode == null) return;
         String expectedRoomTopic = TOPIC_ROOM_PREFIX + activeRoomCode;
 
-        // 3. Room Typing Indicator (Fix #19: Cancel previous runnable for same user)
+        // 5. Room Typing Indicator
         if (topic.equals(expectedRoomTopic + "/typing")) {
             try {
                 JsonObject obj = JsonParser.parseString(payload).getAsJsonObject();
@@ -765,7 +989,7 @@ public class MqttRoomManager {
             return;
         }
 
-        // 4. Room Presence
+        // 6. Room Presence
         if (topic.startsWith(expectedRoomTopic + "/presence/")) {
             String uId = topic.substring((expectedRoomTopic + "/presence/").length());
             updatePresenceMap(roomPresence, uId, payload);
@@ -778,10 +1002,9 @@ public class MqttRoomManager {
             return;
         }
 
-        // 5. Room State JSON
+        // 7. Room State JSON
         if (topic.equals(expectedRoomTopic)) {
             if (payload.isEmpty()) {
-                // Fix #6: Handle empty retained payload both when room was deleted live AND when joining a deleted room
                 if (receivedInitialRoomState || joiningExistingRoom) {
                     final String deletedCode = activeRoomCode;
                     mainHandler.post(() -> {
@@ -802,7 +1025,7 @@ public class MqttRoomManager {
                     receivedInitialRoomState = true;
                     joiningExistingRoom = false;
 
-                    // Detect newly arrived messages for local notifications (#1 & F1)
+                    // Detect newly arrived messages for local notifications
                     List<Message> newlyArrivedFromOthers = new ArrayList<>();
                     if (remote.messages != null) {
                         String myId = prefs.getUserId();
@@ -836,9 +1059,50 @@ public class MqttRoomManager {
         }
     }
 
-    /**
-     * Fix #1 & F1: Fires a real Android notification when notifications are enabled and chat is not actively visible.
-     */
+    private void handleIncomingSignal(SignalMessage sig) {
+        mainHandler.post(() -> {
+            if (SignalMessage.TYPE_FRIEND_REQUEST.equals(sig.type)) {
+                prefs.addPendingRequest(sig);
+                triggerSignalNotification("طلب صداقة جديد", sig.fromUserName + " أرسل لك طلب صداقة!");
+            } else if (SignalMessage.TYPE_FRIEND_ACCEPT.equals(sig.type)) {
+                prefs.addFriend(sig.fromUserId, sig.fromUserName, sig.fromAvatarUrl);
+                triggerSignalNotification("تم قبول طلب الصداقة", sig.fromUserName + " قبل طلب الصداقة وأصبح صديقاً لك!");
+            } else if (SignalMessage.TYPE_FRIEND_DECLINE.equals(sig.type)) {
+                prefs.removeSentRequest(sig.fromUserId);
+            } else if (SignalMessage.TYPE_ROOM_INVITE.equals(sig.type)) {
+                prefs.addRoomInvite(sig);
+                triggerSignalNotification("دعوة إلى غرفة: " + sig.roomName, sig.fromUserName + " يدعوك للانضمام إلى الغرفة #" + sig.roomCode);
+            }
+
+            for (GlobalListener l : new ArrayList<>(globalListeners)) {
+                l.onSignalReceived(sig);
+            }
+        });
+    }
+
+    private void triggerSignalNotification(String title, String body) {
+        if (!prefs.isNotificationsEnabled()) return;
+        if (Build.VERSION.SDK_INT >= 33) {
+            if (ContextCompat.checkSelfPermission(appContext, Manifest.permission.POST_NOTIFICATIONS)
+                    != PackageManager.PERMISSION_GRANTED) {
+                return;
+            }
+        }
+        try {
+            NotificationCompat.Builder builder = new NotificationCompat.Builder(appContext, RunApplication.CHANNEL_ID_MESSAGES)
+                    .setSmallIcon(android.R.drawable.stat_notify_chat)
+                    .setContentTitle(title)
+                    .setContentText(body)
+                    .setPriority(NotificationCompat.PRIORITY_HIGH)
+                    .setAutoCancel(true);
+
+            NotificationManagerCompat.from(appContext).notify(
+                    (title + body).hashCode(),
+                    builder.build()
+            );
+        } catch (Exception ignored) {}
+    }
+
     private void triggerLocalMessageNotification(String roomCode, String roomName, Message msg) {
         if (!prefs.isNotificationsEnabled() || chatActivelyVisible) return;
         if (Build.VERSION.SDK_INT >= 33) {
@@ -891,6 +1155,7 @@ public class MqttRoomManager {
     private void updatePresenceMap(Map<String, Long> map, String userId, String payload) {
         if (payload == null || payload.isEmpty()) {
             map.remove(userId);
+            onlineUsersMap.remove(userId);
             return;
         }
         try {
@@ -898,17 +1163,20 @@ public class MqttRoomManager {
             long ts = obj.has("ts") ? obj.get("ts").getAsLong() : System.currentTimeMillis();
             if (System.currentTimeMillis() - ts <= PRESENCE_TTL_MS) {
                 map.put(userId, ts);
+                String name = obj.has("name") ? obj.get("name").getAsString() : "User";
+                String avatarUrl = obj.has("avatarUrl") ? obj.get("avatarUrl").getAsString() : "";
+                String bio = obj.has("bio") ? obj.get("bio").getAsString() : "";
+                boolean isSelf = userId.equals(prefs.getUserId());
+                onlineUsersMap.put(userId, new OnlineUser(userId, name, avatarUrl, bio, ts, isSelf));
             } else {
                 map.remove(userId);
+                onlineUsersMap.remove(userId);
             }
         } catch (Exception e) {
             map.put(userId, System.currentTimeMillis());
         }
     }
 
-    /**
-     * Fix #9: Protects `out.meta` against NullPointerException if both remote.meta and local.meta are null.
-     */
     private RoomData mergeRoomData(RoomData remote, RoomData local, String code) {
         RoomData out = new RoomData();
         out.kind = "run-room";
@@ -975,6 +1243,19 @@ public class MqttRoomManager {
         out.avatars = new HashMap<>();
         if (local != null && local.avatars != null) out.avatars.putAll(local.avatars);
         if (remote != null && remote.avatars != null) out.avatars.putAll(remote.avatars);
+
+        // Merge Shared Note
+        if (remote != null && remote.note != null) {
+            if (local == null || local.note == null || remote.note.version >= local.note.version) {
+                out.note = remote.note;
+            } else {
+                out.note = local.note;
+            }
+        } else if (local != null && local.note != null) {
+            out.note = local.note;
+        } else {
+            out.note = new RoomData.NoteData();
+        }
 
         return out;
     }

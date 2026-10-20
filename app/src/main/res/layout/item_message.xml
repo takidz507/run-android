@@ -10,18 +10,18 @@
         android:id="@+id/bubbleCard"
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:layout_marginHorizontal="4dp"
+        android:layout_marginHorizontal="6dp"
         app:cardBackgroundColor="@color/run_panel"
-        app:cardCornerRadius="16dp"
+        app:cardCornerRadius="18dp"
         app:cardElevation="0dp"
-        app:strokeColor="@color/run_panel_soft"
+        app:strokeColor="@color/run_panel_hover"
         app:strokeWidth="1dp">
 
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
             android:minWidth="160dp"
-            android:maxWidth="310dp"
+            android:maxWidth="320dp"
             android:orientation="vertical"
             android:padding="12dp">
 
@@ -39,14 +39,15 @@
                     android:layout_height="22dp"
                     android:layout_marginEnd="6dp"
                     android:scaleType="centerCrop"
-                    android:visibility="gone" />
+                    android:visibility="gone"
+                    android:contentDescription="Avatar" />
 
                 <TextView
                     android:id="@+id/tvAuthor"
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="تقي"
+                    android:text="User"
                     android:textColor="@color/run_accent"
                     android:textSize="12sp"
                     android:textStyle="bold" />
@@ -61,13 +62,13 @@
                     android:textSize="11sp" />
             </LinearLayout>
 
-            <!-- Quoted Reply Container (Clickable to jump to original message - Fix #14 / F3) -->
+            <!-- Quoted Reply Container (Clickable to jump to original message) -->
             <LinearLayout
                 android:id="@+id/replyContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginBottom="6dp"
-                android:background="@color/run_bg_elevated"
+                android:background="@drawable/bg_reply_box"
                 android:clickable="true"
                 android:focusable="true"
                 android:orientation="vertical"
@@ -92,7 +93,7 @@
                     android:textSize="12sp" />
             </LinearLayout>
 
-            <!-- Attached Image (Clickable for Fullscreen viewer - Fix #13 / F2) -->
+            <!-- Attached Image (Clickable for Fullscreen viewer) -->
             <ImageView
                 android:id="@+id/ivAttachmentImage"
                 android:layout_width="240dp"
@@ -100,7 +101,8 @@
                 android:layout_marginBottom="6dp"
                 android:adjustViewBounds="true"
                 android:scaleType="centerCrop"
-                android:visibility="gone" />
+                android:visibility="gone"
+                android:contentDescription="Attachment" />
 
             <!-- Voice Note Player -->
             <LinearLayout
@@ -114,18 +116,25 @@
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnPlayVoice"
+                    style="@style/Widget.Material3.Button.TonalButton"
                     android:layout_width="wrap_content"
-                    android:layout_height="38dp"
-                    android:text="تشغيل 🔊"
+                    android:layout_height="36dp"
+                    android:insetTop="0dp"
+                    android:insetBottom="0dp"
+                    android:paddingStart="10dp"
+                    android:paddingEnd="12dp"
+                    app:icon="@drawable/ic_play_arrow"
+                    app:iconSize="14dp"
+                    android:text="Play"
                     android:textSize="12sp"
-                    app:cornerRadius="10dp" />
+                    app:cornerRadius="12dp" />
 
                 <TextView
                     android:id="@+id/tvVoiceDuration"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
-                    android:text="0 ثانية"
+                    android:text="0s"
                     android:textColor="@color/run_muted"
                     android:textSize="12sp" />
             </LinearLayout>
@@ -133,10 +142,14 @@
             <!-- External File / Video Link Button -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnOpenExternalFile"
-                style="@style/Widget.MaterialComponents.Button.TextButton"
+                style="@style/Widget.Material3.Button.TextButton"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:text="📎 فتح الملف المرفق"
+                android:insetTop="0dp"
+                android:insetBottom="0dp"
+                app:icon="@drawable/ic_attach_file"
+                app:iconSize="14dp"
+                android:text="Open Attachment"
                 android:textSize="12sp"
                 android:visibility="gone" />
 
@@ -146,7 +159,7 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:autoLink="web"
-                android:text="مرحباً بالجميع"
+                android:text="Hello everyone"
                 android:textColor="@color/run_text"
                 android:textSize="14sp" />
 
@@ -163,7 +176,7 @@
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:padding="4dp"
-                    android:text="↩ رد"
+                    android:text="↩ Reply"
                     android:textColor="@color/run_muted"
                     android:textSize="11sp" />
 
@@ -173,7 +186,7 @@
                     android:layout_height="wrap_content"
                     android:layout_marginStart="12dp"
                     android:padding="4dp"
-                    android:text="ترجمة الرسالة"
+                    android:text="Translate"
                     android:textColor="@color/run_accent"
                     android:textSize="11sp"
                     android:textStyle="bold" />

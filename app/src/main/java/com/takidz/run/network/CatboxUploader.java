@@ -115,6 +115,10 @@ public class CatboxUploader {
         });
     }
 
+    public void processAndUploadLocalFile(File file, String mimeType, UploadCallback callback) {
+        processAndUploadFile(file, mimeType, callback);
+    }
+
     public void processAndUploadFile(File file, String mimeType, UploadCallback callback) {
         executor.execute(() -> {
             try {

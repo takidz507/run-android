@@ -84,6 +84,14 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgVie
         if (msgId != null) notifyMessageUpdatedById(msgId);
     }
 
+    public void setAudioPlayingMessageId(String msgId) {
+        setPlayingMessageId(msgId);
+    }
+
+    public void setMessages(List<Message> msgs) {
+        submitList(msgs);
+    }
+
     public void highlightMessageTemporarily(String msgId) {
         this.highlightedMessageId = msgId;
         notifyMessageUpdatedById(msgId);
@@ -237,11 +245,12 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgVie
         if ("voice".equals(msg.type) && msg.file != null) {
             holder.voiceContainer.setVisibility(View.VISIBLE);
             boolean isPlaying = msg.id != null && msg.id.equals(playingMessageId);
-            holder.btnPlayVoice.setText(isPlaying ? "إيقاف ⏹" : "تشغيل 🔊");
+            holder.btnPlayVoice.setText(isPlaying ? "Stop" : "Play");
+            holder.btnPlayVoice.setIconResource(isPlaying ? R.drawable.ic_pause : R.drawable.ic_play_arrow);
             holder.btnPlayVoice.setBackgroundTintList(android.content.res.ColorStateList.valueOf(palette.accent));
             holder.btnPlayVoice.setTextColor(palette.accentInk);
             int dur = msg.file.duration;
-            holder.tvVoiceDuration.setText(dur > 0 ? (dur + " ثانية") : "تسجيل صوتي");
+            holder.tvVoiceDuration.setText(dur > 0 ? (dur + "s") : "Voice message");
             holder.tvVoiceDuration.setTextColor(palette.muted);
             holder.btnPlayVoice.setOnClickListener(v -> listener.onPlayVoiceClicked(msg));
         } else if ("file".equals(msg.type) && msg.file != null && msg.file.url != null) {
@@ -257,8 +266,8 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgVie
             } else {
                 holder.btnOpenExternalFile.setVisibility(View.VISIBLE);
                 boolean isVideo = mime.startsWith("video/");
-                String label = isVideo ? "🎬 تشغيل الفيديو: " : "📎 فتح الملف: ";
-                holder.btnOpenExternalFile.setText(label + (msg.file.name != null ? msg.file.name : "ملف مرفق"));
+                String label = isVideo ? "Play video: " : "Open file: ";
+                holder.btnOpenExternalFile.setText(label + (msg.file.name != null ? msg.file.name : "attachment"));
                 holder.btnOpenExternalFile.setTextColor(palette.accent);
                 holder.btnOpenExternalFile.setOnClickListener(v -> {
                     if (url.startsWith("http")) {
@@ -271,10 +280,11 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgVie
 
         // Actions: Reply & Translate
         holder.btnReply.setTextColor(palette.muted);
+        holder.btnReply.setText("↩ Reply");
         holder.btnReply.setOnClickListener(v -> listener.onReplyClicked(msg));
 
         holder.btnTranslate.setTextColor(palette.accent);
-        holder.btnTranslate.setText(msg.showingTranslated ? "عرض النص الأصلي" : "ترجمة الرسالة");
+        holder.btnTranslate.setText(msg.showingTranslated ? "Original" : "Translate");
         holder.btnTranslate.setOnClickListener(v -> listener.onTranslateClicked(msg));
     }
 
