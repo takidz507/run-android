@@ -10,49 +10,50 @@ import android.view.animation.LinearInterpolator;
 import android.view.animation.OvershootInterpolator;
 
 /**
- * #15 & #21: First-class 60fps motion helper with automatic Lite Mode adaptation.
- *
- * v3.1 (owner request): every theme carries its OWN motion character.
- * Activities call {@link #setThemeProfile(String)} whenever a theme is applied;
- * all animations below then speak that theme's motion language:
- *  - Warm Paper      — soft paper glide: gentle rise, decelerate settle.
- *  - Warm Paper Dark — the same soul, slower and quieter (longer fades).
- *  - Clean Air       — barely-there: short, small, fast.
- *  - Deep Night      — crisp neon snap: quick with a small electric overshoot.
- *  - Liquid Glass    — liquid spring: panels swell in with a soft overshoot,
- *                      bubbles pour in with a slow elastic settle.
+ * Run v3.2.0 Motion Engine (#15 & #21):
+ * Preserves the owner-praised Liquid Glass droplet/elastic physics as the gold standard
+ * and elevates all 7 themes to have expressive, intentional, tactile motion (scale + rise + spring settle),
+ * while respecting Lite Mode (#21).
  */
 public class MotionHelper {
 
     private static class Profile {
-        final long panelMs, bubbleMs, colorMs;
+        final long panelMs, bubbleMs, colorMs, retMs;
         final float panelRiseDp, bubbleRiseDp, bubbleOvershoot, panelOvershoot;
+        final float pressSquash, pressOvershoot;
         final boolean panelScale;
 
-        Profile(long panelMs, long bubbleMs, long colorMs,
+        Profile(long panelMs, long bubbleMs, long colorMs, long retMs,
                 float panelRiseDp, float bubbleRiseDp,
-                float bubbleOvershoot, float panelOvershoot, boolean panelScale) {
+                float bubbleOvershoot, float panelOvershoot,
+                float pressSquash, float pressOvershoot, boolean panelScale) {
             this.panelMs = panelMs;
             this.bubbleMs = bubbleMs;
             this.colorMs = colorMs;
+            this.retMs = retMs;
             this.panelRiseDp = panelRiseDp;
             this.bubbleRiseDp = bubbleRiseDp;
             this.bubbleOvershoot = bubbleOvershoot;
             this.panelOvershoot = panelOvershoot;
+            this.pressSquash = pressSquash;
+            this.pressOvershoot = pressOvershoot;
             this.panelScale = panelScale;
         }
     }
 
+    // Elevated profiles inspired by the Liquid Glass gold standard:
+    // Every theme now has tactile scale + organic spring overshoot tailored to its personality.
     private static final Profile WARM_PAPER =
-            new Profile(220, 190, 240, 24f, 18f, 0.85f, 0f, false);
+            new Profile(300, 260, 260, 190, 20f, 16f, 1.15f, 0.75f, 0.92f, 1.55f, true);
     private static final Profile WARM_PAPER_DARK =
-            new Profile(300, 240, 320, 16f, 12f, 0.5f, 0f, false);
+            new Profile(330, 280, 300, 200, 18f, 15f, 1.05f, 0.68f, 0.92f, 1.45f, true);
     private static final Profile CLEAN_AIR =
-            new Profile(150, 130, 160, 10f, 8f, 0.3f, 0f, false);
+            new Profile(250, 220, 220, 170, 16f, 14f, 1.10f, 0.70f, 0.93f, 1.50f, true);
     private static final Profile DEEP_NIGHT =
-            new Profile(170, 150, 180, 18f, 14f, 1.1f, 0f, false);
+            new Profile(260, 230, 220, 185, 20f, 16f, 1.35f, 0.85f, 0.91f, 1.65f, true);
+    // Gold standard Liquid Glass profile (untouched droplet feel + elastic swell)
     private static final Profile LIQUID_GLASS =
-            new Profile(380, 340, 380, 26f, 20f, 1.5f, 0.9f, true);
+            new Profile(380, 340, 380, 220, 26f, 20f, 1.5f, 0.9f, 0.90f, 1.8f, true);
 
     private static volatile Profile current = WARM_PAPER;
     private static volatile String currentKey = ThemeHelper.THEME_WARM_PAPER;
@@ -111,8 +112,8 @@ public class MotionHelper {
         panel.setAlpha(0f);
         panel.setTranslationY(p.panelRiseDp * density / 2f);
         if (p.panelScale) {
-            panel.setScaleX(0.94f);
-            panel.setScaleY(0.94f);
+            panel.setScaleX(0.95f);
+            panel.setScaleY(0.95f);
         }
         panel.animate()
                 .alpha(1f)
@@ -121,6 +122,33 @@ public class MotionHelper {
                 .scaleY(1f)
                 .setDuration(p.panelMs)
                 .setInterpolator(panelInterpolator(p))
+                .start();
+    }
+
+    public static void animateStaggeredCard(View card, int index, boolean liteMode) {
+        if (card == null) return;
+        if (liteMode) {
+            card.setAlpha(1f);
+            card.setTranslationY(0f);
+            card.setScaleX(1f);
+            card.setScaleY(1f);
+            return;
+        }
+        Profile p = current;
+        float density = card.getResources().getDisplayMetrics().density;
+        card.setAlpha(0f);
+        card.setTranslationY(p.bubbleRiseDp * density * 0.55f);
+        card.setScaleX(0.96f);
+        card.setScaleY(0.96f);
+        long delay = Math.min(index * 38L, 220L);
+        card.animate()
+                .alpha(1f)
+                .translationY(0f)
+                .scaleX(1f)
+                .scaleY(1f)
+                .setStartDelay(delay)
+                .setDuration(p.panelMs)
+                .setInterpolator(new OvershootInterpolator(p.panelOvershoot))
                 .start();
     }
 
@@ -137,8 +165,8 @@ public class MotionHelper {
         float density = bubble.getResources().getDisplayMetrics().density;
         bubble.setAlpha(0f);
         bubble.setTranslationY(p.bubbleRiseDp * density / 2f);
-        bubble.setScaleX(0.96f);
-        bubble.setScaleY(0.96f);
+        bubble.setScaleX(0.95f);
+        bubble.setScaleY(0.95f);
         bubble.animate()
                 .alpha(1f)
                 .translationY(0f)
@@ -151,18 +179,16 @@ public class MotionHelper {
 
     public static void animateButtonPulse(View view, boolean liteMode) {
         if (view == null || liteMode) return;
-        // Liquid Glass presses feel like pressing a droplet: deeper squash, springy return.
-        final float squash = isGlass() ? 0.90f : 0.93f;
-        final long retMs = isGlass() ? 220L : 130L;
+        Profile p = current;
         view.animate()
-                .scaleX(squash)
-                .scaleY(squash)
+                .scaleX(p.pressSquash)
+                .scaleY(p.pressSquash)
                 .setDuration(75L)
                 .withEndAction(() -> view.animate()
                         .scaleX(1f)
                         .scaleY(1f)
-                        .setDuration(retMs)
-                        .setInterpolator(new OvershootInterpolator(isGlass() ? 1.8f : 1.4f))
+                        .setDuration(p.retMs)
+                        .setInterpolator(new OvershootInterpolator(p.pressOvershoot))
                         .start())
                 .start();
     }
@@ -180,13 +206,15 @@ public class MotionHelper {
         anim.start();
     }
 
-    /** v3.1 Liquid Glass: a soft sheen sweep for glass surfaces (FAB, dock, sheets). */
+    /** Liquid Glass & tactile sheen sweep for FAB, dock, and sheets. */
     public static void animateGlassSheen(View view, boolean liteMode) {
-        if (view == null || liteMode || !isGlass()) return;
-        view.setAlpha(0.55f);
+        if (view == null || liteMode) return;
+        float startAlpha = isGlass() ? 0.55f : 0.78f;
+        long dur = isGlass() ? 420L : 260L;
+        view.setAlpha(startAlpha);
         view.animate()
                 .alpha(1f)
-                .setDuration(420L)
+                .setDuration(dur)
                 .setInterpolator(new LinearInterpolator())
                 .start();
     }
