@@ -37,14 +37,10 @@ import java.util.Map;
 import java.util.Objects;
 
 /**
- * Run v3.0.0 MessagesAdapter:
- * - #14: Warm Paper tactile message bubbles (own messages use signature warm lime surface).
- * - #15 & #21: Smooth entrance motion respecting Lite Mode.
- * - #17: Tints accents with room's custom identity color.
- * - #18: Long-press opens reaction & quick-action picker; renders interactive emoji reaction pills.
- * - #26: Renders Sent (✓), Delivered (✓✓), and Read (highlighted ✓✓) indicators on outgoing messages.
- * - #28: Full Arabic RTL support and localized timestamps.
- * - #31: Bookmark/Save indicator and 1-tap toggle into "My saved".
+ * Run v3.2.0 MessagesAdapter — Rebuilt to match Design A (7196.png):
+ * - Clean, airy message bubbles with 1dp subtle stroke and 20dp corner radius.
+ * - Incoming bubbles ("Salim", "Amine") use warm cream surface; outgoing bubbles ("You") use signature warm lime (#D9F27E).
+ * - Eliminates bottom 3-button clutter from every bubble; actions live on swipe-to-reply (#18) and long-press sheet (#18, #28, #31).
  */
 public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgViewHolder> {
 
@@ -209,6 +205,7 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgVie
         boolean isMine = msg.userId != null && msg.userId.equals(currentUserId);
         boolean isHighlighted = msg.id != null && msg.id.equals(highlightedMessageId);
         boolean isSaved = prefs.isMessageSaved(roomCode, msg.id);
+        float d = context.getResources().getDisplayMetrics().density;
 
         LinearLayout.LayoutParams params = (LinearLayout.LayoutParams) holder.bubbleCard.getLayoutParams();
         params.gravity = isMine ? Gravity.END : Gravity.START;
@@ -217,19 +214,19 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgVie
         int bubbleBg = isHighlighted ? palette.panelSoft : (isMine ? palette.ownBubble : palette.panel);
         int bubbleStroke = isHighlighted ? roomAccentColor : (isMine ? palette.ownBubbleStroke : palette.panelHover);
         int mainTextColor = isMine ? palette.ownBubbleText : palette.text;
-        int subTextColor = isMine ? ThemeHelper.withAlpha(palette.ownBubbleText, 175) : palette.muted;
+        int subTextColor = isMine ? ThemeHelper.withAlpha(palette.ownBubbleText, 165) : palette.muted;
 
         holder.bubbleCard.setCardBackgroundColor(bubbleBg);
         holder.bubbleCard.setStrokeColor(bubbleStroke);
-        holder.bubbleCard.setStrokeWidth(isHighlighted ? 5 : 2);
+        holder.bubbleCard.setStrokeWidth((int) ((isHighlighted ? 2.2f : 1f) * d));
 
         String youLabel = isArabic ? "أنت" : "You";
         holder.tvAuthor.setText(isMine ? youLabel : (msg.author != null && !msg.author.isEmpty() ? msg.author : "Guest"));
         holder.tvAuthor.setTextColor(isMine ? mainTextColor : palette.text);
 
         holder.tvSavedBadge.setVisibility(isSaved ? View.VISIBLE : View.GONE);
+        holder.tvSavedBadge.setTextColor(isMine ? mainTextColor : roomAccentColor);
 
-        // Render sender avatar
         RoomData.AvatarProfile profile = (msg.userId != null && avatars != null) ? avatars.get(msg.userId) : null;
         if (profile != null && profile.avatarUrl != null && !profile.avatarUrl.isEmpty()) {
             holder.ivAuthorAvatar.setVisibility(View.VISIBLE);
@@ -238,11 +235,9 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgVie
             holder.ivAuthorAvatar.setVisibility(View.GONE);
         }
 
-        // Timestamp (#28 Arabic-aware)
         holder.tvTime.setText(LocaleHelper.formatIsoTime(msg.createdAt, isArabic));
         holder.tvTime.setTextColor(subTextColor);
 
-        // #26: Delivery & Read Indicators for own messages
         if (isMine) {
             holder.tvAckStatus.setVisibility(View.VISIBLE);
             if (msg.ackState <= 0) {
@@ -255,7 +250,6 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgVie
                 holder.tvAckStatus.setText("✓✓");
                 holder.tvAckStatus.setTextColor(subTextColor);
             } else {
-                // Read = highlighted checkmarks
                 holder.tvAckStatus.setText("✓✓");
                 holder.tvAckStatus.setTextColor(palette.isLight ? palette.success : palette.accent);
             }
@@ -263,13 +257,12 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgVie
             holder.tvAckStatus.setVisibility(View.GONE);
         }
 
-        // Quoted reply box jumps to original message on click
         if (msg.replyTo != null && msg.replyTo.text != null) {
             holder.replyContainer.setVisibility(View.VISIBLE);
             GradientDrawable replyBg = new GradientDrawable();
             replyBg.setColor(ThemeHelper.withAlpha(palette.bg, 160));
-            replyBg.setCornerRadius(24f);
-            replyBg.setStroke(2, ThemeHelper.withAlpha(roomAccentColor, 140));
+            replyBg.setCornerRadius(12 * d);
+            replyBg.setStroke((int) (1 * d), ThemeHelper.withAlpha(roomAccentColor, 130));
             holder.replyContainer.setBackground(replyBg);
             holder.tvReplyAuthor.setText(msg.replyTo.author != null ? msg.replyTo.author : (isArabic ? "مستخدم" : "User"));
             holder.tvReplyAuthor.setTextColor(palette.isLight ? palette.text : roomAccentColor);
@@ -285,7 +278,6 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgVie
             holder.replyContainer.setOnClickListener(null);
         }
 
-        // Main text / Translated text / Caption
         String displayText = (msg.showingTranslated && msg.translatedText != null)
                 ? ("🌐 " + msg.translatedText)
                 : (msg.text != null ? msg.text : "");
@@ -298,7 +290,6 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgVie
             holder.tvMessageText.setVisibility(View.GONE);
         }
 
-        // File / Image / Voice attachment handling (interoperable with Web v2 Pro and Android v2 Pro)
         holder.cardAttachmentImage.setVisibility(View.GONE);
         holder.ivAttachmentImage.setVisibility(View.GONE);
         holder.voiceContainer.setVisibility(View.GONE);
@@ -347,31 +338,25 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgVie
             }
         }
 
-        // #18: Render Emoji Reactions Row
         bindReactionsRow(holder, msg);
 
-        // Footer quick actions
-        holder.btnReply.setTextColor(subTextColor);
-        holder.btnReply.setText(isArabic ? "↩ رد" : "↩ Reply");
         holder.btnReply.setOnClickListener(v -> listener.onReplyClicked(msg));
-
-        holder.btnTranslate.setTextColor(subTextColor);
-        holder.btnTranslate.setText(msg.showingTranslated
-                ? (isArabic ? "الأصل" : "Original")
-                : (isArabic ? "ترجمة" : "Translate"));
         holder.btnTranslate.setOnClickListener(v -> listener.onTranslateClicked(msg));
-
-        holder.btnSaveMsg.setTextColor(isSaved ? (palette.isLight ? palette.text : roomAccentColor) : subTextColor);
-        holder.btnSaveMsg.setText(isSaved ? (isArabic ? "★ محفوظة" : "★ Saved") : (isArabic ? "☆ حفظ" : "☆ Save"));
         holder.btnSaveMsg.setOnClickListener(v -> listener.onSaveClicked(msg));
 
-        // #18: Long-press on message bubble opens Emoji Reaction & Action Picker
+        // Long-press on message bubble opens Emoji Reaction & Action Sheet (#18, #28, #31)
         holder.bubbleCard.setOnLongClickListener(v -> {
             listener.onMessageLongPressed(msg, holder.bubbleCard);
             return true;
         });
 
-        // #15 & #21: Animate newly arrived message bubbles smoothly (skipped in Lite mode)
+        // Single tap on a translated message toggles back to original; otherwise opens action sheet on tap if desired
+        holder.bubbleCard.setOnClickListener(v -> {
+            if (msg.showingTranslated) {
+                listener.onTranslateClicked(msg);
+            }
+        });
+
         if (position > lastAnimatedPosition && position == messages.size() - 1) {
             lastAnimatedPosition = position;
             MotionHelper.animateMessageBubbleIn(holder.bubbleCard, prefs.isLiteModeEnabled());
