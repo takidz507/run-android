@@ -19,27 +19,26 @@
         android:background="@android:color/transparent"
         android:orientation="vertical">
 
-        <!-- ================= EDITORIAL ROOM HEADER CARD (#14, #17, #27, #29) ================= -->
+        <!-- ================= DESIGN A AIRY ROOM HEADER (Matches Right Phone in 7196.png) ================= -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/topBarCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginStart="12dp"
-            android:layout_marginTop="10dp"
-            android:layout_marginEnd="12dp"
-            android:layout_marginBottom="6dp"
-            app:cardBackgroundColor="@color/run_panel"
-            app:cardCornerRadius="24dp"
+            app:cardBackgroundColor="@android:color/transparent"
+            app:cardCornerRadius="0dp"
             app:cardElevation="0dp"
-            app:strokeColor="@color/run_panel_hover"
-            app:strokeWidth="1dp">
+            app:strokeWidth="0dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:orientation="vertical"
-                android:padding="12dp">
+                android:paddingStart="20dp"
+                android:paddingTop="16dp"
+                android:paddingEnd="20dp"
+                android:paddingBottom="8dp">
 
+                <!-- Row 1: Back + Title (with overlapping lime highlighter) & Subtitle on start; ⋮ + Room Orb 'S' on end -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -48,39 +47,32 @@
 
                     <ImageButton
                         android:id="@+id/btnBack"
-                        android:layout_width="38dp"
-                        android:layout_height="38dp"
+                        android:layout_width="34dp"
+                        android:layout_height="34dp"
+                        android:layout_marginEnd="6dp"
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:contentDescription="Back"
                         android:src="@drawable/ic_arrow_back"
                         app:tint="@color/run_text" />
 
-                    <!-- Room Initials Orb tinted with Room Identity Color (#17) -->
-                    <TextView
-                        android:id="@+id/tvRoomHeaderOrb"
-                        android:layout_width="38dp"
-                        android:layout_height="38dp"
-                        android:layout_marginStart="4dp"
-                        android:background="@drawable/bg_brand_logo"
-                        android:gravity="center"
-                        android:text="R"
-                        android:textColor="@color/run_accent_ink"
-                        android:textSize="15sp"
-                        android:textStyle="bold" />
-
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
-                        android:layout_marginStart="10dp"
-                        android:layout_marginEnd="6dp"
+                        android:layout_marginEnd="8dp"
                         android:orientation="vertical">
 
-                        <LinearLayout
+                        <!-- Room Title with Overlapping Lime Marker Bar (Matches 7196.png: "Study Group D5") -->
+                        <FrameLayout
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal">
+                            android:layout_height="wrap_content">
+
+                            <View
+                                android:id="@+id/viewRoomTitleHighlighter"
+                                android:layout_width="148dp"
+                                android:layout_height="9dp"
+                                android:layout_gravity="bottom|start"
+                                android:layout_marginBottom="2dp" />
 
                             <TextView
                                 android:id="@+id/tvRoomTitle"
@@ -88,42 +80,19 @@
                                 android:layout_height="wrap_content"
                                 android:ellipsize="end"
                                 android:maxLines="1"
+                                android:singleLine="true"
+                                android:paddingEnd="4dp"
                                 android:text="Study Group D5"
                                 android:textColor="@color/run_text"
-                                android:textSize="17sp"
+                                android:textSize="20sp"
                                 android:textStyle="bold" />
+                        </FrameLayout>
 
-                            <TextView
-                                android:id="@+id/tvRoomCodeBadge"
-                                android:layout_width="wrap_content"
-                                android:layout_height="wrap_content"
-                                android:layout_marginStart="8dp"
-                                android:background="@drawable/bg_code_pill"
-                                android:paddingStart="8dp"
-                                android:paddingTop="2dp"
-                                android:paddingEnd="8dp"
-                                android:paddingBottom="2dp"
-                                android:text="#ABC123"
-                                android:textColor="@color/run_accent_ink"
-                                android:textSize="11sp"
-                                android:textStyle="bold"
-                                android:clickable="true"
-                                android:focusable="true" />
-                        </LinearLayout>
-
-                        <!-- Warm Paper Highlighter Bar under Room Title (#14, #17) -->
-                        <View
-                            android:id="@+id/viewRoomTitleHighlighter"
-                            android:layout_width="96dp"
-                            android:layout_height="5dp"
-                            android:layout_marginTop="2dp"
-                            android:background="@drawable/bg_highlighter_bar" />
-
-                        <!-- Live Presence + #29 Connection Quality + #27 Timed Mute Indicator -->
+                        <!-- Subtitle: "12 online · 48 messages" + Timed Mute Pill -->
                         <LinearLayout
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginTop="3dp"
+                            android:layout_marginTop="2dp"
                             android:gravity="center_vertical"
                             android:orientation="horizontal">
 
@@ -131,9 +100,11 @@
                                 android:id="@+id/tvRoomSyncStatus"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
-                                android:text="1 online · Connected"
+                                android:maxLines="1"
+                                android:singleLine="true"
+                                android:text="1 online · 0 messages"
                                 android:textColor="@color/run_muted"
-                                android:textSize="11sp" />
+                                android:textSize="12.5sp" />
 
                             <TextView
                                 android:id="@+id/tvRoomMuteStatusPill"
@@ -147,100 +118,120 @@
                                 android:paddingBottom="1dp"
                                 android:text="🔕 Muted"
                                 android:textColor="@color/run_muted"
-                                android:textSize="10sp"
+                                android:textSize="10.5sp"
                                 android:visibility="gone"
                                 android:clickable="true"
                                 android:focusable="true" />
                         </LinearLayout>
                     </LinearLayout>
 
-                    <!-- #17: Per-Room Identity Color & Background Picker Button -->
+                    <!-- Hidden legacy header controls (accessible via ⋮ Room More sheet so header stays clean like 7196.png) -->
+                    <TextView
+                        android:id="@+id/tvRoomCodeBadge"
+                        android:layout_width="1dp"
+                        android:layout_height="1dp"
+                        android:visibility="gone" />
+
                     <ImageButton
                         android:id="@+id/btnRoomIdentity"
-                        android:layout_width="36dp"
-                        android:layout_height="36dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:contentDescription="Room Color &amp; Background"
-                        android:src="@drawable/ic_palette"
-                        app:tint="@color/run_text" />
+                        android:layout_width="1dp"
+                        android:layout_height="1dp"
+                        android:visibility="gone"
+                        android:contentDescription="Room Identity" />
 
-                    <!-- #27: Timed Room Mute Button -->
                     <ImageButton
                         android:id="@+id/btnMuteRoom"
-                        android:layout_width="36dp"
-                        android:layout_height="36dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:contentDescription="Mute Room Notifications"
-                        android:src="@drawable/ic_notifications"
-                        app:tint="@color/run_text" />
+                        android:layout_width="1dp"
+                        android:layout_height="1dp"
+                        android:visibility="gone"
+                        android:contentDescription="Mute" />
 
-                    <!-- #23: Share Smart Invite Link Button -->
                     <ImageButton
                         android:id="@+id/btnShareRoom"
-                        android:layout_width="36dp"
-                        android:layout_height="36dp"
-                        android:background="?attr/selectableItemBackgroundBorderless"
-                        android:contentDescription="Share Room"
-                        android:src="@drawable/ic_share"
-                        app:tint="@color/run_text" />
+                        android:layout_width="1dp"
+                        android:layout_height="1dp"
+                        android:visibility="gone"
+                        android:contentDescription="Share" />
 
-                    <!-- Leave / Delete / Archive Room Button -->
+                    <!-- ⋮ Room More Button (opens sheet with Identity, Share Invite, Copy Code, Mute, Archive, Leave/Delete) -->
                     <ImageButton
                         android:id="@+id/btnDeleteRoom"
                         android:layout_width="36dp"
                         android:layout_height="36dp"
+                        android:layout_marginEnd="6dp"
                         android:background="?attr/selectableItemBackgroundBorderless"
-                        android:contentDescription="Leave or Delete Room"
+                        android:contentDescription="Room Options"
                         android:src="@drawable/ic_more_vert"
                         app:tint="@color/run_text" />
+
+                    <!-- Circular Lime Room Initials Orb on Top-Right ('S' in 7196.png) -->
+                    <TextView
+                        android:id="@+id/tvRoomHeaderOrb"
+                        android:layout_width="40dp"
+                        android:layout_height="40dp"
+                        android:gravity="center"
+                        android:text="S"
+                        android:textColor="@color/run_accent_ink"
+                        android:textSize="15sp"
+                        android:textStyle="bold"
+                        android:clickable="true"
+                        android:focusable="true" />
                 </LinearLayout>
 
-                <!-- Warm Paper Pill Switcher (Chat · Tasks · Notes) -->
+                <!-- Row 2: Three Separate Pill Tabs (Chat · Tasks · Notes) matching 7196.png -->
                 <LinearLayout
                     android:id="@+id/layoutRoomTabsBar"
-                    android:layout_width="match_parent"
-                    android:layout_height="40dp"
-                    android:layout_marginTop="10dp"
-                    android:background="@drawable/bg_pill_neutral"
-                    android:orientation="horizontal"
-                    android:padding="3dp">
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="12dp"
+                    android:background="@android:color/transparent"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnTabChat"
                         style="@style/Widget.Material3.Button"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:layout_marginEnd="8dp"
+                        android:minWidth="68dp"
                         android:insetTop="0dp"
                         android:insetBottom="0dp"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp"
                         android:text="Chat"
-                        android:textSize="12sp"
+                        android:textSize="13sp"
                         android:textStyle="bold"
                         app:cornerRadius="18dp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnTabTasks"
                         style="@style/Widget.Material3.Button.TonalButton"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:layout_marginEnd="8dp"
+                        android:minWidth="68dp"
                         android:insetTop="0dp"
                         android:insetBottom="0dp"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp"
                         android:text="Tasks"
-                        android:textSize="12sp"
+                        android:textSize="13sp"
                         android:textStyle="bold"
                         app:cornerRadius="18dp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnTabNotes"
                         style="@style/Widget.Material3.Button.TonalButton"
-                        android:layout_width="0dp"
-                        android:layout_height="match_parent"
-                        android:layout_weight="1"
+                        android:layout_width="wrap_content"
+                        android:layout_height="36dp"
+                        android:minWidth="68dp"
                         android:insetTop="0dp"
                         android:insetBottom="0dp"
+                        android:paddingStart="18dp"
+                        android:paddingEnd="18dp"
                         android:text="Notes"
-                        android:textSize="12sp"
+                        android:textSize="13sp"
                         android:textStyle="bold"
                         app:cornerRadius="18dp" />
                 </LinearLayout>
@@ -268,8 +259,8 @@
                     android:id="@+id/cardGestureHintBanner"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
+                    android:layout_marginStart="18dp"
+                    android:layout_marginEnd="18dp"
                     android:layout_marginBottom="4dp"
                     android:visibility="gone"
                     app:cardBackgroundColor="@color/run_panel"
@@ -284,9 +275,9 @@
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
                         android:paddingStart="12dp"
-                        android:paddingTop="8dp"
+                        android:paddingTop="6dp"
                         android:paddingEnd="8dp"
-                        android:paddingBottom="8dp">
+                        android:paddingBottom="6dp">
 
                         <TextView
                             android:id="@+id/tvGestureHintText"
@@ -301,7 +292,7 @@
                             android:id="@+id/btnDismissGestureHint"
                             style="@style/Widget.Material3.Button.TextButton"
                             android:layout_width="wrap_content"
-                            android:layout_height="30dp"
+                            android:layout_height="28dp"
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
                             android:text="@string/got_it"
@@ -321,38 +312,50 @@
                         android:layout_width="match_parent"
                         android:layout_height="match_parent"
                         android:clipToPadding="false"
-                        android:paddingStart="12dp"
+                        android:overScrollMode="never"
+                        android:paddingStart="16dp"
                         android:paddingTop="4dp"
-                        android:paddingEnd="12dp"
-                        android:paddingBottom="12dp" />
+                        android:paddingEnd="16dp"
+                        android:paddingBottom="8dp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnScrollToBottom"
                         style="@style/Widget.Material3.Button.ElevatedButton"
                         android:layout_width="wrap_content"
-                        android:layout_height="38dp"
+                        android:layout_height="36dp"
                         android:layout_alignParentBottom="true"
                         android:layout_centerHorizontal="true"
-                        android:layout_marginBottom="12dp"
+                        android:layout_marginBottom="10dp"
                         android:insetTop="0dp"
                         android:insetBottom="0dp"
                         android:text="New Messages ↓"
-                        android:textSize="12sp"
+                        android:textSize="11.5sp"
                         android:visibility="gone"
-                        app:cornerRadius="19dp" />
+                        app:cornerRadius="18dp" />
                 </RelativeLayout>
+
+                <!-- Inline Tasks Preview Strip in Chat (Matches Design A 7196.png: "[✓] Revise Analysis ch.2") -->
+                <LinearLayout
+                    android:id="@+id/layoutInlineTasksPreview"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:orientation="vertical"
+                    android:paddingStart="20dp"
+                    android:paddingEnd="20dp"
+                    android:paddingBottom="6dp"
+                    android:visibility="gone" />
 
                 <!-- Typing indicator banner -->
                 <TextView
                     android:id="@+id/tvTypingIndicator"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:paddingStart="18dp"
-                    android:paddingTop="3dp"
-                    android:paddingEnd="18dp"
-                    android:paddingBottom="3dp"
+                    android:paddingStart="22dp"
+                    android:paddingTop="2dp"
+                    android:paddingEnd="22dp"
+                    android:paddingBottom="2dp"
                     android:textColor="@color/run_muted"
-                    android:textSize="12sp"
+                    android:textSize="11.5sp"
                     android:textStyle="italic"
                     android:visibility="gone" />
 
@@ -377,15 +380,15 @@
                     android:background="@drawable/bg_reply_box"
                     android:gravity="center_vertical"
                     android:orientation="horizontal"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
+                    android:layout_marginStart="18dp"
+                    android:layout_marginEnd="18dp"
                     android:layout_marginBottom="6dp"
                     android:padding="8dp"
                     android:visibility="gone">
 
                     <View
                         android:layout_width="3dp"
-                        android:layout_height="24dp"
+                        android:layout_height="22dp"
                         android:background="@color/run_accent" />
 
                     <TextView
@@ -401,24 +404,24 @@
 
                     <ImageButton
                         android:id="@+id/btnCancelReply"
-                        android:layout_width="28dp"
-                        android:layout_height="28dp"
+                        android:layout_width="26dp"
+                        android:layout_height="26dp"
                         android:background="?attr/selectableItemBackgroundBorderless"
                         android:contentDescription="Cancel reply"
                         android:src="@drawable/ic_close"
                         app:tint="@color/run_muted" />
                 </LinearLayout>
 
-                <!-- Warm Paper Floating Pill Composer Bar (#14) -->
+                <!-- Slim Stadium Pill Composer Bar (Matches Bottom of Right Phone in 7196.png) -->
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/cardComposerBar"
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:layout_marginEnd="12dp"
-                    android:layout_marginBottom="10dp"
+                    android:layout_marginStart="18dp"
+                    android:layout_marginEnd="18dp"
+                    android:layout_marginBottom="14dp"
                     app:cardBackgroundColor="@color/run_panel"
-                    app:cardCornerRadius="28dp"
+                    app:cardCornerRadius="26dp"
                     app:cardElevation="0dp"
                     app:strokeColor="@color/run_panel_hover"
                     app:strokeWidth="1dp">
@@ -428,15 +431,15 @@
                         android:layout_height="wrap_content"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
-                        android:paddingStart="6dp"
-                        android:paddingTop="4dp"
+                        android:paddingStart="8dp"
+                        android:paddingTop="3dp"
                         android:paddingEnd="6dp"
-                        android:paddingBottom="4dp">
+                        android:paddingBottom="3dp">
 
                         <ImageButton
                             android:id="@+id/btnAttachFile"
-                            android:layout_width="38dp"
-                            android:layout_height="38dp"
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
                             android:background="?attr/selectableItemBackgroundBorderless"
                             android:contentDescription="Attach file"
                             android:src="@drawable/ic_attach_file"
@@ -446,24 +449,24 @@
                             android:id="@+id/etMessageInput"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="4dp"
-                            android:layout_marginEnd="4dp"
+                            android:layout_marginStart="2dp"
+                            android:layout_marginEnd="2dp"
                             android:layout_weight="1"
                             android:background="@null"
-                            android:hint="@string/send_message_hint"
+                            android:hint="Write a message..."
                             android:maxLines="4"
-                            android:paddingStart="8dp"
+                            android:paddingStart="6dp"
                             android:paddingTop="10dp"
-                            android:paddingEnd="8dp"
+                            android:paddingEnd="6dp"
                             android:paddingBottom="10dp"
                             android:textColor="@color/run_text"
                             android:textColorHint="@color/run_subtle"
-                            android:textSize="15sp" />
+                            android:textSize="14.5sp" />
 
                         <ImageButton
                             android:id="@+id/btnRecordVoice"
-                            android:layout_width="38dp"
-                            android:layout_height="38dp"
+                            android:layout_width="34dp"
+                            android:layout_height="34dp"
                             android:background="?attr/selectableItemBackgroundBorderless"
                             android:contentDescription="Record voice"
                             android:src="@drawable/ic_mic"
@@ -471,14 +474,13 @@
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnSendMessage"
-                            style="@style/Widget.Material3.Button"
-                            android:layout_width="40dp"
-                            android:layout_height="40dp"
-                            android:layout_marginStart="2dp"
+                            style="@style/Widget.Material3.Button.TextButton"
+                            android:layout_width="38dp"
+                            android:layout_height="38dp"
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
                             android:padding="0dp"
-                            app:cornerRadius="20dp"
+                            app:cornerRadius="19dp"
                             app:icon="@drawable/ic_send"
                             app:iconGravity="textStart"
                             app:iconPadding="0dp"
@@ -494,7 +496,10 @@
                 android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:orientation="vertical"
-                android:padding="12dp"
+                android:paddingStart="20dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="20dp"
+                android:paddingBottom="16dp"
                 android:visibility="gone">
 
                 <com.google.android.material.card.MaterialCardView
@@ -513,13 +518,13 @@
                         android:layout_height="wrap_content"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
-                        android:padding="16dp">
+                        android:padding="14dp">
 
                         <com.takidz.run.ui.views.TaskProgressRingView
                             android:id="@+id/progressRingView"
-                            android:layout_width="68dp"
-                            android:layout_height="68dp"
-                            android:layout_marginEnd="16dp" />
+                            android:layout_width="58dp"
+                            android:layout_height="58dp"
+                            android:layout_marginEnd="14dp" />
 
                         <LinearLayout
                             android:layout_width="0dp"
@@ -533,7 +538,7 @@
                                 android:layout_height="wrap_content"
                                 android:text="0 of 0 completed"
                                 android:textColor="@color/run_text"
-                                android:textSize="16sp"
+                                android:textSize="15.5sp"
                                 android:textStyle="bold" />
 
                             <TextView
@@ -541,7 +546,7 @@
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
                                 android:layout_marginTop="2dp"
-                                android:text="Shared checklist for everyone in this space"
+                                android:text="Shared checklist for everyone in this room"
                                 android:textColor="@color/run_muted"
                                 android:textSize="12sp" />
                         </LinearLayout>
@@ -558,7 +563,7 @@
                     <EditText
                         android:id="@+id/etNewTaskInput"
                         android:layout_width="0dp"
-                        android:layout_height="46dp"
+                        android:layout_height="44dp"
                         android:layout_marginEnd="8dp"
                         android:layout_weight="1"
                         android:background="@drawable/bg_input_field"
@@ -574,7 +579,7 @@
                         android:id="@+id/btnAddTask"
                         style="@style/Widget.Material3.Button"
                         android:layout_width="wrap_content"
-                        android:layout_height="46dp"
+                        android:layout_height="44dp"
                         app:cornerRadius="16dp"
                         app:icon="@drawable/ic_add"
                         android:text="Add" />
@@ -596,7 +601,10 @@
                 android:layout_height="match_parent"
                 android:layout_weight="1"
                 android:orientation="vertical"
-                android:padding="12dp"
+                android:paddingStart="20dp"
+                android:paddingTop="8dp"
+                android:paddingEnd="20dp"
+                android:paddingBottom="16dp"
                 android:visibility="gone">
 
                 <com.google.android.material.card.MaterialCardView
@@ -604,7 +612,7 @@
                     android:layout_width="match_parent"
                     android:layout_height="match_parent"
                     app:cardBackgroundColor="@color/run_panel"
-                    app:cardCornerRadius="24dp"
+                    app:cardCornerRadius="22dp"
                     app:cardElevation="0dp"
                     app:strokeColor="@color/run_panel_hover"
                     app:strokeWidth="1dp">
@@ -623,8 +631,8 @@
                             android:layout_marginBottom="10dp">
 
                             <ImageView
-                                android:layout_width="20dp"
-                                android:layout_height="20dp"
+                                android:layout_width="18dp"
+                                android:layout_height="18dp"
                                 android:src="@drawable/ic_note"
                                 app:tint="@color/run_text"
                                 android:contentDescription="Notes" />
@@ -643,7 +651,7 @@
                                 android:id="@+id/btnNoteSync"
                                 style="@style/Widget.Material3.Button.TonalButton"
                                 android:layout_width="wrap_content"
-                                android:layout_height="34dp"
+                                android:layout_height="32dp"
                                 android:insetTop="0dp"
                                 android:insetBottom="0dp"
                                 android:paddingStart="10dp"
@@ -733,10 +741,10 @@
                             android:gravity="top|start"
                             android:hint="@string/notes_placeholder"
                             android:lineSpacingExtra="4dp"
-                            android:padding="16dp"
+                            android:padding="14dp"
                             android:textColor="@color/run_text"
                             android:textColorHint="@color/run_subtle"
-                            android:textSize="15sp" />
+                            android:textSize="14.5sp" />
 
                         <LinearLayout
                             android:layout_width="match_parent"
