@@ -587,6 +587,77 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
+
+        <!-- Theme 5: Liquid Glass (v3.1) -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/cardThemeGlass"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="16dp"
+            android:clickable="true"
+            android:focusable="true"
+            app:cardBackgroundColor="@color/run_panel"
+            app:cardCornerRadius="18dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/run_panel_hover"
+            app:strokeWidth="1.5dp">
+
+            <LinearLayout
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="12dp">
+
+                <View
+                    android:layout_width="44dp"
+                    android:layout_height="32dp"
+                    android:background="#0E2A26" />
+
+                <View
+                    android:layout_width="16dp"
+                    android:layout_height="32dp"
+                    android:background="#9ADBE8" />
+
+                <LinearLayout
+                    android:layout_width="0dp"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_weight="1"
+                    android:orientation="vertical">
+
+                    <TextView
+                        android:id="@+id/tvThemeName5"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Liquid Glass"
+                        android:textColor="@color/run_text"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
+
+                    <TextView
+                        android:id="@+id/tvThemeDesc5"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:text="Frosted glass · liquid translucency"
+                        android:textColor="@color/run_muted"
+                        android:textSize="12sp" />
+                </LinearLayout>
+
+                <TextView
+                    android:id="@+id/tvThemeCheck5"
+                    android:layout_width="24dp"
+                    android:layout_height="24dp"
+                    android:background="@drawable/bg_brand_logo"
+                    android:gravity="center"
+                    android:text="✓"
+                    android:textColor="#1A2407"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
         <!-- Profile Section -->
         <TextView
             android:id="@+id/tvProfileSectionLabel"
@@ -712,6 +783,15 @@
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:text="Lite mode (reduce heavy animations for battery/weak devices)"
+            android:textColor="@color/run_text"
+            android:textSize="13sp" />
+
+        <CheckBox
+            android:id="@+id/cbDarkModeVariant"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginTop="6dp"
+            android:text="Dark mode — works with every design above"
             android:textColor="@color/run_text"
             android:textSize="13sp" />
 
