@@ -90,6 +90,9 @@
                             android:id="@+id/tvConnectionQuality"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:ellipsize="end"
+                            android:maxLines="1"
+                            android:singleLine="true"
                             android:text="Connected"
                             android:textColor="@color/run_muted"
                             android:textSize="10sp"
@@ -122,6 +125,7 @@
             <!-- #28: Quick Language Switch Pill (عربي / EN) -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnQuickLangToggle"
+                android:visibility="gone"
                 style="@style/Widget.Material3.Button.TonalButton"
                 android:layout_width="wrap_content"
                 android:layout_height="34dp"
@@ -138,6 +142,7 @@
             <!-- #25 & #30: Account Pairing / Phone Transfer Button -->
             <ImageButton
                 android:id="@+id/btnAccountPairing"
+                android:visibility="gone"
                 android:layout_width="38dp"
                 android:layout_height="38dp"
                 android:layout_marginStart="4dp"
@@ -155,6 +160,17 @@
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="Settings"
                 android:src="@drawable/ic_settings"
+                app:tint="@color/run_text" />
+
+            <!-- v3.1: More (three dots) — space-eaters live here now -->
+            <ImageButton
+                android:id="@+id/btnMoreMenu"
+                android:layout_width="38dp"
+                android:layout_height="38dp"
+                android:layout_marginStart="2dp"
+                android:background="?attr/selectableItemBackgroundBorderless"
+                android:contentDescription="More"
+                android:src="@drawable/ic_more_vert"
                 app:tint="@color/run_text" />
 
             <!-- Top-right User Avatar Orb (matches Warm Paper mockup 'T') -->
@@ -218,9 +234,9 @@
                         android:id="@+id/profileCard"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="16dp"
+                        android:layout_marginBottom="10dp"
                         app:cardBackgroundColor="@color/run_panel"
-                        app:cardCornerRadius="24dp"
+                        app:cardCornerRadius="20dp"
                         app:cardElevation="0dp"
                         app:strokeColor="@color/run_panel_hover"
                         app:strokeWidth="1dp">
@@ -230,7 +246,7 @@
                             android:layout_height="wrap_content"
                             android:gravity="center_vertical"
                             android:orientation="horizontal"
-                            android:padding="16dp">
+                            android:padding="12dp">
 
                             <LinearLayout
                                 android:layout_width="0dp"
@@ -638,12 +654,14 @@
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- Quick Discover Tiles at bottom of Spaces -->
+                    <!-- Quick Discover Tiles at bottom of Spaces: v3.1 hidden — Discover lives in the dock and the More sheet -->
                     <LinearLayout
+                        android:id="@+id/layoutQuickTiles"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:layout_marginTop="14dp"
-                        android:orientation="horizontal">
+                        android:orientation="horizontal"
+                        android:visibility="gone">
 
                         <com.google.android.material.card.MaterialCardView
                             android:id="@+id/cardPublicGroups"
