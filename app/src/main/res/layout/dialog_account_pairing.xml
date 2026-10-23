@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/scrollPairingSheet"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:background="@color/run_bg"
+    android:overScrollMode="never"
     android:fillViewport="true">
 
     <LinearLayout
@@ -224,4 +225,4 @@
                 app:cornerRadius="12dp" />
         </LinearLayout>
     </LinearLayout>
-</ScrollView>
+</androidx.core.widget.NestedScrollView>
