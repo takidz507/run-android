@@ -1,0 +1,89 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">Run</string>
+    <string name="app_tagline">مساحات محادثة فورية بدون خادم</string>
+
+    <!-- Bottom & Rail Navigation (#14, #28) -->
+    <string name="nav_spaces">مساحاتي</string>
+    <string name="nav_discover">استكشاف</string>
+    <string name="nav_people">المتصلون</string>
+    <string name="nav_saved">محفوظاتي</string>
+
+    <!-- Room Tabs -->
+    <string name="tab_chat">المحادثة</string>
+    <string name="tab_tasks">المهام</string>
+    <string name="tab_notes">الملاحظات</string>
+    <string name="tab_online_now">متصل الآن</string>
+    <string name="tab_friends_invites">الأصدقاء والدعوات</string>
+
+    <!-- Home / Spaces Screen -->
+    <string name="your_spaces">مساحاتك وغرفك</string>
+    <string name="online_now_title">متصلون الآن</string>
+    <string name="create_room">إنشاء غرفة</string>
+    <string name="join_by_code">انضمام برمز</string>
+    <string name="public_groups">المجموعات العامة</string>
+    <string name="feedback_board">لوحة المقترحات</string>
+    <string name="online_now_format">%d متصل</string>
+    <string name="room_name_hint">اسم الغرفة (اختياري)</string>
+    <string name="user_name_hint">اسم العرض الخاص بك</string>
+    <string name="make_public_label">إدراج في دليل المجموعات العامة</string>
+    <string name="password_optional_hint">كلمة مرور للحماية (اختياري)</string>
+    <string name="recent_rooms_title">غرفك</string>
+    <string name="no_recent_rooms">لا توجد غرف بعد. اضغط + لإنشاء غرفة أو الانضمام برمز!</string>
+
+    <!-- Connection Quality (#29) -->
+    <string name="conn_connected">متصل</string>
+    <string name="conn_weak">إشارة ضعيفة</string>
+    <string name="conn_reconnecting">يعيد الاتصال تلقائياً…</string>
+
+    <!-- Room Screen -->
+    <string name="send_message_hint">اكتب رسالة…</string>
+    <string name="add_task_hint">أضف مهمة مشتركة…</string>
+    <string name="notes_placeholder">اكتب الملاحظات المشتركة، ملخصات الدراسة، أو الروابط هنا. يرى الجميع التحديثات مباشرة…</string>
+    <string name="room_code_copied">تم نسخ رمز الغرفة: %s</string>
+    <string name="invite_link_copied">تم نسخ رابط الدعوة: %s</string>
+    <string name="gesture_hint_banner">اسحب الرسالة للرد السريع • اضغط مطولاً للتفاعل أو الحفظ • اسحب الصورة للأسفل للإغلاق</string>
+    <string name="got_it">حسناً</string>
+
+    <!-- Timed Room Mute (#27) -->
+    <string name="mute_room_title">كتم إشعارات هذه الغرفة مؤقتاً</string>
+    <string name="mute_1_hour">كتم لمدة ساعة واحدة</string>
+    <string name="mute_8_hours">كتم لمدة 8 ساعات</string>
+    <string name="mute_until_tomorrow">كتم حتى الغد (8:00 صباحاً)</string>
+    <string name="unmute_now">إلغاء الكتم الآن</string>
+
+    <!-- Saved Messages (#31) -->
+    <string name="saved_messages_title">محفوظاتي</string>
+    <string name="saved_messages_sub">رسائلك المحفوظة بشكل خاص من جميع الغرف</string>
+    <string name="saved_empty">لا توجد رسائل محفوظة بعد. اضغط مطولاً على أي رسالة داخل أي غرفة لاختيار حفظ.</string>
+    <string name="jump_to_room">الانتقال للرسالة ↖</string>
+
+    <!-- Pairing & Transfer (#25, #30) -->
+    <string name="pair_account_title">حساب واحد ونقل البيانات برمز</string>
+    <string name="pair_account_sub">انقل غرفك وملفك الشخصي إلى هاتف جديد أو اربط حسابك بين الويب والتطبيق برمز قصير.</string>
+
+    <!-- Online Directory -->
+    <string name="online_directory_title">مجتمع المتصلين</string>
+    <string name="search_users_hint">ابحث عن متصلين…</string>
+    <string name="invite_to_room">دعوة</string>
+    <string name="add_friend">إضافة صديق</string>
+    <string name="friend_pending">قيد الانتظار</string>
+    <string name="friend_status">صديق</string>
+    <string name="self_indicator">أنت</string>
+    <string name="accept">قبول</string>
+    <string name="decline">رفض</string>
+    <string name="active_now">نشط الآن</string>
+
+    <!-- Feedback -->
+    <string name="feedback_title">المقترحات والأفكار</string>
+    <string name="new_suggestion">مقترح جديد</string>
+    <string name="category_idea">فكرة</string>
+    <string name="category_feature">ميزة</string>
+    <string name="category_bug">خطأ</string>
+    <string name="category_improvement">تحسين</string>
+    <string name="suggestion_title_hint">عنوان المقترح</string>
+    <string name="suggestion_content_hint">اشرح فكرتك أو ملاحظتك…</string>
+    <string name="submit">نشر</string>
+    <string name="cancel">إلغاء</string>
+    <string name="close">إغلاق</string>
+</resources>

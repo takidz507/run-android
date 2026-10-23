@@ -3,15 +3,47 @@ package com.takidz.run.utils;
 import android.graphics.Color;
 import androidx.appcompat.app.AppCompatDelegate;
 
+import java.util.Locale;
+
 /**
- * Exact Theme Token Palette from the Run Technical Specification:
- * 1. Dark (Default): bg=#111218, panel=#1b1d26, panelSoft=#20222c, text=#f4f3f8, muted=#9b9dac, accent=#c8f169, accentInk=#1d2810
- * 2. AMOLED Black:   bg=#000000, panel=#080808, panelSoft=#101010, text=#f7f7f7, muted=#a3a3a3, accent=#c8f169, accentInk=#18210a
- * 3. Light:          bg=#f4f5f2, panel=#ffffff, panelSoft=#f6f7f3, text=#20221d, muted=#656a5d, accent=#3390ec, accentInk=#ffffff
+ * #14 & #22: The Four Approved Switchable Themes from `themes-all-four.png`:
+ * 1. Warm Paper (Default)   — Light · the original, warmer (#F5F1E6 paper, #B8E646 lime highlighter)
+ * 2. Warm Paper Dark        — Dark · same soul, at night (#181713 warm espresso-charcoal, #BCEB4B lime)
+ * 3. Clean Air              — Light · minimal and airy (#F7F8F6 white-sage, thin borders, #8CD936 leaf lime)
+ * 4. Deep Night             — AMOLED · neon lime (#060705 true black, #C6FF33 electric neon lime)
+ *
+ * Also provides #17 Per-Room Identity color presets and background styles.
  */
 public class ThemeHelper {
 
+    public static final String THEME_WARM_PAPER = "warm_paper";
+    public static final String THEME_WARM_PAPER_DARK = "warm_paper_dark";
+    public static final String THEME_CLEAN_AIR = "clean_air";
+    public static final String THEME_DEEP_NIGHT = "deep_night";
+
+    // #17: Curated Per-Room Identity Color Presets
+    public static final String[] ROOM_ACCENT_HEX = new String[]{
+            "#B8E646", // 0: Warm Lime (Default)
+            "#E06D53", // 1: Terracotta Paper
+            "#E5A93B", // 2: Amber Ochre
+            "#46B886", // 3: Sage Emerald
+            "#3BA8B5", // 4: Coastal Teal
+            "#5B7CE6", // 5: Cobalt Ink
+            "#9B6BE6", // 6: Iris Violet
+            "#D96B98"  // 7: Rose Clay
+    };
+
+    public static final String[] ROOM_BG_STYLES = new String[]{
+            "paper",   // 0: Warm Paper Grain
+            "dots",    // 1: Architect Dot Grid
+            "lines",   // 2: Ruled Notebook
+            "grid",    // 3: Study Graph Grid
+            "waves",   // 4: Calm Contours
+            "origami"  // 5: Origami Facets
+    };
+
     public static class Palette {
+        public final String themeKey;
         public final int bg;
         public final int bgElevated;
         public final int panel;
@@ -22,16 +54,27 @@ public class ThemeHelper {
         public final int subtle;
         public final int accent;
         public final int accentInk;
+        public final int ownBubble;
+        public final int ownBubbleText;
+        public final int ownBubbleStroke;
+        public final int highlighter;
+        public final int dockBg;
+        public final int dockText;
         public final int purple;
         public final int success;
         public final int danger;
+        public final int warning;
         public final boolean isLight;
 
         public Palette(
+                String themeKey,
                 String bg, String bgElevated, String panel, String panelSoft, String panelHover,
                 String text, String muted, String subtle, String accent, String accentInk,
-                String purple, String success, String danger, boolean isLight
+                String ownBubble, String ownBubbleText, String ownBubbleStroke, String highlighter,
+                String dockBg, String dockText,
+                String purple, String success, String danger, String warning, boolean isLight
         ) {
+            this.themeKey = themeKey;
             this.bg = Color.parseColor(bg);
             this.bgElevated = Color.parseColor(bgElevated);
             this.panel = Color.parseColor(panel);
@@ -42,38 +85,103 @@ public class ThemeHelper {
             this.subtle = Color.parseColor(subtle);
             this.accent = Color.parseColor(accent);
             this.accentInk = Color.parseColor(accentInk);
+            this.ownBubble = Color.parseColor(ownBubble);
+            this.ownBubbleText = Color.parseColor(ownBubbleText);
+            this.ownBubbleStroke = Color.parseColor(ownBubbleStroke);
+            this.highlighter = Color.parseColor(highlighter);
+            this.dockBg = Color.parseColor(dockBg);
+            this.dockText = Color.parseColor(dockText);
             this.purple = Color.parseColor(purple);
             this.success = Color.parseColor(success);
             this.danger = Color.parseColor(danger);
+            this.warning = Color.parseColor(warning);
             this.isLight = isLight;
         }
     }
 
-    public static Palette getPalette(String mode) {
-        if ("light".equalsIgnoreCase(mode)) {
-            return new Palette(
-                    "#f4f5f2", "#ffffff", "#ffffff", "#f6f7f3", "#eff1e9",
-                    "#20221d", "#656a5d", "#858a7d", "#3390ec", "#ffffff",
-                    "#6f62db", "#2c813d", "#c73e4d", true
-            );
-        } else if ("amoled".equalsIgnoreCase(mode)) {
-            return new Palette(
-                    "#000000", "#050505", "#080808", "#101010", "#171717",
-                    "#f7f7f7", "#a3a3a3", "#777777", "#c8f169", "#18210a",
-                    "#aaa2ff", "#a8ee9c", "#ff8c96", false
-            );
-        } else {
-            // Default Dark
-            return new Palette(
-                    "#111218", "#171820", "#1b1d26", "#20222c", "#252733",
-                    "#f4f3f8", "#9b9dac", "#747786", "#c8f169", "#1d2810",
-                    "#aaa2ff", "#a8ee9c", "#ff8c96", false
-            );
+    public static String normalizeThemeMode(String mode) {
+        if (mode == null) return THEME_WARM_PAPER;
+        String m = mode.trim().toLowerCase(Locale.US);
+        switch (m) {
+            case THEME_WARM_PAPER:
+            case "light":
+                return THEME_WARM_PAPER;
+            case THEME_WARM_PAPER_DARK:
+            case "dark":
+                return THEME_WARM_PAPER_DARK;
+            case THEME_CLEAN_AIR:
+                return THEME_CLEAN_AIR;
+            case THEME_DEEP_NIGHT:
+            case "amoled":
+                return THEME_DEEP_NIGHT;
+            default:
+                return THEME_WARM_PAPER;
         }
     }
 
+    public static Palette getPalette(String mode) {
+        String norm = normalizeThemeMode(mode);
+        switch (norm) {
+            case THEME_WARM_PAPER_DARK:
+                // Warm Paper Dark: Dark · same soul, at night
+                return new Palette(
+                        THEME_WARM_PAPER_DARK,
+                        "#181713", "#201E19", "#23211B", "#2D2A22", "#3A362C",
+                        "#F4F0E6", "#A6A090", "#7D7768", "#BCEB4B", "#172107",
+                        "#384B17", "#F2F8E4", "#557322", "#47611B",
+                        "#12110E", "#EAE5D9",
+                        "#B5A8FF", "#9BE870", "#FF857A", "#F5B942", false
+                );
+            case THEME_CLEAN_AIR:
+                // Clean Air: Light · minimal and airy
+                return new Palette(
+                        THEME_CLEAN_AIR,
+                        "#F6F8F5", "#EEF2EC", "#FFFFFF", "#ECF0EA", "#DCE2D9",
+                        "#171B16", "#60685D", "#8B9488", "#8AD834", "#132205",
+                        "#E3F5C6", "#162408", "#C5E892", "#D5F2A7",
+                        "#1B1F1A", "#F4F7F3",
+                        "#5C5CE0", "#268740", "#D13B49", "#D98A1C", true
+                );
+            case THEME_DEEP_NIGHT:
+                // Deep Night: AMOLED · neon lime
+                return new Palette(
+                        THEME_DEEP_NIGHT,
+                        "#060805", "#0C0F0A", "#11150F", "#181E15", "#252E20",
+                        "#F2F7EF", "#8D9986", "#5E6958", "#C6FF33", "#0E1A00",
+                        "#273D0F", "#EEFFD6", "#456E1A", "#365714",
+                        "#0B0E0A", "#ECF5E8",
+                        "#A89FFF", "#8CF56E", "#FF7A85", "#F7B93E", false
+                );
+            case THEME_WARM_PAPER:
+            default:
+                // Warm Paper (Default): Light · the original, warmer
+                return new Palette(
+                        THEME_WARM_PAPER,
+                        "#F5F1E6", "#ECE7D9", "#FCF9F2", "#EAE4D3", "#DDD5C1",
+                        "#1D1B16", "#6D685B", "#969080", "#B5E53E", "#1A2407",
+                        "#DCF29D", "#1B250A", "#C2E36B", "#CBEF68",
+                        "#1E1C17", "#F7F4EB",
+                        "#6857D6", "#2E7D32", "#C93B3B", "#D6831A", true
+                );
+        }
+    }
+
+    public static int parseRoomAccentColor(String hex, Palette fallbackPalette) {
+        if (hex != null && !hex.trim().isEmpty()) {
+            try {
+                return Color.parseColor(hex.trim());
+            } catch (Exception ignored) {}
+        }
+        return fallbackPalette != null ? fallbackPalette.accent : Color.parseColor("#B5E53E");
+    }
+
+    public static int withAlpha(int color, int alpha) {
+        return Color.argb(Math.max(0, Math.min(255, alpha)), Color.red(color), Color.green(color), Color.blue(color));
+    }
+
     public static void applyAppNightMode(String mode) {
-        if ("light".equalsIgnoreCase(mode)) {
+        Palette p = getPalette(mode);
+        if (p.isLight) {
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_NO);
         } else {
             AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_YES);

@@ -1,622 +1,770 @@
 <?xml version="1.0" encoding="utf-8"?>
-<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+<FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
-    android:id="@+id/rootRoomLayout"
+    android:id="@+id/rootRoomFrame"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:background="@color/run_bg"
-    android:orientation="vertical">
+    android:background="@color/run_bg">
 
-    <!-- Top Room AppBar Card (Material 3 Pixel/Classroom style) -->
-    <com.google.android.material.card.MaterialCardView
-        android:id="@+id/topBarCard"
+    <!-- #17: Synced Per-Room Identity Pattern & Color Wash Canvas -->
+    <com.takidz.run.ui.views.RoomPatternBackgroundView
+        android:id="@+id/roomPatternBackground"
         android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:layout_margin="10dp"
-        app:cardBackgroundColor="@color/run_panel"
-        app:cardCornerRadius="20dp"
-        app:cardElevation="0dp"
-        app:strokeColor="@color/run_panel_hover"
-        app:strokeWidth="1dp">
+        android:layout_height="match_parent" />
 
-        <LinearLayout
+    <LinearLayout
+        android:id="@+id/rootRoomLayout"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:background="@android:color/transparent"
+        android:orientation="vertical">
+
+        <!-- ================= EDITORIAL ROOM HEADER CARD (#14, #17, #27, #29) ================= -->
+        <com.google.android.material.card.MaterialCardView
+            android:id="@+id/topBarCard"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:orientation="vertical"
-            android:padding="12dp">
+            android:layout_marginStart="12dp"
+            android:layout_marginTop="10dp"
+            android:layout_marginEnd="12dp"
+            android:layout_marginBottom="6dp"
+            app:cardBackgroundColor="@color/run_panel"
+            app:cardCornerRadius="24dp"
+            app:cardElevation="0dp"
+            app:strokeColor="@color/run_panel_hover"
+            app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <ImageButton
-                    android:id="@+id/btnBack"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="Back"
-                    android:src="@drawable/ic_arrow_back"
-                    app:tint="@color/run_text" />
-
-                <LinearLayout
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_weight="1"
-                    android:layout_marginStart="8dp"
-                    android:layout_marginEnd="8dp"
-                    android:orientation="vertical">
-
-                    <LinearLayout
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal">
-
-                        <TextView
-                            android:id="@+id/tvRoomTitle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:ellipsize="end"
-                            android:maxLines="1"
-                            android:text="Room Title"
-                            android:textColor="@color/run_text"
-                            android:textSize="16sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:id="@+id/tvRoomCodeBadge"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:background="@drawable/bg_code_pill"
-                            android:paddingStart="8dp"
-                            android:paddingTop="2dp"
-                            android:paddingEnd="8dp"
-                            android:paddingBottom="2dp"
-                            android:text="#ABC123"
-                            android:textColor="@color/run_accent"
-                            android:textSize="11sp"
-                            android:textStyle="bold"
-                            android:clickable="true"
-                            android:focusable="true" />
-                    </LinearLayout>
-
-                    <TextView
-                        android:id="@+id/tvRoomSyncStatus"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="2dp"
-                        android:text="● 1 in room • Synced"
-                        android:textColor="@color/run_success"
-                        android:textSize="11sp" />
-                </LinearLayout>
-
-                <ImageButton
-                    android:id="@+id/btnShareRoom"
-                    android:layout_width="38dp"
-                    android:layout_height="38dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="Share Room"
-                    android:src="@drawable/ic_share"
-                    app:tint="@color/run_text" />
-
-                <ImageButton
-                    android:id="@+id/btnDeleteRoom"
-                    android:layout_width="38dp"
-                    android:layout_height="38dp"
-                    android:layout_marginStart="4dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="Leave/Delete Room"
-                    android:src="@drawable/ic_delete"
-                    app:tint="@color/run_danger" />
-            </LinearLayout>
-
-            <!-- 3-Segment Tab Bar (Chat | Tasks | Shared Notes) -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="40dp"
-                android:layout_marginTop="10dp"
-                android:background="@drawable/bg_pill_neutral"
-                android:orientation="horizontal"
-                android:padding="3dp">
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnTabChat"
-                    style="@style/Widget.Material3.Button"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:text="Chat (0)"
-                    android:textSize="12sp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnTabTasks"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:text="Tasks"
-                    android:textSize="12sp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnTabNotes"
-                    style="@style/Widget.Material3.Button.TonalButton"
-                    android:layout_width="0dp"
-                    android:layout_height="match_parent"
-                    android:layout_weight="1"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:text="Notes"
-                    android:textSize="12sp" />
-            </LinearLayout>
-        </LinearLayout>
-    </com.google.android.material.card.MaterialCardView>
-
-    <!-- Content Area: Chat Panel vs Tasks Panel vs Notes Panel -->
-    <FrameLayout
-        android:layout_width="match_parent"
-        android:layout_height="0dp"
-        android:layout_weight="1">
-
-        <!-- ================= 1. CHAT PANEL ================= -->
-        <LinearLayout
-            android:id="@+id/chatPanel"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical">
-
-            <!-- Messages List with Floating Scroll-To-Bottom Button -->
-            <RelativeLayout
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1">
-
-                <androidx.recyclerview.widget.RecyclerView
-                    android:id="@+id/rvMessages"
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:clipToPadding="false"
-                    android:paddingStart="12dp"
-                    android:paddingTop="6dp"
-                    android:paddingEnd="12dp"
-                    android:paddingBottom="12dp" />
-
-                <!-- Floating New Messages / Scroll-To-Bottom Button -->
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnScrollToBottom"
-                    style="@style/Widget.Material3.Button.ElevatedButton"
-                    android:layout_width="wrap_content"
-                    android:layout_height="38dp"
-                    android:layout_alignParentBottom="true"
-                    android:layout_centerHorizontal="true"
-                    android:layout_marginBottom="12dp"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:text="New Messages ↓"
-                    android:textSize="12sp"
-                    android:visibility="gone"
-                    app:cornerRadius="19dp" />
-            </RelativeLayout>
-
-            <!-- Typing indicator banner -->
-            <TextView
-                android:id="@+id/tvTypingIndicator"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:paddingStart="16dp"
-                android:paddingTop="4dp"
-                android:paddingEnd="16dp"
-                android:paddingBottom="4dp"
-                android:textColor="@color/run_accent"
-                android:textSize="12sp"
-                android:textStyle="italic"
-                android:visibility="gone" />
-
-            <!-- Voice recording live countdown banner -->
-            <TextView
-                android:id="@+id/tvRecordingTimerBanner"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="#2d1519"
-                android:gravity="center"
-                android:padding="8dp"
-                android:textColor="@color/run_danger"
-                android:textSize="13sp"
-                android:textStyle="bold"
-                android:visibility="gone" />
-
-            <!-- Quoted reply preview banner -->
-            <LinearLayout
-                android:id="@+id/replyBanner"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@drawable/bg_reply_box"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:layout_marginStart="10dp"
-                android:layout_marginEnd="10dp"
-                android:layout_marginBottom="6dp"
-                android:padding="8dp"
-                android:visibility="gone">
-
-                <View
-                    android:layout_width="3dp"
-                    android:layout_height="24dp"
-                    android:background="@color/run_accent" />
-
-                <TextView
-                    android:id="@+id/tvReplyingToText"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:layout_weight="1"
-                    android:ellipsize="end"
-                    android:maxLines="1"
-                    android:textColor="@color/run_text"
-                    android:textSize="12sp" />
-
-                <ImageButton
-                    android:id="@+id/btnCancelReply"
-                    android:layout_width="28dp"
-                    android:layout_height="28dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="Cancel reply"
-                    android:src="@drawable/ic_close"
-                    app:tint="@color/run_muted" />
-            </LinearLayout>
-
-            <!-- Bottom Chat Input Bar -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:background="@color/run_panel"
-                android:gravity="center_vertical"
-                android:orientation="horizontal"
-                android:paddingStart="8dp"
-                android:paddingTop="8dp"
-                android:paddingEnd="8dp"
-                android:paddingBottom="8dp">
-
-                <ImageButton
-                    android:id="@+id/btnAttachFile"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="Attach file"
-                    android:src="@drawable/ic_attach_file"
-                    app:tint="@color/run_muted" />
-
-                <ImageButton
-                    android:id="@+id/btnRecordVoice"
-                    android:layout_width="40dp"
-                    android:layout_height="40dp"
-                    android:background="?attr/selectableItemBackgroundBorderless"
-                    android:contentDescription="Record voice"
-                    android:src="@drawable/ic_mic"
-                    app:tint="@color/run_accent" />
-
-                <EditText
-                    android:id="@+id/etMessageInput"
-                    android:layout_width="0dp"
-                    android:layout_height="wrap_content"
-                    android:layout_marginStart="4dp"
-                    android:layout_marginEnd="6dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/bg_input_field"
-                    android:hint="Type a message..."
-                    android:maxLines="4"
-                    android:paddingStart="14dp"
-                    android:paddingTop="10dp"
-                    android:paddingEnd="14dp"
-                    android:paddingBottom="10dp"
-                    android:textColor="@color/run_text"
-                    android:textColorHint="@color/run_subtle"
-                    android:textSize="14sp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnSendMessage"
-                    style="@style/Widget.Material3.Button"
-                    android:layout_width="42dp"
-                    android:layout_height="42dp"
-                    android:insetTop="0dp"
-                    android:insetBottom="0dp"
-                    android:padding="0dp"
-                    app:cornerRadius="21dp"
-                    app:icon="@drawable/ic_send"
-                    app:iconGravity="textStart"
-                    app:iconPadding="0dp"
-                    app:iconSize="18dp" />
-            </LinearLayout>
-        </LinearLayout>
-
-        <!-- ================= 2. TASKS PANEL ================= -->
-        <LinearLayout
-            android:id="@+id/tasksPanel"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:padding="12dp"
-            android:visibility="gone">
-
-            <!-- Progress Header Card with TaskProgressRingView -->
-            <com.google.android.material.card.MaterialCardView
-                android:id="@+id/progressHeaderCard"
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                app:cardBackgroundColor="@color/run_panel"
-                app:cardCornerRadius="20dp"
-                app:cardElevation="0dp"
-                app:strokeColor="@color/run_panel_hover"
-                app:strokeWidth="1dp">
+                android:orientation="vertical"
+                android:padding="12dp">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:padding="16dp">
+                    android:orientation="horizontal">
 
-                    <com.takidz.run.ui.views.TaskProgressRingView
-                        android:id="@+id/progressRingView"
-                        android:layout_width="72dp"
-                        android:layout_height="72dp"
-                        android:layout_marginEnd="16dp" />
+                    <ImageButton
+                        android:id="@+id/btnBack"
+                        android:layout_width="38dp"
+                        android:layout_height="38dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Back"
+                        android:src="@drawable/ic_arrow_back"
+                        app:tint="@color/run_text" />
+
+                    <!-- Room Initials Orb tinted with Room Identity Color (#17) -->
+                    <TextView
+                        android:id="@+id/tvRoomHeaderOrb"
+                        android:layout_width="38dp"
+                        android:layout_height="38dp"
+                        android:layout_marginStart="4dp"
+                        android:background="@drawable/bg_brand_logo"
+                        android:gravity="center"
+                        android:text="R"
+                        android:textColor="@color/run_accent_ink"
+                        android:textSize="15sp"
+                        android:textStyle="bold" />
 
                     <LinearLayout
                         android:layout_width="0dp"
                         android:layout_height="wrap_content"
                         android:layout_weight="1"
+                        android:layout_marginStart="10dp"
+                        android:layout_marginEnd="6dp"
                         android:orientation="vertical">
-
-                        <TextView
-                            android:id="@+id/tvTasksSummaryTitle"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="0 of 0 completed"
-                            android:textColor="@color/run_text"
-                            android:textSize="16sp"
-                            android:textStyle="bold" />
-
-                        <TextView
-                            android:id="@+id/tvTasksSummarySub"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:layout_marginTop="2dp"
-                            android:text="Add tasks below for real-time collaboration"
-                            android:textColor="@color/run_muted"
-                            android:textSize="12sp" />
-                    </LinearLayout>
-                </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
-
-            <!-- New Task Input Row -->
-            <LinearLayout
-                android:layout_width="match_parent"
-                android:layout_height="wrap_content"
-                android:layout_marginBottom="12dp"
-                android:gravity="center_vertical"
-                android:orientation="horizontal">
-
-                <EditText
-                    android:id="@+id/etNewTaskInput"
-                    android:layout_width="0dp"
-                    android:layout_height="48dp"
-                    android:layout_marginEnd="8dp"
-                    android:layout_weight="1"
-                    android:background="@drawable/bg_input_field"
-                    android:hint="Add a shared task..."
-                    android:paddingStart="14dp"
-                    android:paddingEnd="14dp"
-                    android:singleLine="true"
-                    android:textColor="@color/run_text"
-                    android:textColorHint="@color/run_subtle"
-                    android:textSize="14sp" />
-
-                <com.google.android.material.button.MaterialButton
-                    android:id="@+id/btnAddTask"
-                    style="@style/Widget.Material3.Button"
-                    android:layout_width="wrap_content"
-                    android:layout_height="48dp"
-                    app:cornerRadius="14dp"
-                    app:icon="@drawable/ic_add"
-                    android:text="Add" />
-            </LinearLayout>
-
-            <!-- Tasks RecyclerView -->
-            <androidx.recyclerview.widget.RecyclerView
-                android:id="@+id/rvTasks"
-                android:layout_width="match_parent"
-                android:layout_height="0dp"
-                android:layout_weight="1"
-                android:clipToPadding="false"
-                android:paddingBottom="16dp" />
-        </LinearLayout>
-
-        <!-- ================= 3. SHARED NOTES PANEL ================= -->
-        <LinearLayout
-            android:id="@+id/notesPanel"
-            android:layout_width="match_parent"
-            android:layout_height="match_parent"
-            android:orientation="vertical"
-            android:padding="12dp"
-            android:visibility="gone">
-
-            <!-- Shared Paper Card -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="match_parent"
-                android:layout_height="match_parent"
-                app:cardBackgroundColor="@color/run_panel"
-                app:cardCornerRadius="22dp"
-                app:cardElevation="0dp"
-                app:strokeColor="@color/run_panel_hover"
-                app:strokeWidth="1dp">
-
-                <LinearLayout
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:orientation="vertical"
-                    android:padding="16dp">
-
-                    <!-- Notes Header & Status -->
-                    <LinearLayout
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal"
-                        android:layout_marginBottom="10dp">
-
-                        <ImageView
-                            android:layout_width="20dp"
-                            android:layout_height="20dp"
-                            android:src="@drawable/ic_note"
-                            app:tint="@color/run_accent"
-                            android:contentDescription="Notes" />
-
-                        <TextView
-                            android:id="@+id/tvNoteStatus"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_marginStart="8dp"
-                            android:layout_weight="1"
-                            android:text="Shared paper • Synced with room"
-                            android:textColor="@color/run_muted"
-                            android:textSize="12sp" />
-
-                        <com.google.android.material.button.MaterialButton
-                            android:id="@+id/btnNoteSync"
-                            style="@style/Widget.Material3.Button.TonalButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="34dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:paddingStart="10dp"
-                            android:paddingEnd="10dp"
-                            android:textSize="11sp"
-                            app:icon="@drawable/ic_sync"
-                            app:iconSize="12dp"
-                            android:text="Sync" />
-                    </LinearLayout>
-
-                    <!-- Formatting Toolbar -->
-                    <HorizontalScrollView
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:scrollbars="none"
-                        android:layout_marginBottom="10dp">
 
                         <LinearLayout
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
                             android:orientation="horizontal">
 
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btnNoteBullet"
-                                style="@style/Widget.Material3.Button.TonalButton"
+                            <TextView
+                                android:id="@+id/tvRoomTitle"
                                 android:layout_width="wrap_content"
-                                android:layout_height="32dp"
-                                android:insetTop="0dp"
-                                android:insetBottom="0dp"
-                                android:text="• Bullet"
-                                android:textSize="11sp" />
+                                android:layout_height="wrap_content"
+                                android:ellipsize="end"
+                                android:maxLines="1"
+                                android:text="Study Group D5"
+                                android:textColor="@color/run_text"
+                                android:textSize="17sp"
+                                android:textStyle="bold" />
 
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btnNoteCheck"
-                                style="@style/Widget.Material3.Button.TonalButton"
+                            <TextView
+                                android:id="@+id/tvRoomCodeBadge"
                                 android:layout_width="wrap_content"
-                                android:layout_height="32dp"
-                                android:layout_marginStart="6dp"
-                                android:insetTop="0dp"
-                                android:insetBottom="0dp"
-                                android:text="[ ] Task"
-                                android:textSize="11sp" />
-
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btnNoteHeading"
-                                style="@style/Widget.Material3.Button.TonalButton"
-                                android:layout_width="wrap_content"
-                                android:layout_height="32dp"
-                                android:layout_marginStart="6dp"
-                                android:insetTop="0dp"
-                                android:insetBottom="0dp"
-                                android:text="# Heading"
-                                android:textSize="11sp" />
-
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btnNoteCopy"
-                                style="@style/Widget.Material3.Button.TonalButton"
-                                android:layout_width="wrap_content"
-                                android:layout_height="32dp"
-                                android:layout_marginStart="6dp"
-                                android:insetTop="0dp"
-                                android:insetBottom="0dp"
-                                app:icon="@drawable/ic_content_copy"
-                                app:iconSize="12dp"
-                                android:text="Copy"
-                                android:textSize="11sp" />
-
-                            <com.google.android.material.button.MaterialButton
-                                android:id="@+id/btnNoteClear"
-                                style="@style/Widget.Material3.Button.TextButton"
-                                android:layout_width="wrap_content"
-                                android:layout_height="32dp"
-                                android:layout_marginStart="6dp"
-                                android:insetTop="0dp"
-                                android:insetBottom="0dp"
-                                android:textColor="@color/run_danger"
-                                android:text="Clear"
-                                android:textSize="11sp" />
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp"
+                                android:background="@drawable/bg_code_pill"
+                                android:paddingStart="8dp"
+                                android:paddingTop="2dp"
+                                android:paddingEnd="8dp"
+                                android:paddingBottom="2dp"
+                                android:text="#ABC123"
+                                android:textColor="@color/run_accent_ink"
+                                android:textSize="11sp"
+                                android:textStyle="bold"
+                                android:clickable="true"
+                                android:focusable="true" />
                         </LinearLayout>
-                    </HorizontalScrollView>
 
-                    <!-- Main Editable Note Canvas -->
-                    <EditText
-                        android:id="@+id/etSharedNoteContent"
-                        android:layout_width="match_parent"
-                        android:layout_height="0dp"
+                        <!-- Warm Paper Highlighter Bar under Room Title (#14, #17) -->
+                        <View
+                            android:id="@+id/viewRoomTitleHighlighter"
+                            android:layout_width="96dp"
+                            android:layout_height="5dp"
+                            android:layout_marginTop="2dp"
+                            android:background="@drawable/bg_highlighter_bar" />
+
+                        <!-- Live Presence + #29 Connection Quality + #27 Timed Mute Indicator -->
+                        <LinearLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content"
+                            android:layout_marginTop="3dp"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal">
+
+                            <TextView
+                                android:id="@+id/tvRoomSyncStatus"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="1 online · Connected"
+                                android:textColor="@color/run_muted"
+                                android:textSize="11sp" />
+
+                            <TextView
+                                android:id="@+id/tvRoomMuteStatusPill"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="6dp"
+                                android:background="@drawable/bg_pill_neutral"
+                                android:paddingStart="6dp"
+                                android:paddingTop="1dp"
+                                android:paddingEnd="6dp"
+                                android:paddingBottom="1dp"
+                                android:text="🔕 Muted"
+                                android:textColor="@color/run_muted"
+                                android:textSize="10sp"
+                                android:visibility="gone"
+                                android:clickable="true"
+                                android:focusable="true" />
+                        </LinearLayout>
+                    </LinearLayout>
+
+                    <!-- #17: Per-Room Identity Color & Background Picker Button -->
+                    <ImageButton
+                        android:id="@+id/btnRoomIdentity"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Room Color &amp; Background"
+                        android:src="@drawable/ic_palette"
+                        app:tint="@color/run_text" />
+
+                    <!-- #27: Timed Room Mute Button -->
+                    <ImageButton
+                        android:id="@+id/btnMuteRoom"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Mute Room Notifications"
+                        android:src="@drawable/ic_notifications"
+                        app:tint="@color/run_text" />
+
+                    <!-- #23: Share Smart Invite Link Button -->
+                    <ImageButton
+                        android:id="@+id/btnShareRoom"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Share Room"
+                        android:src="@drawable/ic_share"
+                        app:tint="@color/run_text" />
+
+                    <!-- Leave / Delete / Archive Room Button -->
+                    <ImageButton
+                        android:id="@+id/btnDeleteRoom"
+                        android:layout_width="36dp"
+                        android:layout_height="36dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Leave or Delete Room"
+                        android:src="@drawable/ic_more_vert"
+                        app:tint="@color/run_text" />
+                </LinearLayout>
+
+                <!-- Warm Paper Pill Switcher (Chat · Tasks · Notes) -->
+                <LinearLayout
+                    android:id="@+id/layoutRoomTabsBar"
+                    android:layout_width="match_parent"
+                    android:layout_height="40dp"
+                    android:layout_marginTop="10dp"
+                    android:background="@drawable/bg_pill_neutral"
+                    android:orientation="horizontal"
+                    android:padding="3dp">
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnTabChat"
+                        style="@style/Widget.Material3.Button"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
                         android:layout_weight="1"
-                        android:background="@drawable/bg_paper_note"
-                        android:gravity="top|start"
-                        android:hint="Write shared notes, meeting minutes, links, or ideas here. Everyone in the room sees updates live..."
-                        android:lineSpacingExtra="4dp"
-                        android:padding="16dp"
-                        android:textColor="@color/run_text"
-                        android:textColorHint="@color/run_subtle"
-                        android:textSize="15sp" />
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="Chat"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        app:cornerRadius="18dp" />
 
-                    <!-- Note Footer Status -->
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnTabTasks"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="Tasks"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        app:cornerRadius="18dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnTabNotes"
+                        style="@style/Widget.Material3.Button.TonalButton"
+                        android:layout_width="0dp"
+                        android:layout_height="match_parent"
+                        android:layout_weight="1"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="Notes"
+                        android:textSize="12sp"
+                        android:textStyle="bold"
+                        app:cornerRadius="18dp" />
+                </LinearLayout>
+            </LinearLayout>
+        </com.google.android.material.card.MaterialCardView>
+
+        <!-- ================= ADAPTIVE CONTENT AREA (#16 Phone Single-Pane & Tablet Two-Pane) ================= -->
+        <LinearLayout
+            android:id="@+id/layoutAdaptiveRoomBody"
+            android:layout_width="match_parent"
+            android:layout_height="0dp"
+            android:layout_weight="1"
+            android:orientation="horizontal">
+
+            <!-- ================= 1. CHAT PANEL ================= -->
+            <LinearLayout
+                android:id="@+id/chatPanel"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:orientation="vertical">
+
+                <!-- #18: First-Use Discoverable Gesture Hint Banner -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardGestureHintBanner"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:layout_marginBottom="4dp"
+                    android:visibility="gone"
+                    app:cardBackgroundColor="@color/run_panel"
+                    app:cardCornerRadius="16dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/run_panel_hover"
+                    app:strokeWidth="1dp">
+
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
                         android:gravity="center_vertical"
                         android:orientation="horizontal"
-                        android:layout_marginTop="8dp">
+                        android:paddingStart="12dp"
+                        android:paddingTop="8dp"
+                        android:paddingEnd="8dp"
+                        android:paddingBottom="8dp">
 
                         <TextView
-                            android:id="@+id/tvNoteWordCount"
+                            android:id="@+id/tvGestureHintText"
                             android:layout_width="0dp"
                             android:layout_height="wrap_content"
                             android:layout_weight="1"
-                            android:text="0 words • 0 characters"
+                            android:text="@string/gesture_hint_banner"
                             android:textColor="@color/run_muted"
                             android:textSize="11sp" />
 
-                        <TextView
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnDismissGestureHint"
+                            style="@style/Widget.Material3.Button.TextButton"
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="Real-time synced"
-                            android:textColor="@color/run_accent"
+                            android:layout_height="30dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:text="@string/got_it"
                             android:textSize="11sp"
                             android:textStyle="bold" />
                     </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <!-- Messages List with Floating Scroll-To-Bottom Button -->
+                <RelativeLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1">
+
+                    <androidx.recyclerview.widget.RecyclerView
+                        android:id="@+id/rvMessages"
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:clipToPadding="false"
+                        android:paddingStart="12dp"
+                        android:paddingTop="4dp"
+                        android:paddingEnd="12dp"
+                        android:paddingBottom="12dp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnScrollToBottom"
+                        style="@style/Widget.Material3.Button.ElevatedButton"
+                        android:layout_width="wrap_content"
+                        android:layout_height="38dp"
+                        android:layout_alignParentBottom="true"
+                        android:layout_centerHorizontal="true"
+                        android:layout_marginBottom="12dp"
+                        android:insetTop="0dp"
+                        android:insetBottom="0dp"
+                        android:text="New Messages ↓"
+                        android:textSize="12sp"
+                        android:visibility="gone"
+                        app:cornerRadius="19dp" />
+                </RelativeLayout>
+
+                <!-- Typing indicator banner -->
+                <TextView
+                    android:id="@+id/tvTypingIndicator"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:paddingStart="18dp"
+                    android:paddingTop="3dp"
+                    android:paddingEnd="18dp"
+                    android:paddingBottom="3dp"
+                    android:textColor="@color/run_muted"
+                    android:textSize="12sp"
+                    android:textStyle="italic"
+                    android:visibility="gone" />
+
+                <!-- Voice recording live countdown banner -->
+                <TextView
+                    android:id="@+id/tvRecordingTimerBanner"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="#2d1519"
+                    android:gravity="center"
+                    android:padding="8dp"
+                    android:textColor="@color/run_danger"
+                    android:textSize="13sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
+
+                <!-- Quoted reply preview banner -->
+                <LinearLayout
+                    android:id="@+id/replyBanner"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:background="@drawable/bg_reply_box"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:layout_marginBottom="6dp"
+                    android:padding="8dp"
+                    android:visibility="gone">
+
+                    <View
+                        android:layout_width="3dp"
+                        android:layout_height="24dp"
+                        android:background="@color/run_accent" />
+
+                    <TextView
+                        android:id="@+id/tvReplyingToText"
+                        android:layout_width="0dp"
+                        android:layout_height="wrap_content"
+                        android:layout_marginStart="8dp"
+                        android:layout_weight="1"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:textColor="@color/run_text"
+                        android:textSize="12sp" />
+
+                    <ImageButton
+                        android:id="@+id/btnCancelReply"
+                        android:layout_width="28dp"
+                        android:layout_height="28dp"
+                        android:background="?attr/selectableItemBackgroundBorderless"
+                        android:contentDescription="Cancel reply"
+                        android:src="@drawable/ic_close"
+                        app:tint="@color/run_muted" />
                 </LinearLayout>
-            </com.google.android.material.card.MaterialCardView>
+
+                <!-- Warm Paper Floating Pill Composer Bar (#14) -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardComposerBar"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="12dp"
+                    android:layout_marginEnd="12dp"
+                    android:layout_marginBottom="10dp"
+                    app:cardBackgroundColor="@color/run_panel"
+                    app:cardCornerRadius="28dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/run_panel_hover"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="6dp"
+                        android:paddingTop="4dp"
+                        android:paddingEnd="6dp"
+                        android:paddingBottom="4dp">
+
+                        <ImageButton
+                            android:id="@+id/btnAttachFile"
+                            android:layout_width="38dp"
+                            android:layout_height="38dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:contentDescription="Attach file"
+                            android:src="@drawable/ic_attach_file"
+                            app:tint="@color/run_muted" />
+
+                        <EditText
+                            android:id="@+id/etMessageInput"
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="4dp"
+                            android:layout_marginEnd="4dp"
+                            android:layout_weight="1"
+                            android:background="@null"
+                            android:hint="@string/send_message_hint"
+                            android:maxLines="4"
+                            android:paddingStart="8dp"
+                            android:paddingTop="10dp"
+                            android:paddingEnd="8dp"
+                            android:paddingBottom="10dp"
+                            android:textColor="@color/run_text"
+                            android:textColorHint="@color/run_subtle"
+                            android:textSize="15sp" />
+
+                        <ImageButton
+                            android:id="@+id/btnRecordVoice"
+                            android:layout_width="38dp"
+                            android:layout_height="38dp"
+                            android:background="?attr/selectableItemBackgroundBorderless"
+                            android:contentDescription="Record voice"
+                            android:src="@drawable/ic_mic"
+                            app:tint="@color/run_muted" />
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnSendMessage"
+                            style="@style/Widget.Material3.Button"
+                            android:layout_width="40dp"
+                            android:layout_height="40dp"
+                            android:layout_marginStart="2dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:padding="0dp"
+                            app:cornerRadius="20dp"
+                            app:icon="@drawable/ic_send"
+                            app:iconGravity="textStart"
+                            app:iconPadding="0dp"
+                            app:iconSize="18dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
+
+            <!-- ================= 2. TASKS PANEL ================= -->
+            <LinearLayout
+                android:id="@+id/tasksPanel"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:padding="12dp"
+                android:visibility="gone">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/progressHeaderCard"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    app:cardBackgroundColor="@color/run_panel"
+                    app:cardCornerRadius="22dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/run_panel_hover"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:padding="16dp">
+
+                        <com.takidz.run.ui.views.TaskProgressRingView
+                            android:id="@+id/progressRingView"
+                            android:layout_width="68dp"
+                            android:layout_height="68dp"
+                            android:layout_marginEnd="16dp" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/tvTasksSummaryTitle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="0 of 0 completed"
+                                android:textColor="@color/run_text"
+                                android:textSize="16sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvTasksSummarySub"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:layout_marginTop="2dp"
+                                android:text="Shared checklist for everyone in this space"
+                                android:textColor="@color/run_muted"
+                                android:textSize="12sp" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
+                <LinearLayout
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginBottom="12dp"
+                    android:gravity="center_vertical"
+                    android:orientation="horizontal">
+
+                    <EditText
+                        android:id="@+id/etNewTaskInput"
+                        android:layout_width="0dp"
+                        android:layout_height="46dp"
+                        android:layout_marginEnd="8dp"
+                        android:layout_weight="1"
+                        android:background="@drawable/bg_input_field"
+                        android:hint="@string/add_task_hint"
+                        android:paddingStart="14dp"
+                        android:paddingEnd="14dp"
+                        android:singleLine="true"
+                        android:textColor="@color/run_text"
+                        android:textColorHint="@color/run_subtle"
+                        android:textSize="14sp" />
+
+                    <com.google.android.material.button.MaterialButton
+                        android:id="@+id/btnAddTask"
+                        style="@style/Widget.Material3.Button"
+                        android:layout_width="wrap_content"
+                        android:layout_height="46dp"
+                        app:cornerRadius="16dp"
+                        app:icon="@drawable/ic_add"
+                        android:text="Add" />
+                </LinearLayout>
+
+                <androidx.recyclerview.widget.RecyclerView
+                    android:id="@+id/rvTasks"
+                    android:layout_width="match_parent"
+                    android:layout_height="0dp"
+                    android:layout_weight="1"
+                    android:clipToPadding="false"
+                    android:paddingBottom="16dp" />
+            </LinearLayout>
+
+            <!-- ================= 3. SHARED NOTES PANEL ================= -->
+            <LinearLayout
+                android:id="@+id/notesPanel"
+                android:layout_width="0dp"
+                android:layout_height="match_parent"
+                android:layout_weight="1"
+                android:orientation="vertical"
+                android:padding="12dp"
+                android:visibility="gone">
+
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardNotesPaper"
+                    android:layout_width="match_parent"
+                    android:layout_height="match_parent"
+                    app:cardBackgroundColor="@color/run_panel"
+                    app:cardCornerRadius="24dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/run_panel_hover"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="match_parent"
+                        android:orientation="vertical"
+                        android:padding="16dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:layout_marginBottom="10dp">
+
+                            <ImageView
+                                android:layout_width="20dp"
+                                android:layout_height="20dp"
+                                android:src="@drawable/ic_note"
+                                app:tint="@color/run_text"
+                                android:contentDescription="Notes" />
+
+                            <TextView
+                                android:id="@+id/tvNoteStatus"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_marginStart="8dp"
+                                android:layout_weight="1"
+                                android:text="Shared paper • Synced with room"
+                                android:textColor="@color/run_muted"
+                                android:textSize="12sp" />
+
+                            <com.google.android.material.button.MaterialButton
+                                android:id="@+id/btnNoteSync"
+                                style="@style/Widget.Material3.Button.TonalButton"
+                                android:layout_width="wrap_content"
+                                android:layout_height="34dp"
+                                android:insetTop="0dp"
+                                android:insetBottom="0dp"
+                                android:paddingStart="10dp"
+                                android:paddingEnd="10dp"
+                                android:textSize="11sp"
+                                app:icon="@drawable/ic_sync"
+                                app:iconSize="12dp"
+                                android:text="Sync" />
+                        </LinearLayout>
+
+                        <HorizontalScrollView
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:scrollbars="none"
+                            android:layout_marginBottom="10dp">
+
+                            <LinearLayout
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:orientation="horizontal">
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnNoteBullet"
+                                    style="@style/Widget.Material3.Button.TonalButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="32dp"
+                                    android:insetTop="0dp"
+                                    android:insetBottom="0dp"
+                                    android:text="• Bullet"
+                                    android:textSize="11sp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnNoteCheck"
+                                    style="@style/Widget.Material3.Button.TonalButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="32dp"
+                                    android:layout_marginStart="6dp"
+                                    android:insetTop="0dp"
+                                    android:insetBottom="0dp"
+                                    android:text="[ ] Task"
+                                    android:textSize="11sp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnNoteHeading"
+                                    style="@style/Widget.Material3.Button.TonalButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="32dp"
+                                    android:layout_marginStart="6dp"
+                                    android:insetTop="0dp"
+                                    android:insetBottom="0dp"
+                                    android:text="# Heading"
+                                    android:textSize="11sp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnNoteCopy"
+                                    style="@style/Widget.Material3.Button.TonalButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="32dp"
+                                    android:layout_marginStart="6dp"
+                                    android:insetTop="0dp"
+                                    android:insetBottom="0dp"
+                                    app:icon="@drawable/ic_content_copy"
+                                    app:iconSize="12dp"
+                                    android:text="Copy"
+                                    android:textSize="11sp" />
+
+                                <com.google.android.material.button.MaterialButton
+                                    android:id="@+id/btnNoteClear"
+                                    style="@style/Widget.Material3.Button.TextButton"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="32dp"
+                                    android:layout_marginStart="6dp"
+                                    android:insetTop="0dp"
+                                    android:insetBottom="0dp"
+                                    android:textColor="@color/run_danger"
+                                    android:text="Clear"
+                                    android:textSize="11sp" />
+                            </LinearLayout>
+                        </HorizontalScrollView>
+
+                        <EditText
+                            android:id="@+id/etSharedNoteContent"
+                            android:layout_width="match_parent"
+                            android:layout_height="0dp"
+                            android:layout_weight="1"
+                            android:background="@drawable/bg_paper_note"
+                            android:gravity="top|start"
+                            android:hint="@string/notes_placeholder"
+                            android:lineSpacingExtra="4dp"
+                            android:padding="16dp"
+                            android:textColor="@color/run_text"
+                            android:textColorHint="@color/run_subtle"
+                            android:textSize="15sp" />
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:layout_marginTop="8dp">
+
+                            <TextView
+                                android:id="@+id/tvNoteWordCount"
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:text="0 words • 0 characters"
+                                android:textColor="@color/run_muted"
+                                android:textSize="11sp" />
+
+                            <TextView
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="Real-time synced"
+                                android:textColor="@color/run_muted"
+                                android:textSize="11sp"
+                                android:textStyle="bold" />
+                        </LinearLayout>
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+            </LinearLayout>
         </LinearLayout>
-    </FrameLayout>
-</LinearLayout>
+    </LinearLayout>
+</FrameLayout>

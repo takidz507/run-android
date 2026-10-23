@@ -1,6 +1,7 @@
 package com.takidz.run.ui.adapters;
 
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,9 +14,12 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.card.MaterialCardView;
 import com.takidz.run.R;
 import com.takidz.run.models.OnlineUser;
 import com.takidz.run.models.SignalMessage;
+import com.takidz.run.utils.PrefsManager;
+import com.takidz.run.utils.ThemeHelper;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -48,15 +52,25 @@ public class FriendsAdapter extends RecyclerView.Adapter<FriendsAdapter.ViewHold
     }
 
     private final Context context;
+    private final PrefsManager prefs;
+    private ThemeHelper.Palette palette;
     private final FriendsActionListener listener;
-    private List<DisplayItem> items = new ArrayList<>();
+    private final List<DisplayItem> items = new ArrayList<>();
 
     public FriendsAdapter(Context context, FriendsActionListener listener) {
         this.context = context;
+        this.prefs = new PrefsManager(context);
+        this.palette = ThemeHelper.getPalette(prefs.getThemeMode());
         this.listener = listener;
     }
 
+    public void updatePalette(ThemeHelper.Palette newPalette) {
+        this.palette = newPalette;
+        notifyDataSetChanged();
+    }
+
     public void setData(List<SignalMessage> requests, List<SignalMessage> invites, List<OnlineUser> friends) {
+        this.palette = ThemeHelper.getPalette(prefs.getThemeMode());
         items.clear();
         if (invites != null) {
             for (SignalMessage i : invites) {
@@ -95,6 +109,7 @@ public class FriendsAdapter extends RecyclerView.Adapter<FriendsAdapter.ViewHold
     }
 
     class ViewHolder extends RecyclerView.ViewHolder {
+        MaterialCardView cardRoot;
         ImageView ivAvatar;
         TextView tvAvatarFallback;
         TextView tvTitle;
@@ -105,6 +120,7 @@ public class FriendsAdapter extends RecyclerView.Adapter<FriendsAdapter.ViewHold
 
         ViewHolder(View itemView) {
             super(itemView);
+            cardRoot = (itemView instanceof MaterialCardView) ? (MaterialCardView) itemView : null;
             ivAvatar = itemView.findViewById(R.id.ivAvatar);
             tvAvatarFallback = itemView.findViewById(R.id.tvAvatarFallback);
             tvTitle = itemView.findViewById(R.id.tvTitle);
@@ -115,19 +131,37 @@ public class FriendsAdapter extends RecyclerView.Adapter<FriendsAdapter.ViewHold
         }
 
         void bind(DisplayItem item) {
+            boolean ar = prefs.isArabic();
+            if (cardRoot != null) {
+                cardRoot.setCardBackgroundColor(palette.panel);
+                cardRoot.setStrokeColor(palette.panelHover);
+            }
+            tvTitle.setTextColor(palette.text);
+            tvSub.setTextColor(palette.muted);
+
+            btnPrimary.setBackgroundTintList(ColorStateList.valueOf(palette.accent));
+            btnPrimary.setTextColor(palette.accentInk);
+            btnPrimary.setIconTint(ColorStateList.valueOf(palette.accentInk));
+
+            btnSecondary.setBackgroundTintList(ColorStateList.valueOf(palette.panelSoft));
+            btnSecondary.setTextColor(palette.text);
+            btnSecondary.setIconTint(ColorStateList.valueOf(palette.text));
+
             if (item.type == DisplayItem.TYPE_INVITE) {
                 SignalMessage invite = item.signal;
                 tvTitle.setText(invite.fromUserName);
-                tvSub.setText("Invited you to Room #" + invite.roomCode + " (" + invite.roomName + ")");
+                tvSub.setText(ar
+                        ? ("دعاك إلى غرفة #" + invite.roomCode + " (" + invite.roomName + ")")
+                        : ("Invited you to Room #" + invite.roomCode + " (" + invite.roomName + ")"));
                 setupAvatar(invite.fromUserName, invite.fromAvatarUrl);
 
-                btnPrimary.setText("Join Room");
+                btnPrimary.setText(ar ? "انضمام" : "Join Room");
                 btnPrimary.setIconResource(R.drawable.ic_chat);
                 btnPrimary.setOnClickListener(v -> {
                     if (listener != null) listener.onJoinRoomInvite(invite);
                 });
 
-                btnSecondary.setText("Dismiss");
+                btnSecondary.setText(ar ? "تجاهل" : "Dismiss");
                 btnSecondary.setIconResource(R.drawable.ic_close);
                 btnSecondary.setOnClickListener(v -> {
                     if (listener != null) listener.onDismissRoomInvite(invite);
@@ -135,16 +169,16 @@ public class FriendsAdapter extends RecyclerView.Adapter<FriendsAdapter.ViewHold
             } else if (item.type == DisplayItem.TYPE_REQUEST) {
                 SignalMessage req = item.signal;
                 tvTitle.setText(req.fromUserName);
-                tvSub.setText("Sent you a friend request");
+                tvSub.setText(ar ? "أرسل لك طلب صداقة" : "Sent you a friend request");
                 setupAvatar(req.fromUserName, req.fromAvatarUrl);
 
-                btnPrimary.setText("Accept");
+                btnPrimary.setText(ar ? "قبول" : "Accept");
                 btnPrimary.setIconResource(R.drawable.ic_check);
                 btnPrimary.setOnClickListener(v -> {
                     if (listener != null) listener.onAcceptFriendRequest(req);
                 });
 
-                btnSecondary.setText("Decline");
+                btnSecondary.setText(ar ? "رفض" : "Decline");
                 btnSecondary.setIconResource(R.drawable.ic_close);
                 btnSecondary.setOnClickListener(v -> {
                     if (listener != null) listener.onDeclineFriendRequest(req);
@@ -152,16 +186,16 @@ public class FriendsAdapter extends RecyclerView.Adapter<FriendsAdapter.ViewHold
             } else {
                 OnlineUser friend = item.friend;
                 tvTitle.setText(friend.name);
-                tvSub.setText("Friend");
+                tvSub.setText(ar ? "صديق ★" : "Friend ★");
                 setupAvatar(friend.name, friend.avatarUrl);
 
-                btnPrimary.setText("Invite");
+                btnPrimary.setText(ar ? "دعوة للغرفة" : "Invite");
                 btnPrimary.setIconResource(R.drawable.ic_share);
                 btnPrimary.setOnClickListener(v -> {
                     if (listener != null) listener.onInviteFriendToRoom(friend);
                 });
 
-                btnSecondary.setText("Remove");
+                btnSecondary.setText(ar ? "إزالة" : "Remove");
                 btnSecondary.setIconResource(R.drawable.ic_delete);
                 btnSecondary.setOnClickListener(v -> {
                     if (listener != null) listener.onRemoveFriend(friend);
@@ -172,6 +206,8 @@ public class FriendsAdapter extends RecyclerView.Adapter<FriendsAdapter.ViewHold
         private void setupAvatar(String name, String avatarUrl) {
             String initial = (name != null && !name.isEmpty()) ? name.substring(0, 1).toUpperCase() : "U";
             tvAvatarFallback.setText(initial);
+            tvAvatarFallback.setBackgroundTintList(ColorStateList.valueOf(palette.accent));
+            tvAvatarFallback.setTextColor(palette.accentInk);
             if (avatarUrl != null && !avatarUrl.trim().isEmpty()) {
                 ivAvatar.setVisibility(View.VISIBLE);
                 tvAvatarFallback.setVisibility(View.GONE);

@@ -11,8 +11,10 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.card.MaterialCardView;
 import com.takidz.run.R;
 import com.takidz.run.models.FeedbackPost;
+import com.takidz.run.utils.LocaleHelper;
 import com.takidz.run.utils.PrefsManager;
 import com.takidz.run.utils.ThemeHelper;
 
@@ -27,7 +29,7 @@ public class FeedbackPostsAdapter extends RecyclerView.Adapter<FeedbackPostsAdap
 
     private final Context context;
     private final PrefsManager prefs;
-    private final ThemeHelper.Palette palette;
+    private ThemeHelper.Palette palette;
     private final VoteListener voteListener;
     private List<FeedbackPost> posts = new ArrayList<>();
 
@@ -36,6 +38,11 @@ public class FeedbackPostsAdapter extends RecyclerView.Adapter<FeedbackPostsAdap
         this.prefs = prefs;
         this.palette = palette;
         this.voteListener = voteListener;
+    }
+
+    public void updatePalette(ThemeHelper.Palette newPalette) {
+        this.palette = newPalette;
+        notifyDataSetChanged();
     }
 
     public void setPosts(List<FeedbackPost> newPosts) {
@@ -62,6 +69,7 @@ public class FeedbackPostsAdapter extends RecyclerView.Adapter<FeedbackPostsAdap
     }
 
     class ViewHolder extends RecyclerView.ViewHolder {
+        MaterialCardView cardRoot;
         TextView tvCategoryChip;
         TextView tvPostAuthorTime;
         TextView tvPostTitle;
@@ -71,6 +79,7 @@ public class FeedbackPostsAdapter extends RecyclerView.Adapter<FeedbackPostsAdap
 
         ViewHolder(View itemView) {
             super(itemView);
+            cardRoot = (itemView instanceof MaterialCardView) ? (MaterialCardView) itemView : null;
             tvCategoryChip = itemView.findViewById(R.id.tvCategoryChip);
             tvPostAuthorTime = itemView.findViewById(R.id.tvPostAuthorTime);
             tvPostTitle = itemView.findViewById(R.id.tvPostTitle);
@@ -80,12 +89,24 @@ public class FeedbackPostsAdapter extends RecyclerView.Adapter<FeedbackPostsAdap
         }
 
         void bind(FeedbackPost post) {
+            boolean ar = prefs.isArabic();
+            if (cardRoot != null) {
+                cardRoot.setCardBackgroundColor(palette.panel);
+                cardRoot.setStrokeColor(palette.panelHover);
+            }
             tvPostTitle.setText(post.title);
+            tvPostTitle.setTextColor(palette.text);
             tvPostContent.setText(post.content);
+            tvPostContent.setTextColor(palette.muted);
+
             tvCategoryChip.setText(post.category != null ? post.category : "Idea");
+            tvCategoryChip.setBackgroundTintList(ColorStateList.valueOf(palette.highlighter));
+            tvCategoryChip.setTextColor(palette.accentInk);
 
             String author = (post.author != null && !post.author.isEmpty()) ? post.author : "Guest";
-            tvPostAuthorTime.setText(author);
+            String rel = LocaleHelper.formatRelativeTime(post.createdAt, ar);
+            tvPostAuthorTime.setText(author + " • " + rel);
+            tvPostAuthorTime.setTextColor(palette.subtle);
 
             String myId = prefs.getUserId();
             boolean hasUpvoted = post.hasUpvoted(myId);
@@ -95,19 +116,23 @@ public class FeedbackPostsAdapter extends RecyclerView.Adapter<FeedbackPostsAdap
             btnHeart.setText(String.valueOf(post.getHeartCount()));
 
             if (hasUpvoted) {
-                btnUpvote.setIconTint(ColorStateList.valueOf(palette.accent));
-                btnUpvote.setTextColor(palette.accent);
+                btnUpvote.setBackgroundTintList(ColorStateList.valueOf(palette.accent));
+                btnUpvote.setIconTint(ColorStateList.valueOf(palette.accentInk));
+                btnUpvote.setTextColor(palette.accentInk);
             } else {
+                btnUpvote.setBackgroundTintList(ColorStateList.valueOf(palette.panelSoft));
                 btnUpvote.setIconTint(ColorStateList.valueOf(palette.muted));
-                btnUpvote.setTextColor(palette.muted);
+                btnUpvote.setTextColor(palette.text);
             }
 
             if (hasHearted) {
+                btnHeart.setBackgroundTintList(ColorStateList.valueOf(ThemeHelper.withAlpha(palette.danger, 45)));
                 btnHeart.setIconTint(ColorStateList.valueOf(palette.danger));
                 btnHeart.setTextColor(palette.danger);
             } else {
+                btnHeart.setBackgroundTintList(ColorStateList.valueOf(palette.panelSoft));
                 btnHeart.setIconTint(ColorStateList.valueOf(palette.muted));
-                btnHeart.setTextColor(palette.muted);
+                btnHeart.setTextColor(palette.text);
             }
 
             btnUpvote.setOnClickListener(v -> {

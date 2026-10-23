@@ -16,5 +16,6 @@ public class DirectoryData {
         public String seed;
         public String verifier;
         public String createdAt;
+        public String by; // Creator userId matching Web v2 Pro
     }
 }

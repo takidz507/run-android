@@ -1,10 +1,11 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
+    android:id="@+id/messageRowRoot"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
     android:orientation="vertical"
-    android:paddingVertical="4dp">
+    android:paddingVertical="5dp">
 
     <com.google.android.material.card.MaterialCardView
         android:id="@+id/bubbleCard"
@@ -12,7 +13,7 @@
         android:layout_height="wrap_content"
         android:layout_marginHorizontal="6dp"
         app:cardBackgroundColor="@color/run_panel"
-        app:cardCornerRadius="18dp"
+        app:cardCornerRadius="22dp"
         app:cardElevation="0dp"
         app:strokeColor="@color/run_panel_hover"
         app:strokeWidth="1dp">
@@ -20,12 +21,15 @@
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:minWidth="160dp"
-            android:maxWidth="320dp"
+            android:minWidth="172dp"
+            android:maxWidth="316dp"
             android:orientation="vertical"
-            android:padding="12dp">
+            android:paddingStart="14dp"
+            android:paddingTop="11dp"
+            android:paddingEnd="14dp"
+            android:paddingBottom="10dp">
 
-            <!-- Header: Avatar + Author + Timestamp -->
+            <!-- Header: Avatar + Author + Saved Indicator (#31) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -35,8 +39,8 @@
 
                 <ImageView
                     android:id="@+id/ivAuthorAvatar"
-                    android:layout_width="22dp"
-                    android:layout_height="22dp"
+                    android:layout_width="20dp"
+                    android:layout_height="20dp"
                     android:layout_marginEnd="6dp"
                     android:scaleType="centerCrop"
                     android:visibility="gone"
@@ -47,19 +51,19 @@
                     android:layout_width="0dp"
                     android:layout_height="wrap_content"
                     android:layout_weight="1"
-                    android:text="User"
-                    android:textColor="@color/run_accent"
+                    android:text="Salim"
+                    android:textColor="@color/run_text"
                     android:textSize="12sp"
                     android:textStyle="bold" />
 
                 <TextView
-                    android:id="@+id/tvTime"
+                    android:id="@+id/tvSavedBadge"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="8dp"
-                    android:text="14:20"
-                    android:textColor="@color/run_subtle"
-                    android:textSize="11sp" />
+                    android:layout_marginStart="6dp"
+                    android:text="🔖"
+                    android:textSize="11sp"
+                    android:visibility="gone" />
             </LinearLayout>
 
             <!-- Quoted Reply Container (Clickable to jump to original message) -->
@@ -72,14 +76,17 @@
                 android:clickable="true"
                 android:focusable="true"
                 android:orientation="vertical"
-                android:padding="8dp"
+                android:paddingStart="10dp"
+                android:paddingTop="6dp"
+                android:paddingEnd="10dp"
+                android:paddingBottom="6dp"
                 android:visibility="gone">
 
                 <TextView
                     android:id="@+id/tvReplyAuthor"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:textColor="@color/run_accent"
+                    android:textColor="@color/run_accent_ink"
                     android:textSize="11sp"
                     android:textStyle="bold" />
 
@@ -93,16 +100,26 @@
                     android:textSize="12sp" />
             </LinearLayout>
 
-            <!-- Attached Image (Clickable for Fullscreen viewer) -->
-            <ImageView
-                android:id="@+id/ivAttachmentImage"
-                android:layout_width="240dp"
-                android:layout_height="180dp"
+            <!-- Attached Image (Clickable for Fullscreen swipe-down viewer #18) -->
+            <com.google.android.material.card.MaterialCardView
+                android:id="@+id/cardAttachmentImage"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
                 android:layout_marginBottom="6dp"
-                android:adjustViewBounds="true"
-                android:scaleType="centerCrop"
                 android:visibility="gone"
-                android:contentDescription="Attachment" />
+                app:cardCornerRadius="14dp"
+                app:cardElevation="0dp"
+                app:strokeWidth="0dp">
+
+                <ImageView
+                    android:id="@+id/ivAttachmentImage"
+                    android:layout_width="240dp"
+                    android:layout_height="180dp"
+                    android:adjustViewBounds="true"
+                    android:scaleType="centerCrop"
+                    android:visibility="gone"
+                    android:contentDescription="Attachment" />
+            </com.google.android.material.card.MaterialCardView>
 
             <!-- Voice Note Player -->
             <LinearLayout
@@ -118,7 +135,7 @@
                     android:id="@+id/btnPlayVoice"
                     style="@style/Widget.Material3.Button.TonalButton"
                     android:layout_width="wrap_content"
-                    android:layout_height="36dp"
+                    android:layout_height="34dp"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
                     android:paddingStart="10dp"
@@ -127,16 +144,17 @@
                     app:iconSize="14dp"
                     android:text="Play"
                     android:textSize="12sp"
-                    app:cornerRadius="12dp" />
+                    app:cornerRadius="17dp" />
 
                 <TextView
                     android:id="@+id/tvVoiceDuration"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
                     android:layout_marginStart="10dp"
-                    android:text="0s"
+                    android:text="0:12"
                     android:textColor="@color/run_muted"
-                    android:textSize="12sp" />
+                    android:textSize="12sp"
+                    android:textStyle="bold" />
             </LinearLayout>
 
             <!-- External File / Video Link Button -->
@@ -159,23 +177,42 @@
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:autoLink="web"
-                android:text="Hello everyone"
+                android:lineSpacingExtra="3dp"
+                android:text="Message content"
                 android:textColor="@color/run_text"
-                android:textSize="14sp" />
+                android:textSize="15sp" />
 
-            <!-- Footer Actions: Reply & Translate -->
+            <!-- #18: Emoji Reactions Row -->
+            <HorizontalScrollView
+                android:id="@+id/scrollReactions"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginTop="6dp"
+                android:scrollbars="none"
+                android:visibility="gone">
+
+                <LinearLayout
+                    android:id="@+id/layoutReactionsContainer"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:orientation="horizontal" />
+            </HorizontalScrollView>
+
+            <!-- Footer Row: Quick Actions + Timestamp + #26 Delivery/Read Checkmarks -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:layout_marginTop="6dp"
-                android:gravity="end"
+                android:gravity="center_vertical"
                 android:orientation="horizontal">
 
                 <TextView
                     android:id="@+id/btnReply"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:padding="4dp"
+                    android:paddingTop="2dp"
+                    android:paddingBottom="2dp"
+                    android:paddingEnd="6dp"
                     android:text="↩ Reply"
                     android:textColor="@color/run_muted"
                     android:textSize="11sp" />
@@ -184,12 +221,52 @@
                     android:id="@+id/btnTranslate"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="12dp"
-                    android:padding="4dp"
+                    android:layout_marginStart="6dp"
+                    android:paddingTop="2dp"
+                    android:paddingBottom="2dp"
+                    android:paddingEnd="6dp"
                     android:text="Translate"
-                    android:textColor="@color/run_accent"
+                    android:textColor="@color/run_muted"
                     android:textSize="11sp"
                     android:textStyle="bold" />
+
+                <TextView
+                    android:id="@+id/btnSaveMsg"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="6dp"
+                    android:paddingTop="2dp"
+                    android:paddingBottom="2dp"
+                    android:paddingEnd="6dp"
+                    android:text="Save"
+                    android:textColor="@color/run_muted"
+                    android:textSize="11sp" />
+
+                <View
+                    android:layout_width="0dp"
+                    android:layout_height="1dp"
+                    android:layout_weight="1" />
+
+                <TextView
+                    android:id="@+id/tvTime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="8dp"
+                    android:text="14:20"
+                    android:textColor="@color/run_subtle"
+                    android:textSize="11sp" />
+
+                <!-- #26: Delivery & Read State Indicator (✓ Sent, ✓✓ Delivered, Accent ✓✓ Read) -->
+                <TextView
+                    android:id="@+id/tvAckStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:layout_marginStart="4dp"
+                    android:text="✓✓"
+                    android:textColor="@color/run_accent"
+                    android:textSize="11sp"
+                    android:textStyle="bold"
+                    android:visibility="gone" />
             </LinearLayout>
 
         </LinearLayout>

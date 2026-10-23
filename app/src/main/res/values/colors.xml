@@ -1,17 +1,22 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Default Dark Theme Tokens from Technical Spec -->
-    <color name="run_bg">#111218</color>
-    <color name="run_bg_elevated">#171820</color>
-    <color name="run_panel">#1b1d26</color>
-    <color name="run_panel_soft">#20222c</color>
-    <color name="run_panel_hover">#252733</color>
-    <color name="run_text">#f4f3f8</color>
-    <color name="run_muted">#9b9dac</color>
-    <color name="run_subtle">#747786</color>
-    <color name="run_accent">#c8f169</color>
-    <color name="run_accent_ink">#1d2810</color>
-    <color name="run_purple">#aaa2ff</color>
-    <color name="run_success">#a8ee9c</color>
-    <color name="run_danger">#ff8c96</color>
+    <!-- Warm Paper Default Theme Tokens (#14) -->
+    <color name="run_bg">#F5F1E6</color>
+    <color name="run_bg_elevated">#ECE7D9</color>
+    <color name="run_panel">#FCF9F2</color>
+    <color name="run_panel_soft">#EAE4D3</color>
+    <color name="run_panel_hover">#DDD5C1</color>
+    <color name="run_text">#1D1B16</color>
+    <color name="run_muted">#6D685B</color>
+    <color name="run_subtle">#969080</color>
+    <color name="run_accent">#B5E53E</color>
+    <color name="run_accent_ink">#1A2407</color>
+    <color name="run_own_bubble">#DCF29D</color>
+    <color name="run_highlighter">#CBEF68</color>
+    <color name="run_dock_bg">#1E1C17</color>
+    <color name="run_dock_text">#F7F4EB</color>
+    <color name="run_purple">#6857D6</color>
+    <color name="run_success">#2E7D32</color>
+    <color name="run_danger">#C93B3B</color>
+    <color name="run_warning">#D6831A</color>
 </resources>

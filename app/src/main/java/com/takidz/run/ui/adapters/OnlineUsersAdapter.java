@@ -1,6 +1,7 @@
 package com.takidz.run.ui.adapters;
 
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.view.LayoutInflater;
 import android.view.View;
 import android.view.ViewGroup;
@@ -13,8 +14,10 @@ import androidx.recyclerview.widget.RecyclerView;
 
 import com.bumptech.glide.Glide;
 import com.google.android.material.button.MaterialButton;
+import com.google.android.material.card.MaterialCardView;
 import com.takidz.run.R;
 import com.takidz.run.models.OnlineUser;
+import com.takidz.run.utils.LocaleHelper;
 import com.takidz.run.utils.PrefsManager;
 import com.takidz.run.utils.ThemeHelper;
 
@@ -30,7 +33,7 @@ public class OnlineUsersAdapter extends RecyclerView.Adapter<OnlineUsersAdapter.
 
     private final Context context;
     private final PrefsManager prefs;
-    private final ThemeHelper.Palette palette;
+    private ThemeHelper.Palette palette;
     private final UserActionListener listener;
     private List<OnlineUser> users = new ArrayList<>();
 
@@ -39,6 +42,11 @@ public class OnlineUsersAdapter extends RecyclerView.Adapter<OnlineUsersAdapter.
         this.prefs = prefs;
         this.palette = palette;
         this.listener = listener;
+    }
+
+    public void updatePalette(ThemeHelper.Palette newPalette) {
+        this.palette = newPalette;
+        notifyDataSetChanged();
     }
 
     public void setUsers(List<OnlineUser> newUsers) {
@@ -65,6 +73,7 @@ public class OnlineUsersAdapter extends RecyclerView.Adapter<OnlineUsersAdapter.
     }
 
     class ViewHolder extends RecyclerView.ViewHolder {
+        MaterialCardView cardRoot;
         ImageView ivUserAvatar;
         TextView tvAvatarFallback;
         TextView tvUserName;
@@ -76,6 +85,7 @@ public class OnlineUsersAdapter extends RecyclerView.Adapter<OnlineUsersAdapter.
 
         ViewHolder(View itemView) {
             super(itemView);
+            cardRoot = (itemView instanceof MaterialCardView) ? (MaterialCardView) itemView : null;
             ivUserAvatar = itemView.findViewById(R.id.ivUserAvatar);
             tvAvatarFallback = itemView.findViewById(R.id.tvAvatarFallback);
             tvUserName = itemView.findViewById(R.id.tvUserName);
@@ -87,10 +97,20 @@ public class OnlineUsersAdapter extends RecyclerView.Adapter<OnlineUsersAdapter.
         }
 
         void bind(OnlineUser user) {
+            boolean ar = prefs.isArabic();
+            if (cardRoot != null) {
+                cardRoot.setCardBackgroundColor(palette.panel);
+                cardRoot.setStrokeColor(palette.panelHover);
+            }
+
             tvUserName.setText(user.name);
+            tvUserName.setTextColor(palette.text);
+            tvUserSub.setTextColor(palette.muted);
 
             String initial = (user.name != null && !user.name.isEmpty()) ? user.name.substring(0, 1).toUpperCase() : "U";
             tvAvatarFallback.setText(initial);
+            tvAvatarFallback.setBackgroundTintList(ColorStateList.valueOf(palette.accent));
+            tvAvatarFallback.setTextColor(palette.accentInk);
             if (user.avatarUrl != null && !user.avatarUrl.trim().isEmpty()) {
                 ivUserAvatar.setVisibility(View.VISIBLE);
                 tvAvatarFallback.setVisibility(View.GONE);
@@ -102,31 +122,40 @@ public class OnlineUsersAdapter extends RecyclerView.Adapter<OnlineUsersAdapter.
 
             if (user.isSelf) {
                 tvSelfBadge.setVisibility(View.VISIBLE);
-                tvUserSub.setText("Active now (This device)");
+                tvSelfBadge.setText(ar ? "أنت" : "You");
+                tvSelfBadge.setBackgroundTintList(ColorStateList.valueOf(palette.highlighter));
+                tvSelfBadge.setTextColor(palette.accentInk);
+                tvUserSub.setText(ar ? "نشط الآن (هذا الجهاز)" : "Active now (This device)");
                 layoutActions.setVisibility(View.GONE);
             } else {
                 tvSelfBadge.setVisibility(View.GONE);
-                long secAgo = Math.max(0, (System.currentTimeMillis() - user.lastSeenTs) / 1000);
-                if (secAgo < 25) {
-                    tvUserSub.setText("Active now" + (user.bio.isEmpty() ? "" : " • " + user.bio));
-                } else {
-                    tvUserSub.setText("Last seen " + secAgo + "s ago" + (user.bio.isEmpty() ? "" : " • " + user.bio));
-                }
+                String rel = LocaleHelper.formatRelativeTimeMs(user.lastSeenTs, ar);
+                String bioSuffix = (user.bio != null && !user.bio.isEmpty()) ? (" • " + user.bio) : "";
+                tvUserSub.setText(rel + " • " + (user.platform != null ? user.platform : "Web") + bioSuffix);
                 layoutActions.setVisibility(View.VISIBLE);
 
                 boolean isFriend = prefs.isFriend(user.userId);
                 boolean hasSent = prefs.hasSentRequest(user.userId);
 
+                btnInviteRoom.setText(ar ? "دعوة" : "Invite");
+                btnInviteRoom.setBackgroundTintList(ColorStateList.valueOf(palette.panelSoft));
+                btnInviteRoom.setTextColor(palette.text);
+                btnInviteRoom.setIconTint(ColorStateList.valueOf(palette.text));
+
+                btnAddFriend.setBackgroundTintList(ColorStateList.valueOf(palette.accent));
+                btnAddFriend.setTextColor(palette.accentInk);
+                btnAddFriend.setIconTint(ColorStateList.valueOf(palette.accentInk));
+
                 if (isFriend) {
-                    btnAddFriend.setText("Friends ✓");
+                    btnAddFriend.setText(ar ? "صديق ✓" : "Friends ✓");
                     btnAddFriend.setEnabled(false);
                     btnAddFriend.setIconResource(R.drawable.ic_check);
                 } else if (hasSent) {
-                    btnAddFriend.setText("Pending");
+                    btnAddFriend.setText(ar ? "مرسل" : "Pending");
                     btnAddFriend.setEnabled(false);
                     btnAddFriend.setIconResource(R.drawable.ic_sync);
                 } else {
-                    btnAddFriend.setText("Add Friend");
+                    btnAddFriend.setText(ar ? "+ صديق" : "Add Friend");
                     btnAddFriend.setEnabled(true);
                     btnAddFriend.setIconResource(R.drawable.ic_person_add);
                     btnAddFriend.setOnClickListener(v -> {

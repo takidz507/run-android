@@ -13,12 +13,39 @@ public class RoomData {
     public List<TaskItem> tasks = new ArrayList<>();
     public Map<String, AvatarProfile> avatars = new HashMap<>();
     public NoteData note = new NoteData();
+    public RoomIdentity identity = null;
 
     public static class Meta {
         public String code = "";
         public String name = "";
         public String createdAt = "";
         public String dirId = null;
+        // #17: Per-room identity fields
+        public String ownerId = null;
+        public String accentColor = null;
+        public String bgStyle = null;
+        public long identityVersion = 0L;
+    }
+
+    public static class RoomIdentity {
+        public String kind = "run-room-identity";
+        public String roomCode = "";
+        public String ownerId = "";
+        public String accentColor = "#B8E646";
+        public String bgStyle = "paper"; // "paper" | "dots" | "lines" | "grid" | "waves" | "origami"
+        public long version = 1L;
+        public String updatedAt = "";
+
+        public RoomIdentity() {}
+
+        public RoomIdentity(String roomCode, String ownerId, String accentColor, String bgStyle, long version, String updatedAt) {
+            this.roomCode = roomCode;
+            this.ownerId = ownerId;
+            this.accentColor = accentColor;
+            this.bgStyle = bgStyle;
+            this.version = version;
+            this.updatedAt = updatedAt;
+        }
     }
 
     public static class AvatarProfile {
@@ -29,9 +56,9 @@ public class RoomData {
         public AvatarProfile() {}
 
         public AvatarProfile(String name, String avatarUrl, String bio) {
-            this.name = name;
-            this.avatarUrl = avatarUrl;
-            this.bio = bio;
+            this.name = name != null ? name : "";
+            this.avatarUrl = avatarUrl != null ? avatarUrl : "";
+            this.bio = bio != null ? bio : "";
         }
     }
 

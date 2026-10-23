@@ -1,33 +1,23 @@
-# Run — Native Android Application (Java + Material Design 3)
+# Run — Native Android v3.0.0 (`com.takidz.run`)
 
-تطبيق **Android أصلي (Native)** احترافي ومتوافق لحظياً بنسبة 100% مع منصة الويب [`https://takidz507.github.io/run/`](https://takidz507.github.io/run/).
+Serverless, real-time room-based collaboration & chat app built on public MQTT brokers (`wss://broker.emqx.io:8084/mqtt`, `wss://broker.hivemq.com:8884/mqtt`), 100% interoperable with the live Web v2 Pro client and Android v2.0.0-pro.
 
-## المميزات والتحسينات المضافة في نسخة الأندرويد
+## What's New in v3.0.0
 
-1. **مزامنة لحظية كاملة مع نسخة الويب عبر MQTT WebSockets:**
-   - يتصل تلقائياً بـ `wss://broker.emqx.io:8084/mqtt` مع انتقال تلقائي (Failover) إلى `wss://broker.hivemq.com:8884/mqtt`.
-   - يدعم نفس المواضيع (`runapp/v1/room/<CODE>`, `runapp/v1/directory`, `runapp/v1/presence/+`, `runapp/v1/room/<CODE>/typing`).
-2. **إصلاح مشاكل الواجهة في نسخة الويب وتطوير تجربة الهاتف (UX):**
-   - إضافة حقل **اسم الغرفة (اختياري)** المفقود في البطاقة الرئيسية.
-   - دمج أزرار **+ إنشاء غرفة** و **# الانضمام بكود** مباشرة داخل البطاقة الرئيسية.
-   - تقسيم شاشة الغرفة إلى تبويبين سريعين (**💬 الدردشة** و **✓ المهام المشتركة**) مع **حلقة إنجاز دائرية مخصصة (`TaskProgressRingView`)**.
-3. **دعم المجموعات العامة المحمية بكلمة سر:**
-   - يطبق نفس خوارزمية `SHA-256(seed + "::pw::" + password)` للتحقق من الـ `verifier` واشتقاق مفتاح الموضوع المكون من 12 حرفاً دون نشر كلمة السر.
-4. **مشاركة الملفات، الصور، والرسائل الصوتية:**
-   - تضمين الصور والمقاطع الصوتية الصغيرة (≤ 350KB) كـ `DataURL` مباشرة، ورفع الملفات الأكبر حتى 200MB تلقائياً عبر `Catbox.moe`.
-   - مسجل ومشغل صوتي أصلي (`MediaRecorder` & `MediaPlayer`) مدمج داخل فقاعات الدردشة.
-5. **الترجمة التلقائية الفورية والسمات الثلاث:**
-   - ترجمة فورية للرسائل عبر `Google Translate GTX API` مع ذاكرة تخزين مؤقت وزر التبديل بين النص المترجم والأصلي.
-   - دعم كامل للسمات الثلاث: **Dark Lime** (`#111218` / `#c8f169`)، **AMOLED Black** (`#000000`)، و **Light Mode** (`#f4f5f2` / `#3390ec`).
+- **Warm Paper Editorial Workspace (#14, #15, #16, #22)**: Brand-new workspace navigation with a Floating Dark Pill Bottom Dock (`Spaces` · `Discover` · `People` · `My Saved`), adaptive Two-Pane Study Desk mode on tablets/wide screens, 60fps motion choreography, and **4 switchable themes** (`Warm Paper`, `Warm Paper Dark`, `Clean Air`, `Deep Night`) with **live interactive UI surface preview** in Settings.
+- **Per-Room Identity (#17)**: Room owners customize each room's accent color and background pattern (`Warm Paper`, `Dot Grid`, `Ruled Lines`, `Graph Grid`, `Calm Waves`, `Origami`), synced via MQTT (`RoomData.meta` + retained `/identity` sub-topic) to all members and late joiners.
+- **Quick Gestures & First-Use Hints (#18)**: Swipe a message to reply/quote, long-press to open the emoji reaction picker (`👍 ❤️ 😂 🔥 👏 🎯`) and quick actions, and swipe down to close the fullscreen media viewer.
+- **Origami Icon & Animated Splash (#19)**: F1 Origami launcher icon (adaptive + legacy mipmaps) and a < 1.1s folding Origami splash animation with instant tap-to-skip.
+- **Light Sound & Vibration Touches (#20) & Lite Mode (#21)**: Optional subtle haptic/acoustic feedback respecting OS Silent/DND modes, and automatic Lite Mode detection for low-RAM or Battery Saver devices.
+- **Unified Identity, Smart Invites & Code Pairing (#23, #24, #25, #30)**:
+  - SHA-256 hashed per-device serial (`ANDROID_ID`) so clearing data and renaming still counts as **one user** (#24).
+  - Smart invite links (`https://takidz507.github.io/run/?room=CODE` & `runapp://room/CODE`) with direct room entry and deferred first-run clipboard bridge (#23).
+  - Encrypted 6-character MQTT transfer & pairing code to move rooms/profile/settings to a new phone (#25) or link Web and Android into one unified account (#30).
+- **Everyday Trust (#26, #27, #28, #29, #31)**:
+  - Sent (`✓`), Delivered (`✓✓`), and Read (highlighted `✓✓`) indicators (#26).
+  - Timed per-room notification mute (`1h`, `8h`, `Until tomorrow`) with auto-expiry (#27).
+  - Full RTL Arabic mode with localized typography, dates, and numbers (#28).
+  - Live connection quality indicator (`Connected` / `Weak signal` / `Reconnecting…`) (#29).
+  - Personal Saved Messages (`My saved`) across all rooms with one-tap jump back to the source message (#31).
 
-## طريقة تشغيل وبناء ملف APK
-
-### الطريقة الأولى: عبر Android Studio (على الكمبيوتر)
-1. فك الضغط عن ملف `Run_Native_Android_Project.zip`.
-2. افتح برنامج **Android Studio** واختر **Open** ثم حدد مجلد المشروع.
-3. انتظر اكتمال مزامنة Gradle ثم اضغط **Build > Build Bundle(s) / APK(s) > Build APK(s)**.
-
-### الطريقة الثانية: بناء ملف APK سحابياً عبر GitHub Actions (بدون كمبيوتر!)
-تم تضمين ملف `.github/workflows/build-apk.yml` داخل المشروع:
-1. ارفع ملفات هذا المشروع إلى مستودع جديد على حسابك في GitHub (مثلاً `takidz507/run-android`).
-2. ادخل إلى تبويب **Actions** في المستودع، وستجد عملية البناء تعمل تلقائياً وتنتج لك ملف `run-android-debug-apk` جاهزاً للتحميل والتثبيت على هاتفك.
+See `IMPLEMENTATION-NOTES.md` for the complete feature-to-code mapping.

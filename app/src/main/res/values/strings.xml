@@ -1,38 +1,70 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
     <string name="app_name">Run</string>
-    <string name="app_tagline">Serverless P2P Real-Time Rooms</string>
-    
-    <!-- Navigation & Tabs -->
+    <string name="app_tagline">Serverless P2P Real-Time Spaces</string>
+
+    <!-- Bottom & Rail Navigation (#14) -->
+    <string name="nav_spaces">Spaces</string>
+    <string name="nav_discover">Discover</string>
+    <string name="nav_people">People</string>
+    <string name="nav_saved">My Saved</string>
+
+    <!-- Room Tabs -->
     <string name="tab_chat">Chat</string>
     <string name="tab_tasks">Tasks</string>
-    <string name="tab_notes">Shared Notes</string>
+    <string name="tab_notes">Notes</string>
     <string name="tab_online_now">Online Now</string>
     <string name="tab_friends_invites">Friends &amp; Invites</string>
-    
-    <!-- Home Screen -->
+
+    <!-- Home / Spaces Screen -->
+    <string name="your_spaces">Your spaces</string>
+    <string name="online_now_title">Online now</string>
     <string name="create_room">Create Room</string>
     <string name="join_by_code">Join by Code</string>
     <string name="public_groups">Public Groups</string>
     <string name="feedback_board">Feedback Board</string>
-    <string name="online_now_format">%d Online</string>
-    <string name="room_name_hint">Room name (optional)</string>
+    <string name="online_now_format">%d online</string>
+    <string name="room_name_hint">Space title (optional)</string>
     <string name="user_name_hint">Your display name</string>
-    <string name="make_public_label">List in Public Directory</string>
+    <string name="make_public_label">List in Public Groups Directory</string>
     <string name="password_optional_hint">Password protection (optional)</string>
-    <string name="recent_rooms_title">Recent Rooms</string>
-    <string name="no_recent_rooms">No recent rooms yet. Create or join one above!</string>
-    
+    <string name="recent_rooms_title">Your rooms</string>
+    <string name="no_recent_rooms">No spaces yet. Tap + to create or join a room!</string>
+
+    <!-- Connection Quality (#29) -->
+    <string name="conn_connected">Connected</string>
+    <string name="conn_weak">Weak signal</string>
+    <string name="conn_reconnecting">Reconnecting automatically…</string>
+
     <!-- Room Screen -->
-    <string name="send_message_hint">Type a message...</string>
-    <string name="add_task_hint">Add a new task...</string>
-    <string name="notes_placeholder">Write shared notes, meeting minutes, links, or ideas here. Everyone in the room sees updates live...</string>
+    <string name="send_message_hint">Write a message…</string>
+    <string name="add_task_hint">Add a shared task…</string>
+    <string name="notes_placeholder">Write shared notes, meeting minutes, links, or ideas here. Everyone in the room sees updates live…</string>
     <string name="room_code_copied">Room code copied: %s</string>
     <string name="invite_link_copied">Invite link copied: %s</string>
-    
+    <string name="gesture_hint_banner">Swipe a message to reply • Long-press to react or save • Swipe down on photos to close</string>
+    <string name="got_it">Got it</string>
+
+    <!-- Timed Room Mute (#27) -->
+    <string name="mute_room_title">Mute notifications for this room</string>
+    <string name="mute_1_hour">Mute for 1 hour</string>
+    <string name="mute_8_hours">Mute for 8 hours</string>
+    <string name="mute_until_tomorrow">Mute until tomorrow (8:00 AM)</string>
+    <string name="unmute_now">Unmute room now</string>
+
+    <!-- Saved Messages (#31) -->
+    <string name="saved_messages_title">My saved</string>
+    <string name="saved_messages_sub">Private bookmarks gathered from all your rooms</string>
+    <string name="saved_empty">No saved messages yet. Long-press any message in a room and tap Save.</string>
+    <string name="jump_to_room">Jump to message ↗</string>
+
+    <!-- Pairing & Transfer (#25, #30) -->
+    <string name="pair_account_title">One Account &amp; Phone Transfer</string>
+    <string name="pair_account_sub">Move your rooms, profile &amp; settings to a new phone or link your Web &amp; Android identity with a short code.</string>
+
     <!-- Online Directory -->
-    <string name="online_directory_title">Online Users</string>
-    <string name="search_users_hint">Search online users...</string>
+    <string name="online_directory_title">Online Community</string>
+    <string name="search_users_hint">Search online users…</string>
     <string name="invite_to_room">Invite</string>
     <string name="add_friend">Add Friend</string>
     <string name="friend_pending">Pending</string>
@@ -41,7 +73,7 @@
     <string name="accept">Accept</string>
     <string name="decline">Decline</string>
     <string name="active_now">Active now</string>
-    
+
     <!-- Feedback -->
     <string name="feedback_title">Feedback &amp; Ideas</string>
     <string name="new_suggestion">New Suggestion</string>
@@ -50,7 +82,7 @@
     <string name="category_bug">Bug</string>
     <string name="category_improvement">Improvement</string>
     <string name="suggestion_title_hint">Suggestion title</string>
-    <string name="suggestion_content_hint">Describe your idea or report...</string>
+    <string name="suggestion_content_hint">Describe your idea or report…</string>
     <string name="submit">Submit</string>
     <string name="cancel">Cancel</string>
     <string name="close">Close</string>

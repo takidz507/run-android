@@ -16,8 +16,8 @@ android {
     applicationId = "com.takidz.run"
     minSdk = 24
     targetSdk = 34
-    versionCode = 2
-    versionName = "2.0.0-pro"
+    versionCode = 3
+    versionName = "3.0.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }
@@ -81,8 +81,6 @@ secrets {
 
 googleServices { missingGoogleServicesStrategy = MissingGoogleServicesStrategy.WARN }
 
-// Some unused dependencies are commented out below instead of being removed.
-// This makes it easy to add them back in the future if needed.
 dependencies {
   implementation("androidx.appcompat:appcompat:1.6.1")
   implementation("com.google.android.material:material:1.11.0")
