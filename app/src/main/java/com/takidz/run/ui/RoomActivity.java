@@ -647,7 +647,10 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
         // 2. Quick Actions (Save to My Saved #31, Reply, Translate, Copy)
         boolean isSaved = prefs.isMessageSaved(roomCode, message.id);
 
-        MaterialButton btnSave = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonTonalStyle);
+        MaterialButton btnSave = new MaterialButton(this);
+        btnSave.setBackgroundTintList(ColorStateList.valueOf(com.google.android.material.color.MaterialColors.getColor(btnSave, com.google.android.material.R.attr.colorSecondaryContainer)));
+        btnSave.setTextColor(com.google.android.material.color.MaterialColors.getColor(btnSave, com.google.android.material.R.attr.colorOnSecondaryContainer));
+        btnSave.setIconTint(ColorStateList.valueOf(com.google.android.material.color.MaterialColors.getColor(btnSave, com.google.android.material.R.attr.colorOnSecondaryContainer)));
         LinearLayout.LayoutParams actionLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, (int) (46 * d)
         );
@@ -666,7 +669,10 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
         });
         root.addView(btnSave);
 
-        MaterialButton btnReplyAction = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonTonalStyle);
+        MaterialButton btnReplyAction = new MaterialButton(this);
+        btnReplyAction.setBackgroundTintList(ColorStateList.valueOf(com.google.android.material.color.MaterialColors.getColor(btnReplyAction, com.google.android.material.R.attr.colorSecondaryContainer)));
+        btnReplyAction.setTextColor(com.google.android.material.color.MaterialColors.getColor(btnReplyAction, com.google.android.material.R.attr.colorOnSecondaryContainer));
+        btnReplyAction.setIconTint(ColorStateList.valueOf(com.google.android.material.color.MaterialColors.getColor(btnReplyAction, com.google.android.material.R.attr.colorOnSecondaryContainer)));
         LinearLayout.LayoutParams repLp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.MATCH_PARENT, (int) (44 * d)
         );
@@ -683,7 +689,10 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
         });
         root.addView(btnReplyAction);
 
-        MaterialButton btnCopyAction = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonTonalStyle);
+        MaterialButton btnCopyAction = new MaterialButton(this);
+        btnCopyAction.setBackgroundTintList(ColorStateList.valueOf(com.google.android.material.color.MaterialColors.getColor(btnCopyAction, com.google.android.material.R.attr.colorSecondaryContainer)));
+        btnCopyAction.setTextColor(com.google.android.material.color.MaterialColors.getColor(btnCopyAction, com.google.android.material.R.attr.colorOnSecondaryContainer));
+        btnCopyAction.setIconTint(ColorStateList.valueOf(com.google.android.material.color.MaterialColors.getColor(btnCopyAction, com.google.android.material.R.attr.colorOnSecondaryContainer)));
         btnCopyAction.setLayoutParams(repLp);
         btnCopyAction.setIconResource(R.drawable.ic_content_copy);
         btnCopyAction.setText(ar ? "نسخ النص" : "Copy Message Text");
@@ -801,7 +810,10 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
         bgRow.setOrientation(LinearLayout.HORIZONTAL);
         for (int i = 0; i < ThemeHelper.ROOM_BG_STYLES.length; i++) {
             final String styleKey = ThemeHelper.ROOM_BG_STYLES[i];
-            MaterialButton btnStyle = new MaterialButton(this, null, com.google.android.material.R.attr.materialButtonTonalStyle);
+            MaterialButton btnStyle = new MaterialButton(this);
+        btnStyle.setBackgroundTintList(ColorStateList.valueOf(com.google.android.material.color.MaterialColors.getColor(btnStyle, com.google.android.material.R.attr.colorSecondaryContainer)));
+        btnStyle.setTextColor(com.google.android.material.color.MaterialColors.getColor(btnStyle, com.google.android.material.R.attr.colorOnSecondaryContainer));
+        btnStyle.setIconTint(ColorStateList.valueOf(com.google.android.material.color.MaterialColors.getColor(btnStyle, com.google.android.material.R.attr.colorOnSecondaryContainer)));
             LinearLayout.LayoutParams bLp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT, (int) (38 * d)
             );
