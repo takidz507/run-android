@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<ScrollView xmlns:android="http://schemas.android.com/apk/res/android"
+<androidx.core.widget.NestedScrollView xmlns:android="http://schemas.android.com/apk/res/android"
     xmlns:app="http://schemas.android.com/apk/res-auto"
     android:id="@+id/scrollSettingsSheet"
     android:layout_width="match_parent"
     android:layout_height="wrap_content"
-    android:background="@color/run_bg"
+    android:overScrollMode="never"
     android:fillViewport="true">
 
     <LinearLayout
@@ -57,7 +57,7 @@
                 app:tint="@color/run_text" />
         </LinearLayout>
 
-        <!-- #22: LIVE REAL UI SURFACE PREVIEW (Matches themes-all-four.png) -->
+        <!-- #22: LIVE REAL UI SURFACE PREVIEW -->
         <TextView
             android:id="@+id/tvLivePreviewSectionLabel"
             android:layout_width="wrap_content"
@@ -74,10 +74,10 @@
             android:layout_height="wrap_content"
             android:layout_marginBottom="16dp"
             app:cardBackgroundColor="@color/run_bg"
-            app:cardCornerRadius="26dp"
+            app:cardCornerRadius="24dp"
             app:cardElevation="0dp"
             app:strokeColor="@color/run_panel_hover"
-            app:strokeWidth="1.5dp">
+            app:strokeWidth="1dp">
 
             <LinearLayout
                 android:layout_width="match_parent"
@@ -110,17 +110,15 @@
 
                         <View
                             android:id="@+id/viewPreviewHighlighter"
-                            android:layout_width="96dp"
-                            android:layout_height="6dp"
-                            android:layout_marginTop="3dp"
-                            android:background="@drawable/bg_highlighter_bar" />
+                            android:layout_width="88dp"
+                            android:layout_height="5dp"
+                            android:layout_marginTop="2dp" />
                     </LinearLayout>
 
                     <TextView
                         android:id="@+id/tvPreviewAvatarOrb"
                         android:layout_width="34dp"
                         android:layout_height="34dp"
-                        android:background="@drawable/bg_brand_logo"
                         android:gravity="center"
                         android:text="T"
                         android:textColor="@color/run_accent_ink"
@@ -169,7 +167,6 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="6dp"
-                            android:background="@drawable/bg_pill_accent"
                             android:paddingStart="8dp"
                             android:paddingTop="2dp"
                             android:paddingEnd="8dp"
@@ -214,7 +211,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:text="Same warm paper soul, day or night ✨"
+                            android:text="Same warm paper soul, day or night"
                             android:textColor="@color/run_text"
                             android:textSize="13sp" />
                     </LinearLayout>
@@ -254,7 +251,7 @@
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
                             android:layout_marginTop="2dp"
-                            android:text="And the lime still glows ✓✓"
+                            android:text="Perfect, I was stuck on exercise 2"
                             android:textColor="@color/run_accent_ink"
                             android:textSize="13sp" />
                     </LinearLayout>
@@ -297,7 +294,7 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-        <!-- #14 & #22: THE 4 APPROVED SWITCHABLE THEMES -->
+        <!-- THEMES SECTION -->
         <TextView
             android:id="@+id/tvThemeSectionTitle"
             android:layout_width="wrap_content"
@@ -330,13 +327,13 @@
                 android:padding="12dp">
 
                 <View
-                    android:layout_width="44dp"
-                    android:layout_height="32dp"
-                    android:background="#F5F1E6" />
+                    android:layout_width="40dp"
+                    android:layout_height="30dp"
+                    android:background="#F5F2E8" />
 
                 <View
                     android:layout_width="16dp"
-                    android:layout_height="32dp"
+                    android:layout_height="30dp"
                     android:background="#B5E53E" />
 
                 <LinearLayout
@@ -368,7 +365,6 @@
                     android:id="@+id/tvThemeCheck1"
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:background="@drawable/bg_brand_logo"
                     android:gravity="center"
                     android:text="✓"
                     android:textColor="#1A2407"
@@ -399,13 +395,13 @@
                 android:padding="12dp">
 
                 <View
-                    android:layout_width="44dp"
-                    android:layout_height="32dp"
+                    android:layout_width="40dp"
+                    android:layout_height="30dp"
                     android:background="#181713" />
 
                 <View
                     android:layout_width="16dp"
-                    android:layout_height="32dp"
+                    android:layout_height="30dp"
                     android:background="#BCEB4B" />
 
                 <LinearLayout
@@ -437,7 +433,6 @@
                     android:id="@+id/tvThemeCheck2"
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:background="@drawable/bg_brand_logo"
                     android:gravity="center"
                     android:text="✓"
                     android:textColor="#1A2407"
@@ -469,13 +464,13 @@
                 android:padding="12dp">
 
                 <View
-                    android:layout_width="44dp"
-                    android:layout_height="32dp"
+                    android:layout_width="40dp"
+                    android:layout_height="30dp"
                     android:background="#FFFFFF" />
 
                 <View
                     android:layout_width="16dp"
-                    android:layout_height="32dp"
+                    android:layout_height="30dp"
                     android:background="#8AD834" />
 
                 <LinearLayout
@@ -507,7 +502,6 @@
                     android:id="@+id/tvThemeCheck3"
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:background="@drawable/bg_brand_logo"
                     android:gravity="center"
                     android:text="✓"
                     android:textColor="#1A2407"
@@ -522,7 +516,7 @@
             android:id="@+id/cardThemeDeepNight"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="8dp"
             android:clickable="true"
             android:focusable="true"
             app:cardBackgroundColor="@color/run_panel"
@@ -539,13 +533,13 @@
                 android:padding="12dp">
 
                 <View
-                    android:layout_width="44dp"
-                    android:layout_height="32dp"
+                    android:layout_width="40dp"
+                    android:layout_height="30dp"
                     android:background="#060805" />
 
                 <View
                     android:layout_width="16dp"
-                    android:layout_height="32dp"
+                    android:layout_height="30dp"
                     android:background="#C6FF33" />
 
                 <LinearLayout
@@ -577,7 +571,6 @@
                     android:id="@+id/tvThemeCheck4"
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:background="@drawable/bg_brand_logo"
                     android:gravity="center"
                     android:text="✓"
                     android:textColor="#1A2407"
@@ -587,13 +580,12 @@
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
-
-        <!-- Theme 5: Liquid Glass (v3.1) -->
+        <!-- Theme 5: Liquid Glass -->
         <com.google.android.material.card.MaterialCardView
             android:id="@+id/cardThemeGlass"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
-            android:layout_marginBottom="16dp"
+            android:layout_marginBottom="14dp"
             android:clickable="true"
             android:focusable="true"
             app:cardBackgroundColor="@color/run_panel"
@@ -610,13 +602,13 @@
                 android:padding="12dp">
 
                 <View
-                    android:layout_width="44dp"
-                    android:layout_height="32dp"
+                    android:layout_width="40dp"
+                    android:layout_height="30dp"
                     android:background="#0E2A26" />
 
                 <View
                     android:layout_width="16dp"
-                    android:layout_height="32dp"
+                    android:layout_height="30dp"
                     android:background="#9ADBE8" />
 
                 <LinearLayout
@@ -648,7 +640,6 @@
                     android:id="@+id/tvThemeCheck5"
                     android:layout_width="24dp"
                     android:layout_height="24dp"
-                    android:background="@drawable/bg_brand_logo"
                     android:gravity="center"
                     android:text="✓"
                     android:textColor="#1A2407"
@@ -657,6 +648,17 @@
                     android:visibility="gone" />
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
+
+        <!-- Dark Mode Variant Toggle (flips any design above to its dark variant) -->
+        <CheckBox
+            android:id="@+id/cbDarkModeVariant"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:layout_marginBottom="14dp"
+            android:text="Dark mode — flips any design above to its dark variant"
+            android:textColor="@color/run_text"
+            android:textSize="13sp"
+            android:textStyle="bold" />
 
         <!-- Profile Section -->
         <TextView
@@ -701,7 +703,7 @@
         <EditText
             android:id="@+id/etSettingsDisplayName"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="46dp"
             android:layout_marginBottom="8dp"
             android:background="@drawable/bg_input_field"
             android:hint="Your display name"
@@ -715,7 +717,7 @@
         <EditText
             android:id="@+id/etSettingsBio"
             android:layout_width="match_parent"
-            android:layout_height="48dp"
+            android:layout_height="46dp"
             android:layout_marginBottom="16dp"
             android:background="@drawable/bg_input_field"
             android:hint="Short bio or status (optional)"
@@ -786,15 +788,6 @@
             android:textColor="@color/run_text"
             android:textSize="13sp" />
 
-        <CheckBox
-            android:id="@+id/cbDarkModeVariant"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:layout_marginTop="6dp"
-            android:text="Dark mode — works with every design above"
-            android:textColor="@color/run_text"
-            android:textSize="13sp" />
-
         <TextView
             android:id="@+id/tvLiteModeAutoInfo"
             android:layout_width="match_parent"
@@ -850,4 +843,4 @@
                 app:cornerRadius="16dp" />
         </LinearLayout>
     </LinearLayout>
-</ScrollView>
+</androidx.core.widget.NestedScrollView>
