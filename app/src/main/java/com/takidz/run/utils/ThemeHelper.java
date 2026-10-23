@@ -20,6 +20,12 @@ public class ThemeHelper {
     public static final String THEME_WARM_PAPER_DARK = "warm_paper_dark";
     public static final String THEME_CLEAN_AIR = "clean_air";
     public static final String THEME_DEEP_NIGHT = "deep_night";
+    // v3.1 (owner request): Liquid Glass — translucent frosted surfaces, iPhone-style
+    public static final String THEME_GLASS = "liquid_glass";
+    // v3.1 (owner request): EVERY design gets a dark-mode variant that the
+    // settings Dark Mode switch flips to — dark must work with all designs.
+    public static final String THEME_CLEAN_AIR_DARK = "clean_air_dark";
+    public static final String THEME_GLASS_DARK = "liquid_glass_dark";
 
     // #17: Curated Per-Room Identity Color Presets
     public static final String[] ROOM_ACCENT_HEX = new String[]{
@@ -114,6 +120,36 @@ public class ThemeHelper {
             case THEME_DEEP_NIGHT:
             case "amoled":
                 return THEME_DEEP_NIGHT;
+            case THEME_CLEAN_AIR_DARK:
+                // Clean Air Dark (v3.1): Clean Air's airy soul after sunset —
+                // same leaf-lime accent, deep sage-charcoal surfaces.
+                return new Palette(
+                        THEME_CLEAN_AIR_DARK,
+                        "#0F130F", "#161B16", "#1D231D", "#252C25", "#333D33",
+                        "#EDF3EC", "#9AA79B", "#6E7A6F", "#8AD834", "#132205",
+                        "#2C4517", "#EBF7DA", "#49682A", "#3E5E1E",
+                        "#0B0E0B", "#EFF5EE",
+                        "#A79BFF", "#7BD88F", "#FF857A", "#F5B942", false
+                );
+            case THEME_GLASS_DARK:
+                // Liquid Glass Dark (v3.1): the glass theme pushed deeper —
+                // near-black backdrop, dimmer frost, same liquid translucency.
+                return new Palette(
+                        THEME_GLASS_DARK,
+                        "#04080A", "#0A1418", "#1FFFFFFF", "#12FFFFFF", "#30FFFFFF",
+                        "#EFF8F3", "#A9C2B6", "#75907F", "#B9F25E", "#14230A",
+                        "#40B5E53E", "#F2FBEA", "#40FFFFFF", "#4DB5E53E",
+                        "#1AFFFFFF", "#E6F4EC",
+                        "#C0B4FF", "#93F07A", "#FF8A80", "#F7B93E", false
+                );
+            case THEME_GLASS:
+            case "glass":
+            case "liquid":
+                return THEME_GLASS;
+            case THEME_CLEAN_AIR_DARK:
+                return THEME_CLEAN_AIR_DARK;
+            case THEME_GLASS_DARK:
+                return THEME_GLASS_DARK;
             default:
                 return THEME_WARM_PAPER;
         }
@@ -152,6 +188,19 @@ public class ThemeHelper {
                         "#0B0E0A", "#ECF5E8",
                         "#A89FFF", "#8CF56E", "#FF7A85", "#F7B93E", false
                 );
+            case THEME_GLASS:
+                // Liquid Glass (v3.1): deep blue-teal backdrop, frosted translucent
+                // panels (alpha whites), glass-edge strokes, frosted lime accent.
+                // Panel colors carry alpha on purpose — surfaces float over the
+                // gradient backdrop the activities install for this theme.
+                return new Palette(
+                        THEME_GLASS,
+                        "#0C1512", "#14231C", "#29FFFFFF", "#1AFFFFFF", "#40FFFFFF",
+                        "#F4FAF6", "#BCD2C6", "#84A293", "#B9F25E", "#14230A",
+                        "#4DB5E53E", "#F2FBEA", "#4DFFFFFF", "#57B5E53E",
+                        "#24FFFFFF", "#EAF6EE",
+                        "#C0B4FF", "#93F07A", "#FF8A80", "#F7B93E", false
+                );
             case THEME_WARM_PAPER:
             default:
                 // Warm Paper (Default): Light · the original, warmer
@@ -177,6 +226,46 @@ public class ThemeHelper {
 
     public static int withAlpha(int color, int alpha) {
         return Color.argb(Math.max(0, Math.min(255, alpha)), Color.red(color), Color.green(color), Color.blue(color));
+    }
+
+    /** v3.1: dark variant of any design (Deep Night is already the darkest). */
+    public static String darkVariantOf(String key) {
+        switch (normalizeThemeMode(key)) {
+            case THEME_WARM_PAPER:
+                return THEME_WARM_PAPER_DARK;
+            case THEME_CLEAN_AIR:
+                return THEME_CLEAN_AIR_DARK;
+            case THEME_GLASS:
+                return THEME_GLASS_DARK;
+            default:
+                return normalizeThemeMode(key);
+        }
+    }
+
+    /** v3.1: light variant of any design. */
+    public static String lightVariantOf(String key) {
+        switch (normalizeThemeMode(key)) {
+            case THEME_WARM_PAPER_DARK:
+                return THEME_WARM_PAPER;
+            case THEME_CLEAN_AIR_DARK:
+                return THEME_CLEAN_AIR;
+            case THEME_GLASS_DARK:
+                return THEME_GLASS;
+            default:
+                return normalizeThemeMode(key);
+        }
+    }
+
+    /** v3.1: is this key one of the dark designs? */
+    public static boolean isDarkKey(String key) {
+        String k = normalizeThemeMode(key);
+        return k.equals(darkVariantOf(k));
+    }
+
+    /** v3.1: both glass designs share the liquid-glass treatments. */
+    public static boolean isGlassTheme(String key) {
+        String k = normalizeThemeMode(key);
+        return THEME_GLASS.equals(k) || THEME_GLASS_DARK.equals(k);
     }
 
     public static void applyAppNightMode(String mode) {
