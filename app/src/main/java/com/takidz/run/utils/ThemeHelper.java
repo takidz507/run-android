@@ -120,28 +120,6 @@ public class ThemeHelper {
             case THEME_DEEP_NIGHT:
             case "amoled":
                 return THEME_DEEP_NIGHT;
-            case THEME_CLEAN_AIR_DARK:
-                // Clean Air Dark (v3.1): Clean Air's airy soul after sunset —
-                // same leaf-lime accent, deep sage-charcoal surfaces.
-                return new Palette(
-                        THEME_CLEAN_AIR_DARK,
-                        "#0F130F", "#161B16", "#1D231D", "#252C25", "#333D33",
-                        "#EDF3EC", "#9AA79B", "#6E7A6F", "#8AD834", "#132205",
-                        "#2C4517", "#EBF7DA", "#49682A", "#3E5E1E",
-                        "#0B0E0B", "#EFF5EE",
-                        "#A79BFF", "#7BD88F", "#FF857A", "#F5B942", false
-                );
-            case THEME_GLASS_DARK:
-                // Liquid Glass Dark (v3.1): the glass theme pushed deeper —
-                // near-black backdrop, dimmer frost, same liquid translucency.
-                return new Palette(
-                        THEME_GLASS_DARK,
-                        "#04080A", "#0A1418", "#1FFFFFFF", "#12FFFFFF", "#30FFFFFF",
-                        "#EFF8F3", "#A9C2B6", "#75907F", "#B9F25E", "#14230A",
-                        "#40B5E53E", "#F2FBEA", "#40FFFFFF", "#4DB5E53E",
-                        "#1AFFFFFF", "#E6F4EC",
-                        "#C0B4FF", "#93F07A", "#FF8A80", "#F7B93E", false
-                );
             case THEME_GLASS:
             case "glass":
             case "liquid":
@@ -187,6 +165,28 @@ public class ThemeHelper {
                         "#273D0F", "#EEFFD6", "#456E1A", "#365714",
                         "#0B0E0A", "#ECF5E8",
                         "#A89FFF", "#8CF56E", "#FF7A85", "#F7B93E", false
+                );
+            case THEME_CLEAN_AIR_DARK:
+                // Clean Air Dark (v3.1): Clean Air's airy soul after sunset —
+                // same leaf-lime accent, deep sage-charcoal surfaces.
+                return new Palette(
+                        THEME_CLEAN_AIR_DARK,
+                        "#0F130F", "#161B16", "#1D231D", "#252C25", "#333D33",
+                        "#EDF3EC", "#9AA79B", "#6E7A6F", "#8AD834", "#132205",
+                        "#2C4517", "#EBF7DA", "#49682A", "#3E5E1E",
+                        "#0B0E0B", "#EFF5EE",
+                        "#A79BFF", "#7BD88F", "#FF857A", "#F5B942", false
+                );
+            case THEME_GLASS_DARK:
+                // Liquid Glass Dark (v3.1): the glass theme pushed deeper —
+                // near-black backdrop, dimmer frost, same liquid translucency.
+                return new Palette(
+                        THEME_GLASS_DARK,
+                        "#04080A", "#0A1418", "#1FFFFFFF", "#12FFFFFF", "#30FFFFFF",
+                        "#EFF8F3", "#A9C2B6", "#75907F", "#B9F25E", "#14230A",
+                        "#40B5E53E", "#F2FBEA", "#40FFFFFF", "#4DB5E53E",
+                        "#1AFFFFFF", "#E6F4EC",
+                        "#C0B4FF", "#93F07A", "#FF8A80", "#F7B93E", false
                 );
             case THEME_GLASS:
                 // Liquid Glass (v3.1): deep blue-teal backdrop, frosted translucent
