@@ -9,6 +9,8 @@ import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
+
+import androidx.core.graphics.ColorUtils;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
@@ -114,6 +116,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     private MaterialButton btnQuickLangToggle;
     private ImageButton btnAccountPairing;
     private ImageButton btnThemeSettings;
+    private ImageButton btnMoreMenu;
     private ImageButton btnFeedbackBoard;
     private FrameLayout layoutAvatarClick;
     private ImageView ivMainAvatar;
@@ -356,6 +359,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         btnQuickLangToggle = findViewById(R.id.btnQuickLangToggle);
         btnAccountPairing = findViewById(R.id.btnAccountPairing);
         btnThemeSettings = findViewById(R.id.btnThemeSettings);
+        btnMoreMenu = findViewById(R.id.btnMoreMenu);
         btnFeedbackBoard = findViewById(R.id.btnFeedbackBoard);
         layoutAvatarClick = findViewById(R.id.layoutAvatarClick);
         ivMainAvatar = findViewById(R.id.ivMainAvatar);
@@ -549,6 +553,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         profileCard.setOnClickListener(v -> showLiveThemeAndSettingsSheet());
         btnEditProfile.setOnClickListener(v -> showLiveThemeAndSettingsSheet());
         btnThemeSettings.setOnClickListener(v -> showLiveThemeAndSettingsSheet());
+        btnMoreMenu.setOnClickListener(v -> showMoreSheet());
         layoutAvatarClick.setOnClickListener(v -> showLiveThemeAndSettingsSheet());
 
         btnCreateRoom.setOnClickListener(v -> onCreateRoomClicked());
@@ -1400,6 +1405,87 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     // #22: Live Theme Preview on a Real Interactive UI Surface + Settings Sheet
     // =========================================================================
 
+
+    /**
+     * v3.1 (owner's rule): "whatever eats space goes into the three dots."
+     * The More sheet gathers every secondary destination that used to sit on
+     * the home screen as cards/buttons: Discover shortcuts, archived rooms,
+     * account pairing/transfer, language, and theme & profile. Each row simply
+     * re-fires the existing control's click, so no behavior is duplicated.
+     */
+    private void showMoreSheet() {
+        boolean ar = prefs.isArabic();
+        BottomSheetDialog dialog = new BottomSheetDialog(this, R.style.Theme_RunApp);
+        LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(dp(20), dp(16), dp(20), dp(24));
+        container.setBackgroundColor(palette.panel);
+        LocaleHelper.applyViewDirection(container, ar);
+
+        TextView title = new TextView(this);
+        title.setText(ar ? "المزيد" : "More");
+        title.setTextColor(palette.text);
+        title.setTextSize(17f);
+        title.setTypeface(title.getTypeface(), android.graphics.Typeface.BOLD);
+        title.setPadding(0, 0, 0, dp(8));
+        container.addView(title);
+
+        addMoreRow(container, "🌐", ar ? "المجموعات العامة" : "Public Groups", dialog, () -> cardPublicGroups.performClick());
+        addMoreRow(container, "💡", ar ? "لوحة المقترحات" : "Feedback Board", dialog, () -> cardFeedbackQuick.performClick());
+        addMoreRow(container, "🗄", ar ? "الغرف المؤرشفة" : "Archived Rooms", dialog, () -> {
+            btnDockSpaces.performClick();
+            btnFilterArchivedRooms.performClick();
+        });
+        addMoreRow(container, "🔗", ar ? "ربط / نقل الحساب" : "Pair / Transfer Account", dialog, () -> btnAccountPairing.performClick());
+        addMoreRow(container, "🌍", ar ? "Switch to English" : "التبديل إلى العربية", dialog, () -> btnQuickLangToggle.performClick());
+        addMoreRow(container, "🎨", ar ? "المظهر والملف الشخصي" : "Theme & Profile", dialog, this::showLiveThemeAndSettingsSheet);
+
+        dialog.setContentView(container);
+        MotionHelper.animatePanelEntrance(container, prefs.isLiteModeEnabled());
+        dialog.show();
+    }
+
+    private void addMoreRow(LinearLayout container, String icon, String label,
+                            BottomSheetDialog dialog, Runnable action) {
+        LinearLayout row = new LinearLayout(this);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(6), dp(13), dp(6), dp(13));
+        row.setClickable(true);
+        row.setFocusable(true);
+        android.util.TypedValue ripple = new android.util.TypedValue();
+        if (getTheme().resolveAttribute(android.R.attr.selectableItemBackground, ripple, true)) {
+            row.setBackgroundResource(ripple.resourceId);
+        }
+
+        TextView iconView = new TextView(this);
+        iconView.setText(icon);
+        iconView.setTextSize(18f);
+        row.addView(iconView);
+
+        TextView labelView = new TextView(this);
+        labelView.setText(label);
+        labelView.setTextColor(palette.text);
+        labelView.setTextSize(15f);
+        labelView.setTypeface(labelView.getTypeface(), android.graphics.Typeface.BOLD);
+        LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+        lp.setMarginStart(dp(14));
+        labelView.setLayoutParams(lp);
+        row.addView(labelView);
+
+        row.setOnClickListener(v -> {
+            FeedbackTouchHelper.onGestureTick(this, prefs, v);
+            dialog.dismiss();
+            action.run();
+        });
+        container.addView(row);
+    }
+
+    private int dp(int value) {
+        return (int) (value * getResources().getDisplayMetrics().density);
+    }
+
     private void showLiveThemeAndSettingsSheet() {
         BottomSheetDialog dialog = new BottomSheetDialog(this, R.style.Theme_RunApp);
         View root = LayoutInflater.from(this).inflate(R.layout.dialog_theme_live_preview, null);
@@ -1435,10 +1521,12 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         MaterialCardView cardTheme2 = root.findViewById(R.id.cardThemeWarmPaperDark);
         MaterialCardView cardTheme3 = root.findViewById(R.id.cardThemeCleanAir);
         MaterialCardView cardTheme4 = root.findViewById(R.id.cardThemeDeepNight);
+        MaterialCardView cardTheme5 = root.findViewById(R.id.cardThemeGlass);
         TextView tvCheck1 = root.findViewById(R.id.tvThemeCheck1);
         TextView tvCheck2 = root.findViewById(R.id.tvThemeCheck2);
         TextView tvCheck3 = root.findViewById(R.id.tvThemeCheck3);
         TextView tvCheck4 = root.findViewById(R.id.tvThemeCheck4);
+        TextView tvCheck5 = root.findViewById(R.id.tvThemeCheck5);
 
         // Profile & Experience Inputs
         MaterialButton btnChangeAvatar = root.findViewById(R.id.btnChangeAvatar);
@@ -1449,6 +1537,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         MaterialButton btnLangAr = root.findViewById(R.id.btnLangArabic);
         CheckBox cbTouch = root.findViewById(R.id.cbTouchFeedback);
         CheckBox cbLite = root.findViewById(R.id.cbLiteMode);
+        CheckBox cbDark = root.findViewById(R.id.cbDarkModeVariant);
         TextView tvLiteInfo = root.findViewById(R.id.tvLiteModeAutoInfo);
         CheckBox cbNotify = root.findViewById(R.id.cbNotificationsEnabled);
         CheckBox cbTranslate = root.findViewById(R.id.cbAutoTranslateEnabled);
@@ -1504,16 +1593,21 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             tvPreviewTaskText.setTextColor(p.text);
 
             // Highlight selected theme card
-            MaterialCardView[] cards = {cardTheme1, cardTheme2, cardTheme3, cardTheme4};
-            TextView[] checks = {tvCheck1, tvCheck2, tvCheck3, tvCheck4};
+            MaterialCardView[] cards = {cardTheme1, cardTheme2, cardTheme3, cardTheme4, cardTheme5};
+            TextView[] checks = {tvCheck1, tvCheck2, tvCheck3, tvCheck4, tvCheck5};
             String[] keys = {
                     ThemeHelper.THEME_WARM_PAPER,
                     ThemeHelper.THEME_WARM_PAPER_DARK,
                     ThemeHelper.THEME_CLEAN_AIR,
-                    ThemeHelper.THEME_DEEP_NIGHT
+                    ThemeHelper.THEME_DEEP_NIGHT,
+                    ThemeHelper.THEME_GLASS
             };
+            String previewedBase = ThemeHelper.lightVariantOf(previewedThemeKey[0]);
+            boolean previewedIsCardKey = false;
+            for (String k : keys) if (k.equals(previewedThemeKey[0])) previewedIsCardKey = true;
             for (int i = 0; i < cards.length; i++) {
-                boolean selected = keys[i].equals(previewedThemeKey[0]);
+                boolean selected = keys[i].equals(previewedThemeKey[0])
+                        || (!previewedIsCardKey && keys[i].equals(previewedBase));
                 cards[i].setCardBackgroundColor(p.panel);
                 cards[i].setStrokeColor(selected ? p.accent : p.panelHover);
                 cards[i].setStrokeWidth(selected ? 5 : 2);
@@ -1526,10 +1620,12 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             ((TextView) root.findViewById(R.id.tvThemeName2)).setTextColor(p.text);
             ((TextView) root.findViewById(R.id.tvThemeName3)).setTextColor(p.text);
             ((TextView) root.findViewById(R.id.tvThemeName4)).setTextColor(p.text);
+            ((TextView) root.findViewById(R.id.tvThemeName5)).setTextColor(p.text);
             ((TextView) root.findViewById(R.id.tvThemeDesc1)).setTextColor(p.muted);
             ((TextView) root.findViewById(R.id.tvThemeDesc2)).setTextColor(p.muted);
             ((TextView) root.findViewById(R.id.tvThemeDesc3)).setTextColor(p.muted);
             ((TextView) root.findViewById(R.id.tvThemeDesc4)).setTextColor(p.muted);
+            ((TextView) root.findViewById(R.id.tvThemeDesc5)).setTextColor(p.muted);
 
             etName.setTextColor(p.text);
             etName.setHintTextColor(p.subtle);
@@ -1537,6 +1633,9 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             etBio.setHintTextColor(p.subtle);
             cbTouch.setTextColor(p.text);
             cbLite.setTextColor(p.text);
+            cbDark.setTextColor(p.text);
+            cbDark.setButtonTintList(ColorStateList.valueOf(p.accent));
+            cbDark.setChecked(ThemeHelper.isDarkKey(previewedThemeKey[0]));
             tvLiteInfo.setTextColor(p.muted);
             cbNotify.setTextColor(p.text);
             cbTranslate.setTextColor(p.text);
@@ -1570,6 +1669,20 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         });
         cardTheme4.setOnClickListener(v -> {
             previewedThemeKey[0] = ThemeHelper.THEME_DEEP_NIGHT;
+            FeedbackTouchHelper.onGestureTick(this, prefs, v);
+            updateLivePreviewSurface.run();
+        });
+        cardTheme5.setOnClickListener(v -> {
+            previewedThemeKey[0] = ThemeHelper.THEME_GLASS;
+            FeedbackTouchHelper.onGestureTick(this, prefs, v);
+            updateLivePreviewSurface.run();
+        });
+
+        cbDark.setOnClickListener(v -> {
+            boolean wantDark = cbDark.isChecked();
+            previewedThemeKey[0] = wantDark
+                    ? ThemeHelper.darkVariantOf(previewedThemeKey[0])
+                    : ThemeHelper.lightVariantOf(previewedThemeKey[0]);
             FeedbackTouchHelper.onGestureTick(this, prefs, v);
             updateLivePreviewSurface.run();
         });
@@ -1827,7 +1940,24 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
 
     private void applyCurrentTheme() {
         palette = ThemeHelper.getPalette(prefs.getThemeMode());
-        rootMainFrame.setBackgroundColor(palette.bg);
+        // v3.1: every theme speaks its own motion language
+        MotionHelper.setThemeProfile(palette.themeKey);
+        boolean glassTheme = ThemeHelper.isGlassTheme(palette.themeKey);
+        if (glassTheme) {
+            // Liquid Glass backdrop: a deep, slowly-shifting gradient the
+            // translucent panels float over (iPhone-style).
+            GradientDrawable glassBg = new GradientDrawable(
+                    GradientDrawable.Orientation.TL_BR,
+                    new int[]{
+                            ColorUtils.blendARGB(palette.bg, Color.WHITE, 0.13f),
+                            palette.bg,
+                            ColorUtils.blendARGB(palette.bg, Color.BLACK, 0.35f)
+                    });
+            rootMainFrame.setBackground(glassBg);
+        } else {
+            rootMainFrame.setBackgroundColor(palette.bg);
+        }
+        btnMoreMenu.setColorFilter(palette.text);
         tvAppTitle.setTextColor(palette.text);
         btnAccountPairing.setColorFilter(palette.text);
         btnThemeSettings.setColorFilter(palette.text);
@@ -1840,6 +1970,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
 
         profileCard.setCardBackgroundColor(palette.panel);
         profileCard.setStrokeColor(palette.panelHover);
+        profileCard.setStrokeWidth(0);
         tvGreetingName.setTextColor(palette.text);
         tvUserBioDisplay.setTextColor(palette.muted);
         btnEditProfile.setBackgroundTintList(ColorStateList.valueOf(palette.panelSoft));
@@ -1849,6 +1980,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
 
         cardQuickCodeBar.setCardBackgroundColor(palette.panel);
         cardQuickCodeBar.setStrokeColor(palette.panelHover);
+        cardQuickCodeBar.setStrokeWidth(0);
         etQuickCodeOrSearch.setTextColor(palette.text);
         etQuickCodeOrSearch.setHintTextColor(palette.subtle);
         btnQuickCodeEnter.setBackgroundTintList(ColorStateList.valueOf(palette.accent));
@@ -1856,6 +1988,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
 
         mainCard.setCardBackgroundColor(palette.panel);
         mainCard.setStrokeColor(palette.panelHover);
+        mainCard.setStrokeWidth(0);
         etUserName.setTextColor(palette.text);
         etUserName.setHintTextColor(palette.subtle);
         etRoomName.setTextColor(palette.text);
@@ -1893,12 +2026,26 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         btnPairDeviceFromSaved.setBackgroundTintList(ColorStateList.valueOf(palette.panelSoft));
         btnPairDeviceFromSaved.setTextColor(palette.text);
 
-        fabNewSpace.setBackgroundTintList(ColorStateList.valueOf(palette.accent));
-        fabNewSpace.setTextColor(palette.accentInk);
+        if (glassTheme) {
+            // The '+' becomes a frosted glass droplet: translucent white fill,
+            // bright glass edge, white glyph — and a soft sheen on theme apply.
+            fabNewSpace.setBackgroundTintList(ColorStateList.valueOf(Color.argb(64, 255, 255, 255)));
+            fabNewSpace.setTextColor(Color.WHITE);
+            fabNewSpace.setStrokeColor(ColorStateList.valueOf(Color.argb(150, 255, 255, 255)));
+            fabNewSpace.setStrokeWidth((int) (1.2f * getResources().getDisplayMetrics().density));
+            MotionHelper.animateGlassSheen(fabNewSpace, prefs.isLiteModeEnabled());
+        } else {
+            fabNewSpace.setBackgroundTintList(ColorStateList.valueOf(palette.accent));
+            fabNewSpace.setTextColor(palette.accentInk);
+            fabNewSpace.setStrokeWidth(0);
+        }
 
         GradientDrawable dockBg = new GradientDrawable();
         dockBg.setCornerRadius(32f * getResources().getDisplayMetrics().density);
         dockBg.setColor(palette.dockBg);
+        if (glassTheme) {
+            dockBg.setStroke((int) (1f * getResources().getDisplayMetrics().density), palette.panelHover);
+        }
         bottomNavDock.setBackground(dockBg);
         updateDockButtonsVisuals();
 
