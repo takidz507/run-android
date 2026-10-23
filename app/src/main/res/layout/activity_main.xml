@@ -6,195 +6,133 @@
     android:layout_height="match_parent"
     android:background="@color/run_bg">
 
-    <!-- Main Content Column -->
     <LinearLayout
         android:id="@+id/layoutMainContentColumn"
         android:layout_width="match_parent"
         android:layout_height="match_parent"
         android:orientation="vertical">
 
-        <!-- ================= TOP EDITORIAL BAR (#14, #28, #29) ================= -->
+        <!-- ================= LIGHT TOP BAR MATCHING DESIGN A (7196.png) ================= -->
+        <!-- Logo ("Run.") + ⋮ More Button + Avatar Orb ('T') — zero visual duplication -->
         <LinearLayout
             android:id="@+id/layoutTopEditorialBar"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:gravity="center_vertical"
             android:orientation="horizontal"
-            android:paddingStart="18dp"
-            android:paddingTop="14dp"
-            android:paddingEnd="18dp"
-            android:paddingBottom="10dp">
+            android:paddingStart="22dp"
+            android:paddingTop="18dp"
+            android:paddingEnd="22dp"
+            android:paddingBottom="6dp">
 
-            <!-- Origami Brand Icon (#19) -->
-            <com.google.android.material.card.MaterialCardView
-                android:layout_width="40dp"
-                android:layout_height="40dp"
-                app:cardCornerRadius="12dp"
-                app:cardElevation="0dp"
-                app:strokeWidth="0dp">
-
-                <ImageView
-                    android:layout_width="match_parent"
-                    android:layout_height="match_parent"
-                    android:scaleType="centerCrop"
-                    android:src="@drawable/ic_origami_brand"
-                    android:contentDescription="Run Origami Icon" />
-            </com.google.android.material.card.MaterialCardView>
-
-            <LinearLayout
-                android:layout_width="0dp"
+            <TextView
+                android:id="@+id/tvAppTitle"
+                android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
-                android:layout_weight="1"
-                android:layout_marginStart="10dp"
-                android:orientation="vertical">
+                android:text="Run."
+                android:textColor="@color/run_text"
+                android:textSize="28sp"
+                android:textStyle="bold" />
 
-                <LinearLayout
+            <!-- Subtle Connection Quality Dot (#29: tap to view status) -->
+            <LinearLayout
+                android:id="@+id/pillConnectionQuality"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_marginStart="8dp"
+                android:gravity="center_vertical"
+                android:orientation="horizontal"
+                android:padding="4dp"
+                android:clickable="true"
+                android:focusable="true">
+
+                <View
+                    android:id="@+id/viewConnQualityDot"
+                    android:layout_width="7dp"
+                    android:layout_height="7dp"
+                    android:background="@drawable/bg_status_dot_online" />
+
+                <TextView
+                    android:id="@+id/tvConnectionQuality"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal">
-
-                    <TextView
-                        android:id="@+id/tvAppTitle"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="Run."
-                        android:textColor="@color/run_text"
-                        android:textSize="23sp"
-                        android:textStyle="bold" />
-
-                    <!-- #29: Live Connection Quality Pill -->
-                    <LinearLayout
-                        android:id="@+id/pillConnectionQuality"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:layout_marginStart="8dp"
-                        android:background="@drawable/bg_pill_neutral"
-                        android:gravity="center_vertical"
-                        android:orientation="horizontal"
-                        android:paddingStart="8dp"
-                        android:paddingTop="3dp"
-                        android:paddingEnd="8dp"
-                        android:paddingBottom="3dp"
-                        android:clickable="true"
-                        android:focusable="true">
-
-                        <View
-                            android:id="@+id/viewConnQualityDot"
-                            android:layout_width="7dp"
-                            android:layout_height="7dp"
-                            android:layout_marginEnd="5dp"
-                            android:background="@drawable/bg_status_dot_online" />
-
-                        <TextView
-                            android:id="@+id/tvConnectionQuality"
-                            android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:ellipsize="end"
-                            android:maxLines="1"
-                            android:singleLine="true"
-                            android:text="Connected"
-                            android:textColor="@color/run_muted"
-                            android:textSize="10sp"
-                            android:textStyle="bold" />
-                    </LinearLayout>
-                </LinearLayout>
-
-                <!-- #24: Device-Deduplicated Online Pill -->
-                <LinearLayout
-                    android:id="@+id/pillOnlineDirectory"
-                    android:layout_width="wrap_content"
-                    android:layout_height="wrap_content"
-                    android:layout_marginTop="2dp"
-                    android:gravity="center_vertical"
-                    android:orientation="horizontal"
-                    android:clickable="true"
-                    android:focusable="true">
-
-                    <TextView
-                        android:id="@+id/tvOnlineStatus"
-                        android:layout_width="wrap_content"
-                        android:layout_height="wrap_content"
-                        android:text="● 1 online"
-                        android:textColor="@color/run_muted"
-                        android:textSize="11sp"
-                        android:textStyle="bold" />
-                </LinearLayout>
+                    android:layout_marginStart="4dp"
+                    android:maxLines="1"
+                    android:singleLine="true"
+                    android:text="Connected"
+                    android:textColor="@color/run_muted"
+                    android:textSize="10sp"
+                    android:visibility="gone" />
             </LinearLayout>
 
-            <!-- #28: Quick Language Switch Pill (عربي / EN) -->
+            <View
+                android:layout_width="0dp"
+                android:layout_height="1dp"
+                android:layout_weight="1" />
+
+            <!-- Hidden legacy header controls (triggered via ⋮ More sheet so nothing eats header space) -->
+            <LinearLayout
+                android:id="@+id/pillOnlineDirectory"
+                android:layout_width="1dp"
+                android:layout_height="1dp"
+                android:visibility="gone">
+                <TextView
+                    android:id="@+id/tvOnlineStatus"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content" />
+            </LinearLayout>
+
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnQuickLangToggle"
-                android:visibility="gone"
-                style="@style/Widget.Material3.Button.TonalButton"
-                android:layout_width="wrap_content"
-                android:layout_height="34dp"
-                android:minWidth="48dp"
-                android:insetTop="0dp"
-                android:insetBottom="0dp"
-                android:paddingStart="10dp"
-                android:paddingEnd="10dp"
-                android:text="عربي"
-                android:textSize="11sp"
-                android:textStyle="bold"
-                app:cornerRadius="17dp" />
+                android:layout_width="1dp"
+                android:layout_height="1dp"
+                android:visibility="gone" />
 
-            <!-- #25 & #30: Account Pairing / Phone Transfer Button -->
             <ImageButton
                 android:id="@+id/btnAccountPairing"
+                android:layout_width="1dp"
+                android:layout_height="1dp"
                 android:visibility="gone"
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:layout_marginStart="4dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Account Pairing &amp; Phone Transfer"
-                android:src="@drawable/ic_phonelink"
-                app:tint="@color/run_text" />
+                android:contentDescription="Pairing" />
 
-            <!-- Theme & Settings Button -->
             <ImageButton
                 android:id="@+id/btnThemeSettings"
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:layout_marginStart="2dp"
-                android:background="?attr/selectableItemBackgroundBorderless"
-                android:contentDescription="Settings"
-                android:src="@drawable/ic_settings"
-                app:tint="@color/run_text" />
+                android:layout_width="1dp"
+                android:layout_height="1dp"
+                android:visibility="gone"
+                android:contentDescription="Settings" />
 
-            <!-- v3.1: More (three dots) — space-eaters live here now -->
+            <!-- ⋮ More Menu Button (houses Public Groups, Feedback, Archive, Pairing, Language, Theme & Profile) -->
             <ImageButton
                 android:id="@+id/btnMoreMenu"
                 android:layout_width="38dp"
                 android:layout_height="38dp"
-                android:layout_marginStart="2dp"
+                android:layout_marginEnd="6dp"
                 android:background="?attr/selectableItemBackgroundBorderless"
                 android:contentDescription="More"
                 android:src="@drawable/ic_more_vert"
                 app:tint="@color/run_text" />
 
-            <!-- Top-right User Avatar Orb (matches Warm Paper mockup 'T') -->
+            <!-- Top-right User Avatar Orb ('T' in Design A 7196.png) -->
             <FrameLayout
                 android:id="@+id/layoutAvatarClick"
-                android:layout_width="38dp"
-                android:layout_height="38dp"
-                android:layout_marginStart="6dp"
+                android:layout_width="40dp"
+                android:layout_height="40dp"
                 android:clickable="true"
                 android:focusable="true">
 
                 <ImageView
                     android:id="@+id/ivMainAvatar"
-                    android:layout_width="38dp"
-                    android:layout_height="38dp"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
                     android:scaleType="centerCrop"
                     android:visibility="gone"
                     android:contentDescription="Avatar" />
 
                 <TextView
                     android:id="@+id/tvMainAvatarFallback"
-                    android:layout_width="38dp"
-                    android:layout_height="38dp"
-                    android:background="@drawable/bg_brand_logo"
+                    android:layout_width="40dp"
+                    android:layout_height="40dp"
                     android:gravity="center"
                     android:text="T"
                     android:textColor="@color/run_accent_ink"
@@ -210,172 +148,150 @@
             android:layout_weight="1">
 
             <!-- ==================================================================== -->
-            <!-- DESTINATION 0: SPACES (Editorial Warm Paper Home + Live Orbs + Rooms) -->
+            <!-- DESTINATION 0: DESIGN A HOME SCREEN (7196.png)                       -->
             <!-- ==================================================================== -->
             <ScrollView
                 android:id="@+id/rootScroll"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:clipToPadding="false"
-                android:paddingBottom="96dp"
+                android:overScrollMode="never"
+                android:paddingBottom="88dp"
                 android:fillViewport="true">
 
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
                     android:orientation="vertical"
-                    android:paddingStart="18dp"
-                    android:paddingTop="6dp"
-                    android:paddingEnd="18dp"
+                    android:paddingStart="22dp"
+                    android:paddingTop="4dp"
+                    android:paddingEnd="22dp"
                     android:paddingBottom="24dp">
 
-                    <!-- Editorial Greeting Banner (replaces boxy profile card) -->
-                    <com.google.android.material.card.MaterialCardView
-                        android:id="@+id/profileCard"
+                    <!-- 1. One-Line Greeting directly on paper canvas (Matches 7196.png: "Good evening, Taqi") -->
+                    <TextView
+                        android:id="@+id/tvGreetingName"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="10dp"
-                        app:cardBackgroundColor="@color/run_panel"
-                        app:cardCornerRadius="20dp"
-                        app:cardElevation="0dp"
-                        app:strokeColor="@color/run_panel_hover"
-                        app:strokeWidth="1dp">
+                        android:layout_marginTop="4dp"
+                        android:layout_marginBottom="12dp"
+                        android:ellipsize="end"
+                        android:maxLines="1"
+                        android:singleLine="true"
+                        android:text="Good evening, Taqi"
+                        android:textColor="@color/run_muted"
+                        android:textSize="16sp" />
 
+                    <!-- Hidden legacy profile card views kept for ID compatibility -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/profileCard"
+                        android:layout_width="1dp"
+                        android:layout_height="1dp"
+                        android:visibility="gone">
                         <LinearLayout
-                            android:layout_width="match_parent"
+                            android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:gravity="center_vertical"
-                            android:orientation="horizontal"
-                            android:padding="12dp">
-
-                            <LinearLayout
-                                android:layout_width="0dp"
-                                android:layout_height="wrap_content"
-                                android:layout_weight="1"
-                                android:orientation="vertical">
-
-                                <TextView
-                                    android:id="@+id/tvGreetingName"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="Good evening, Guest"
-                                    android:textColor="@color/run_text"
-                                    android:textSize="19sp"
-                                    android:textStyle="bold" />
-
-                                <TextView
-                                    android:id="@+id/tvUserBioDisplay"
-                                    android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="2dp"
-                                    android:text="Tap to customize profile, theme &amp; paired devices"
-                                    android:textColor="@color/run_muted"
-                                    android:textSize="12sp" />
-                            </LinearLayout>
-
+                            android:orientation="horizontal">
+                            <TextView
+                                android:id="@+id/tvUserBioDisplay"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content" />
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btnEditProfile"
-                                style="@style/Widget.Material3.Button.TonalButton"
                                 android:layout_width="wrap_content"
-                                android:layout_height="36dp"
-                                android:insetTop="0dp"
-                                android:insetBottom="0dp"
-                                android:paddingStart="12dp"
-                                android:paddingEnd="12dp"
-                                android:text="Theme &amp; Profile"
-                                android:textSize="11sp"
-                                app:cornerRadius="18dp" />
+                                android:layout_height="wrap_content" />
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- S2-Inspired Live Online People Orbs Row -->
+                    <!-- 2. Slim Single-Line Online Strip -->
                     <LinearLayout
                         android:id="@+id/layoutOnlineStripSection"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="16dp"
-                        android:orientation="vertical">
+                        android:layout_marginBottom="10dp"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal">
 
                         <TextView
                             android:id="@+id/tvOnlineStripTitle"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginBottom="8dp"
-                            android:text="Online now"
-                            android:textColor="@color/run_text"
-                            android:textSize="14sp"
-                            android:textStyle="bold" />
+                            android:layout_marginEnd="8dp"
+                            android:maxLines="1"
+                            android:singleLine="true"
+                            android:text="● 1 online"
+                            android:textColor="@color/run_accent_ink"
+                            android:textSize="11.5sp"
+                            android:textStyle="bold"
+                            android:paddingStart="10dp"
+                            android:paddingTop="4dp"
+                            android:paddingEnd="10dp"
+                            android:paddingBottom="4dp" />
 
                         <HorizontalScrollView
-                            android:layout_width="match_parent"
+                            android:layout_width="0dp"
                             android:layout_height="wrap_content"
+                            android:layout_weight="1"
                             android:scrollbars="none">
 
                             <LinearLayout
                                 android:id="@+id/layoutOnlineOrbsRow"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:gravity="center_vertical"
                                 android:orientation="horizontal" />
                         </HorizontalScrollView>
                     </LinearLayout>
 
-                    <!-- Fast Code / Link Bar (S1 Focus search/join bar) -->
+                    <!-- 3. Slim Join / Create Bar -->
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/cardQuickCodeBar"
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
-                        android:layout_marginBottom="16dp"
+                        android:layout_marginBottom="18dp"
                         app:cardBackgroundColor="@color/run_panel"
-                        app:cardCornerRadius="26dp"
+                        app:cardCornerRadius="22dp"
                         app:cardElevation="0dp"
                         app:strokeColor="@color/run_panel_hover"
                         app:strokeWidth="1dp">
 
                         <LinearLayout
                             android:layout_width="match_parent"
-                            android:layout_height="50dp"
+                            android:layout_height="44dp"
                             android:gravity="center_vertical"
                             android:orientation="horizontal"
                             android:paddingStart="14dp"
                             android:paddingEnd="6dp">
 
-                            <ImageView
-                                android:layout_width="18dp"
-                                android:layout_height="18dp"
-                                android:src="@drawable/ic_search"
-                                app:tint="@color/run_muted"
-                                android:contentDescription="Join or filter" />
-
                             <EditText
                                 android:id="@+id/etQuickCodeOrSearch"
                                 android:layout_width="0dp"
                                 android:layout_height="match_parent"
-                                android:layout_marginStart="10dp"
                                 android:layout_weight="1"
                                 android:background="@null"
-                                android:hint="Enter 6-char room code, paste invite link, or filter…"
+                                android:hint="Enter room code or create / filter…"
                                 android:singleLine="true"
                                 android:textColor="@color/run_text"
                                 android:textColorHint="@color/run_subtle"
-                                android:textSize="13sp" />
+                                android:textSize="13.5sp" />
 
                             <com.google.android.material.button.MaterialButton
                                 android:id="@+id/btnQuickCodeEnter"
                                 style="@style/Widget.Material3.Button"
                                 android:layout_width="wrap_content"
-                                android:layout_height="38dp"
+                                android:layout_height="34dp"
                                 android:insetTop="0dp"
                                 android:insetBottom="0dp"
-                                android:paddingStart="14dp"
-                                android:paddingEnd="14dp"
+                                android:paddingStart="12dp"
+                                android:paddingEnd="12dp"
                                 android:text="Join →"
-                                android:textSize="12sp"
+                                android:textSize="11.5sp"
                                 android:textStyle="bold"
-                                app:cornerRadius="19dp" />
+                                app:cornerRadius="17dp" />
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- Expandable Create / Join Studio Card (toggled by + FAB or New Space button) -->
+                    <!-- Expandable Create / Join Studio Card (toggled by + FAB) -->
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/mainCard"
                         android:layout_width="match_parent"
@@ -383,10 +299,10 @@
                         android:layout_marginBottom="18dp"
                         android:visibility="gone"
                         app:cardBackgroundColor="@color/run_panel"
-                        app:cardCornerRadius="26dp"
+                        app:cardCornerRadius="24dp"
                         app:cardElevation="0dp"
                         app:strokeColor="@color/run_panel_hover"
-                        app:strokeWidth="1.5dp">
+                        app:strokeWidth="1dp">
 
                         <LinearLayout
                             android:layout_width="match_parent"
@@ -394,11 +310,10 @@
                             android:orientation="vertical"
                             android:padding="18dp">
 
-                            <!-- Segmented Tabs for Studio Card -->
                             <LinearLayout
                                 android:layout_width="match_parent"
-                                android:layout_height="42dp"
-                                android:layout_marginBottom="16dp"
+                                android:layout_height="40dp"
+                                android:layout_marginBottom="14dp"
                                 android:background="@drawable/bg_pill_neutral"
                                 android:orientation="horizontal"
                                 android:padding="3dp">
@@ -411,8 +326,8 @@
                                     android:layout_weight="1"
                                     android:insetTop="0dp"
                                     android:insetBottom="0dp"
-                                    android:text="Create Space"
-                                    android:textSize="13sp" />
+                                    android:text="Create Room"
+                                    android:textSize="12.5sp" />
 
                                 <com.google.android.material.button.MaterialButton
                                     android:id="@+id/btnSegmentJoin"
@@ -423,10 +338,9 @@
                                     android:insetTop="0dp"
                                     android:insetBottom="0dp"
                                     android:text="Join by Code"
-                                    android:textSize="13sp" />
+                                    android:textSize="12.5sp" />
                             </LinearLayout>
 
-                            <!-- CREATE ROOM FORM -->
                             <LinearLayout
                                 android:id="@+id/formCreateRoom"
                                 android:layout_width="match_parent"
@@ -436,7 +350,7 @@
                                 <EditText
                                     android:id="@+id/etUserName"
                                     android:layout_width="match_parent"
-                                    android:layout_height="46dp"
+                                    android:layout_height="44dp"
                                     android:layout_marginBottom="10dp"
                                     android:background="@drawable/bg_input_field"
                                     android:hint="Your display name"
@@ -450,10 +364,10 @@
                                 <EditText
                                     android:id="@+id/etRoomName"
                                     android:layout_width="match_parent"
-                                    android:layout_height="46dp"
+                                    android:layout_height="44dp"
                                     android:layout_marginBottom="10dp"
                                     android:background="@drawable/bg_input_field"
-                                    android:hint="Space / Room name (e.g. Study Group D5)"
+                                    android:hint="Room name (e.g. Study Group D5)"
                                     android:paddingStart="14dp"
                                     android:paddingEnd="14dp"
                                     android:singleLine="true"
@@ -473,7 +387,7 @@
                                 <EditText
                                     android:id="@+id/etPublicPassword"
                                     android:layout_width="match_parent"
-                                    android:layout_height="46dp"
+                                    android:layout_height="44dp"
                                     android:layout_marginBottom="12dp"
                                     android:background="@drawable/bg_input_field"
                                     android:hint="Password protection (optional)"
@@ -489,15 +403,14 @@
                                     android:id="@+id/btnCreateRoom"
                                     style="@style/Widget.Material3.Button"
                                     android:layout_width="match_parent"
-                                    android:layout_height="50dp"
+                                    android:layout_height="48dp"
                                     app:cornerRadius="16dp"
                                     app:icon="@drawable/ic_add"
-                                    android:text="Create &amp; Open Space"
-                                    android:textSize="15sp"
+                                    android:text="Create &amp; Open Room"
+                                    android:textSize="14.5sp"
                                     android:textStyle="bold" />
                             </LinearLayout>
 
-                            <!-- JOIN BY CODE FORM -->
                             <LinearLayout
                                 android:id="@+id/formJoinCode"
                                 android:layout_width="match_parent"
@@ -508,7 +421,7 @@
                                 <EditText
                                     android:id="@+id/etJoinRoomCode"
                                     android:layout_width="match_parent"
-                                    android:layout_height="46dp"
+                                    android:layout_height="44dp"
                                     android:layout_marginBottom="12dp"
                                     android:background="@drawable/bg_input_field"
                                     android:hint="Enter 6 or 12 character code or invite link"
@@ -523,17 +436,17 @@
                                     android:id="@+id/btnJoinByCodeSubmit"
                                     style="@style/Widget.Material3.Button"
                                     android:layout_width="match_parent"
-                                    android:layout_height="50dp"
+                                    android:layout_height="48dp"
                                     app:cornerRadius="16dp"
                                     app:icon="@drawable/ic_play_arrow"
-                                    android:text="Join Space Now"
-                                    android:textSize="15sp"
+                                    android:text="Join Room Now"
+                                    android:textSize="14.5sp"
                                     android:textStyle="bold" />
                             </LinearLayout>
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- "Your rooms" Section Header with Signature Warm Paper Lime Highlighter Bar -->
+                    <!-- 4. "Your rooms" Section Heading with Overlapping Highlighter Marker (Matches 7196.png!) -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -541,69 +454,67 @@
                         android:orientation="horizontal"
                         android:layout_marginBottom="12dp">
 
-                        <LinearLayout
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:orientation="vertical">
+                        <FrameLayout
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content">
+
+                            <View
+                                android:id="@+id/viewYourRoomsHighlighter"
+                                android:layout_width="112dp"
+                                android:layout_height="9dp"
+                                android:layout_gravity="bottom|start"
+                                android:layout_marginBottom="2dp" />
 
                             <TextView
                                 android:id="@+id/tvRecentTitle"
                                 android:layout_width="wrap_content"
                                 android:layout_height="wrap_content"
+                                android:paddingStart="2dp"
+                                android:paddingEnd="4dp"
                                 android:text="Your rooms"
                                 android:textColor="@color/run_text"
-                                android:textSize="20sp"
+                                android:textSize="19sp"
                                 android:textStyle="bold" />
+                        </FrameLayout>
 
-                            <View
-                                android:id="@+id/viewYourRoomsHighlighter"
-                                android:layout_width="112dp"
-                                android:layout_height="6dp"
-                                android:layout_marginTop="2dp"
-                                android:background="@drawable/bg_highlighter_bar" />
-                        </LinearLayout>
+                        <View
+                            android:layout_width="0dp"
+                            android:layout_height="1dp"
+                            android:layout_weight="1" />
 
-                        <!-- Active vs Archived Filter Pills -->
+                        <!-- Shown only when viewing Archived mode from ⋮ More menu -->
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnFilterActiveRooms"
                             style="@style/Widget.Material3.Button.TonalButton"
                             android:layout_width="wrap_content"
-                            android:layout_height="32dp"
+                            android:layout_height="30dp"
                             android:insetTop="0dp"
                             android:insetBottom="0dp"
                             android:paddingStart="10dp"
                             android:paddingEnd="10dp"
-                            android:text="Active"
+                            android:text="← Back to Active"
                             android:textSize="11sp"
-                            app:cornerRadius="16dp" />
+                            android:visibility="gone"
+                            app:cornerRadius="15dp" />
 
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnFilterArchivedRooms"
                             style="@style/Widget.Material3.Button.TextButton"
-                            android:layout_width="wrap_content"
-                            android:layout_height="32dp"
-                            android:layout_marginStart="4dp"
-                            android:insetTop="0dp"
-                            android:insetBottom="0dp"
-                            android:paddingStart="10dp"
-                            android:paddingEnd="10dp"
-                            android:text="Archived"
-                            android:textSize="11sp"
-                            app:cornerRadius="16dp" />
+                            android:layout_width="1dp"
+                            android:layout_height="1dp"
+                            android:visibility="gone" />
 
                         <TextView
                             android:id="@+id/tvRecentCount"
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
-                            android:layout_marginStart="6dp"
                             android:text="0"
                             android:textColor="@color/run_muted"
                             android:textSize="12sp"
-                            android:textStyle="bold" />
+                            android:visibility="gone" />
                     </LinearLayout>
 
-                    <!-- Rooms Container (Direct tactile Warm Paper room cards, no outer wrapper box!) -->
+                    <!-- 5. Direct Room Rows List (NO card-inside-card wrapper!) -->
                     <com.google.android.material.card.MaterialCardView
                         android:id="@+id/recentRoomsCard"
                         android:layout_width="match_parent"
@@ -628,7 +539,7 @@
                                 android:layout_width="match_parent"
                                 android:layout_height="wrap_content"
                                 app:cardBackgroundColor="@color/run_panel"
-                                app:cardCornerRadius="24dp"
+                                app:cardCornerRadius="22dp"
                                 app:cardElevation="0dp"
                                 app:strokeColor="@color/run_panel_hover"
                                 app:strokeWidth="1dp">
@@ -646,7 +557,7 @@
                                         android:layout_width="wrap_content"
                                         android:layout_height="wrap_content"
                                         android:gravity="center"
-                                        android:text="No rooms yet. Tap + below to create a new space or join with a code."
+                                        android:text="No rooms yet. Tap + below to create or join a room."
                                         android:textColor="@color/run_muted"
                                         android:textSize="14sp" />
                                 </LinearLayout>
@@ -654,97 +565,48 @@
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- Quick Discover Tiles at bottom of Spaces: v3.1 hidden — Discover lives in the dock and the More sheet -->
+                    <!-- Hidden legacy quick tiles (triggered via ⋮ More menu) -->
                     <LinearLayout
                         android:id="@+id/layoutQuickTiles"
-                        android:layout_width="match_parent"
-                        android:layout_height="wrap_content"
-                        android:layout_marginTop="14dp"
-                        android:orientation="horizontal"
+                        android:layout_width="1dp"
+                        android:layout_height="1dp"
                         android:visibility="gone">
-
                         <com.google.android.material.card.MaterialCardView
                             android:id="@+id/cardPublicGroups"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:layout_marginEnd="6dp"
-                            app:cardBackgroundColor="@color/run_panel"
-                            app:cardCornerRadius="20dp"
-                            app:cardElevation="0dp"
-                            app:strokeColor="@color/run_panel_hover"
-                            app:strokeWidth="1dp"
-                            android:clickable="true"
-                            android:focusable="true">
-
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content">
                             <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="vertical"
-                                android:padding="14dp">
-
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content">
                                 <TextView
                                     android:id="@+id/tvTilePublicTitle"
                                     android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="🌐 Public Groups"
-                                    android:textColor="@color/run_text"
-                                    android:textSize="14sp"
-                                    android:textStyle="bold" />
-
+                                    android:layout_height="wrap_content" />
                                 <TextView
                                     android:id="@+id/tvPublicCount"
                                     android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="3dp"
-                                    android:text="Browse open spaces"
-                                    android:textColor="@color/run_muted"
-                                    android:textSize="11sp" />
+                                    android:layout_height="wrap_content" />
                             </LinearLayout>
                         </com.google.android.material.card.MaterialCardView>
-
                         <com.google.android.material.card.MaterialCardView
                             android:id="@+id/cardFeedbackQuick"
-                            android:layout_width="0dp"
-                            android:layout_height="wrap_content"
-                            android:layout_weight="1"
-                            android:layout_marginStart="6dp"
-                            app:cardBackgroundColor="@color/run_panel"
-                            app:cardCornerRadius="20dp"
-                            app:cardElevation="0dp"
-                            app:strokeColor="@color/run_panel_hover"
-                            app:strokeWidth="1dp"
-                            android:clickable="true"
-                            android:focusable="true">
-
+                            android:layout_width="wrap_content"
+                            android:layout_height="wrap_content">
                             <LinearLayout
-                                android:layout_width="match_parent"
-                                android:layout_height="wrap_content"
-                                android:orientation="vertical"
-                                android:padding="14dp">
-
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content">
                                 <TextView
                                     android:id="@+id/tvTileFeedbackTitle"
                                     android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:text="💡 Feedback Board"
-                                    android:textColor="@color/run_text"
-                                    android:textSize="14sp"
-                                    android:textStyle="bold" />
-
+                                    android:layout_height="wrap_content" />
                                 <TextView
                                     android:id="@+id/tvTileFeedbackSub"
                                     android:layout_width="wrap_content"
-                                    android:layout_height="wrap_content"
-                                    android:layout_marginTop="3dp"
-                                    android:text="Vote &amp; suggest ideas"
-                                    android:textColor="@color/run_muted"
-                                    android:textSize="11sp" />
+                                    android:layout_height="wrap_content" />
                             </LinearLayout>
                         </com.google.android.material.card.MaterialCardView>
                     </LinearLayout>
 
-                    <!-- Hidden legacy button reference for full backward compatibility -->
                     <ImageButton
                         android:id="@+id/btnFeedbackBoard"
                         android:layout_width="1dp"
@@ -755,24 +617,23 @@
             </ScrollView>
 
             <!-- ==================================================================== -->
-            <!-- DESTINATION 1: DISCOVER (Public Groups Directory + Feedback Board)   -->
+            <!-- SECONDARY WORKSPACE 1: DISCOVER (Opened from ⋮ More)                 -->
             <!-- ==================================================================== -->
             <LinearLayout
                 android:id="@+id/workspaceDiscover"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:orientation="vertical"
-                android:paddingStart="18dp"
+                android:paddingStart="22dp"
                 android:paddingTop="8dp"
-                android:paddingEnd="18dp"
-                android:paddingBottom="92dp"
+                android:paddingEnd="22dp"
+                android:paddingBottom="88dp"
                 android:visibility="gone">
 
-                <!-- Segmented Switcher: Public Groups vs Feedback Board -->
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="44dp"
-                    android:layout_marginBottom="14dp"
+                    android:layout_height="42dp"
+                    android:layout_marginBottom="12dp"
                     android:background="@drawable/bg_pill_neutral"
                     android:orientation="horizontal"
                     android:padding="3dp">
@@ -786,7 +647,7 @@
                         android:insetTop="0dp"
                         android:insetBottom="0dp"
                         android:text="🌐 Public Groups"
-                        android:textSize="13sp" />
+                        android:textSize="12.5sp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnDiscoverTabFeedback"
@@ -797,10 +658,9 @@
                         android:insetTop="0dp"
                         android:insetBottom="0dp"
                         android:text="💡 Feedback Board"
-                        android:textSize="13sp" />
+                        android:textSize="12.5sp" />
                 </LinearLayout>
 
-                <!-- Sub-pane A: Public Groups Directory -->
                 <LinearLayout
                     android:id="@+id/paneDiscoverPublic"
                     android:layout_width="match_parent"
@@ -810,7 +670,7 @@
                     <EditText
                         android:id="@+id/etSearchPublicGroups"
                         android:layout_width="match_parent"
-                        android:layout_height="46dp"
+                        android:layout_height="44dp"
                         android:layout_marginBottom="12dp"
                         android:background="@drawable/bg_input_field"
                         android:hint="Search public groups…"
@@ -834,7 +694,6 @@
                     </ScrollView>
                 </LinearLayout>
 
-                <!-- Sub-pane B: Community Feedback Board -->
                 <LinearLayout
                     android:id="@+id/paneDiscoverFeedback"
                     android:layout_width="match_parent"
@@ -880,22 +739,22 @@
             </LinearLayout>
 
             <!-- ==================================================================== -->
-            <!-- DESTINATION 2: PEOPLE (Online Users Directory + Friends & Invites)   -->
+            <!-- SECONDARY WORKSPACE 2: PEOPLE (Opened from Online Strip / ⋮ More)   -->
             <!-- ==================================================================== -->
             <LinearLayout
                 android:id="@+id/workspacePeople"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:orientation="vertical"
-                android:paddingStart="18dp"
+                android:paddingStart="22dp"
                 android:paddingTop="8dp"
-                android:paddingEnd="18dp"
-                android:paddingBottom="92dp"
+                android:paddingEnd="22dp"
+                android:paddingBottom="88dp"
                 android:visibility="gone">
 
                 <LinearLayout
                     android:layout_width="match_parent"
-                    android:layout_height="44dp"
+                    android:layout_height="42dp"
                     android:layout_marginBottom="12dp"
                     android:background="@drawable/bg_pill_neutral"
                     android:orientation="horizontal"
@@ -910,7 +769,7 @@
                         android:insetTop="0dp"
                         android:insetBottom="0dp"
                         android:text="Online Now"
-                        android:textSize="13sp" />
+                        android:textSize="12.5sp" />
 
                     <com.google.android.material.button.MaterialButton
                         android:id="@+id/btnPeopleTabFriends"
@@ -921,13 +780,13 @@
                         android:insetTop="0dp"
                         android:insetBottom="0dp"
                         android:text="Friends &amp; Invites"
-                        android:textSize="13sp" />
+                        android:textSize="12.5sp" />
                 </LinearLayout>
 
                 <EditText
                     android:id="@+id/etSearchPeopleInline"
                     android:layout_width="match_parent"
-                    android:layout_height="46dp"
+                    android:layout_height="44dp"
                     android:layout_marginBottom="12dp"
                     android:background="@drawable/bg_input_field"
                     android:hint="@string/search_users_hint"
@@ -947,20 +806,19 @@
             </LinearLayout>
 
             <!-- ==================================================================== -->
-            <!-- DESTINATION 3: MY SAVED (#31 Personal Saved Messages + Pairing Card) -->
+            <!-- SECONDARY WORKSPACE 3: MY SAVED (#31, Opened from ⋮ More)            -->
             <!-- ==================================================================== -->
             <LinearLayout
                 android:id="@+id/workspaceSaved"
                 android:layout_width="match_parent"
                 android:layout_height="match_parent"
                 android:orientation="vertical"
-                android:paddingStart="18dp"
+                android:paddingStart="22dp"
                 android:paddingTop="8dp"
-                android:paddingEnd="18dp"
-                android:paddingBottom="92dp"
+                android:paddingEnd="22dp"
+                android:paddingBottom="88dp"
                 android:visibility="gone">
 
-                <!-- Header with Warm Paper Lime Highlighter -->
                 <LinearLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
@@ -974,21 +832,26 @@
                         android:layout_weight="1"
                         android:orientation="vertical">
 
-                        <TextView
-                            android:id="@+id/tvSavedSectionTitle"
+                        <FrameLayout
                             android:layout_width="wrap_content"
-                            android:layout_height="wrap_content"
-                            android:text="@string/saved_messages_title"
-                            android:textColor="@color/run_text"
-                            android:textSize="20sp"
-                            android:textStyle="bold" />
+                            android:layout_height="wrap_content">
 
-                        <View
-                            android:id="@+id/viewSavedHighlighter"
-                            android:layout_width="96dp"
-                            android:layout_height="6dp"
-                            android:layout_marginTop="2dp"
-                            android:background="@drawable/bg_highlighter_bar" />
+                            <View
+                                android:id="@+id/viewSavedHighlighter"
+                                android:layout_width="96dp"
+                                android:layout_height="9dp"
+                                android:layout_gravity="bottom|start"
+                                android:layout_marginBottom="2dp" />
+
+                            <TextView
+                                android:id="@+id/tvSavedSectionTitle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:text="@string/saved_messages_title"
+                                android:textColor="@color/run_text"
+                                android:textSize="19sp"
+                                android:textStyle="bold" />
+                        </FrameLayout>
 
                         <TextView
                             android:id="@+id/tvSavedSectionSub"
@@ -1004,14 +867,14 @@
                         android:id="@+id/btnPairDeviceFromSaved"
                         style="@style/Widget.Material3.Button.TonalButton"
                         android:layout_width="wrap_content"
-                        android:layout_height="36dp"
+                        android:layout_height="34dp"
                         android:insetTop="0dp"
                         android:insetBottom="0dp"
                         android:text="Pair / Transfer"
                         android:textSize="11sp"
                         app:icon="@drawable/ic_phonelink"
                         app:iconSize="14dp"
-                        app:cornerRadius="18dp" />
+                        app:cornerRadius="17dp" />
                 </LinearLayout>
 
                 <androidx.recyclerview.widget.RecyclerView
@@ -1050,15 +913,15 @@
                 </LinearLayout>
             </LinearLayout>
 
-            <!-- ================= FLOATING LIME '+' ACTION BUTTON ================= -->
+            <!-- ================= FLOATING '+' BUTTON MATCHING DESIGN A (7196.png) ================= -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/fabNewSpace"
                 style="@style/Widget.Material3.Button"
                 android:layout_width="56dp"
                 android:layout_height="56dp"
                 android:layout_gravity="bottom|end"
-                android:layout_marginEnd="22dp"
-                android:layout_marginBottom="82dp"
+                android:layout_marginEnd="24dp"
+                android:layout_marginBottom="24dp"
                 android:insetTop="0dp"
                 android:insetBottom="0dp"
                 android:padding="0dp"
@@ -1067,93 +930,75 @@
                 android:textStyle="bold"
                 app:cornerRadius="28dp" />
 
-            <!-- ================= FLOATING DARK PILL BOTTOM DOCK (#14) ================= -->
+            <!-- Secondary-view return dock (hidden on Home so Home matches Design A 7196.png 100%; shown when viewing secondary tabs or in Glass mode) -->
             <LinearLayout
                 android:id="@+id/bottomNavDock"
-                android:layout_width="match_parent"
-                android:layout_height="62dp"
-                android:layout_gravity="bottom"
-                android:layout_marginStart="16dp"
-                android:layout_marginEnd="16dp"
-                android:layout_marginBottom="12dp"
-                android:background="@drawable/bg_dock_pill"
-                android:elevation="8dp"
+                android:layout_width="wrap_content"
+                android:layout_height="48dp"
+                android:layout_gravity="bottom|center_horizontal"
+                android:layout_marginBottom="18dp"
+                android:elevation="6dp"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
                 android:paddingStart="8dp"
-                android:paddingEnd="8dp">
+                android:paddingEnd="8dp"
+                android:visibility="gone">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnDockSpaces"
                     style="@style/Widget.Material3.Button.TextButton"
-                    android:layout_width="0dp"
-                    android:layout_height="46dp"
-                    android:layout_weight="1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="38dp"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
-                    android:padding="2dp"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
                     android:text="@string/nav_spaces"
-                    android:textSize="11sp"
+                    android:textSize="11.5sp"
                     android:textStyle="bold"
-                    app:icon="@drawable/ic_chat"
-                    app:iconGravity="textStart"
-                    app:iconPadding="4dp"
-                    app:iconSize="16dp"
-                    app:cornerRadius="23dp" />
+                    app:cornerRadius="19dp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnDockDiscover"
                     style="@style/Widget.Material3.Button.TextButton"
-                    android:layout_width="0dp"
-                    android:layout_height="46dp"
-                    android:layout_weight="1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="38dp"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
-                    android:padding="2dp"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
                     android:text="@string/nav_discover"
-                    android:textSize="11sp"
+                    android:textSize="11.5sp"
                     android:textStyle="bold"
-                    app:icon="@drawable/ic_public"
-                    app:iconGravity="textStart"
-                    app:iconPadding="4dp"
-                    app:iconSize="16dp"
-                    app:cornerRadius="23dp" />
+                    app:cornerRadius="19dp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnDockPeople"
                     style="@style/Widget.Material3.Button.TextButton"
-                    android:layout_width="0dp"
-                    android:layout_height="46dp"
-                    android:layout_weight="1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="38dp"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
-                    android:padding="2dp"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
                     android:text="@string/nav_people"
-                    android:textSize="11sp"
+                    android:textSize="11.5sp"
                     android:textStyle="bold"
-                    app:icon="@drawable/ic_people"
-                    app:iconGravity="textStart"
-                    app:iconPadding="4dp"
-                    app:iconSize="16dp"
-                    app:cornerRadius="23dp" />
+                    app:cornerRadius="19dp" />
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnDockSaved"
                     style="@style/Widget.Material3.Button.TextButton"
-                    android:layout_width="0dp"
-                    android:layout_height="46dp"
-                    android:layout_weight="1"
+                    android:layout_width="wrap_content"
+                    android:layout_height="38dp"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
-                    android:padding="2dp"
+                    android:paddingStart="12dp"
+                    android:paddingEnd="12dp"
                     android:text="@string/nav_saved"
-                    android:textSize="11sp"
+                    android:textSize="11.5sp"
                     android:textStyle="bold"
-                    app:icon="@drawable/ic_bookmark"
-                    app:iconGravity="textStart"
-                    app:iconPadding="4dp"
-                    app:iconSize="16dp"
-                    app:cornerRadius="23dp" />
+                    app:cornerRadius="19dp" />
             </LinearLayout>
         </FrameLayout>
     </LinearLayout>
