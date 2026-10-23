@@ -8,14 +8,17 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.ColorStateList;
 import android.graphics.Color;
+import android.graphics.Typeface;
 import android.graphics.drawable.GradientDrawable;
-
-import androidx.core.graphics.ColorUtils;
 import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.Editable;
+import android.text.SpannableString;
+import android.text.Spanned;
 import android.text.TextWatcher;
+import android.text.style.ForegroundColorSpan;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -35,6 +38,8 @@ import androidx.activity.result.contract.ActivityResultContracts;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.app.ActivityCompat;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.ColorUtils;
+import androidx.core.widget.NestedScrollView;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -72,20 +77,14 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Run v3.0.0 MainActivity:
- * - #14: Genuinely new Warm Paper editorial workspace structure with Floating Pill Bottom Dock
- *        (Spaces · Discover · People · My Saved) and 4 switchable themes.
- * - #15 & #21: Smooth 60fps transitions with automatic Lite Mode adaptation.
- * - #16: Responsive across phones, foldables, and tablets.
- * - #19: Animated Origami splash screen (< 1.1s, tap to skip).
- * - #22: Live theme preview on a real interactive UI surface in Settings before applying.
- * - #23: Smart invite links (HTTPS App Links + runapp:// scheme + deferred first-run clipboard bridge).
- * - #24: Device-serial deduplicated online counter.
- * - #25 & #30: Encrypted 6-character code transfer & Web-App one-account pairing.
- * - #27: Visible timed mute status on room cards.
- * - #28: Full Arabic mode with complete RTL mirroring and Arabic dates/numbers.
- * - #29: Live connection quality indicator (Connected / Weak signal / Reconnecting).
- * - #31: Personal Saved Messages ("My saved") with one-tap jump back to message in room.
+ * Run v3.2.0 MainActivity — Rebuilt strictly from Design A (7196.png):
+ * - Light top bar ("Run." with lime dot + ⋮ More button + circular 'T' avatar orb).
+ * - One-line greeting directly on the canvas ("Good evening, Taqi" — no card wrapper).
+ * - Slim single-line online strip + slim join/create bar.
+ * - "Your rooms" heading with overlapping lime highlighter marker + "Recent" sub-section.
+ * - Clean room cards (no nested cards, no 3 action buttons crowding rows, unbreakable single-line room code).
+ * - Strict owner rule: everything that eats screen space lives inside the ⋮ More sheet.
+ * - Fixes v3.1 Bug #1 (Liquid Glass BottomSheet contrast) & Bug #2 (Settings sheet scroll clipping/artifacts).
  */
 public class MainActivity extends AppCompatActivity implements MqttRoomManager.GlobalListener {
 
@@ -97,7 +96,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     private CatboxUploader catboxUploader;
     private ThemeHelper.Palette palette;
 
-    private int currentDockTab = 0; // 0: Spaces, 1: Discover, 2: People, 3: My Saved
+    private int currentDockTab = 0; // 0: Home (Spaces), 1: Discover, 2: People, 3: My Saved
     private boolean showingArchivedRooms = false;
     private boolean discoverShowingFeedback = false;
     private boolean peopleShowingFriends = false;
@@ -106,7 +105,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     private FrameLayout rootMainFrame;
     private OrigamiSplashView origamiSplashOverlay;
 
-    // Top Editorial Header
+    // Light Top Header (Matches 7196.png)
     private TextView tvAppTitle;
     private LinearLayout pillConnectionQuality;
     private View viewConnQualityDot;
@@ -122,7 +121,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     private ImageView ivMainAvatar;
     private TextView tvMainAvatarFallback;
 
-    // Destination 0: Spaces
+    // Home Screen Views (Matches 7196.png)
     private ScrollView rootScroll;
     private MaterialCardView profileCard;
     private TextView tvGreetingName;
@@ -134,7 +133,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     private EditText etQuickCodeOrSearch;
     private MaterialButton btnQuickCodeEnter;
 
-    // Expandable Create / Join Studio Card
+    // Expandable Create / Join Studio Card (opened by + FAB)
     private MaterialCardView mainCard;
     private MaterialButton btnSegmentCreate;
     private MaterialButton btnSegmentJoin;
@@ -160,7 +159,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     private LinearLayout layoutRecentEmpty;
     private TextView tvEmptyRoomsText;
 
-    // Quick Discover Tiles
+    // Hidden Legacy Quick Tiles (triggered from ⋮ More menu)
     private MaterialCardView cardPublicGroups;
     private TextView tvTilePublicTitle;
     private TextView tvPublicCount;
@@ -168,7 +167,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     private TextView tvTileFeedbackTitle;
     private TextView tvTileFeedbackSub;
 
-    // Destination 1: Discover Workspace
+    // Secondary Workspace 1: Discover (Public Groups & Feedback Board)
     private LinearLayout workspaceDiscover;
     private MaterialButton btnDiscoverTabPublic;
     private MaterialButton btnDiscoverTabFeedback;
@@ -181,7 +180,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     private RecyclerView rvDiscoverFeedback;
     private FeedbackPostsAdapter inlineFeedbackAdapter;
 
-    // Destination 2: People Workspace
+    // Secondary Workspace 2: People (Online Users & Friends)
     private LinearLayout workspacePeople;
     private MaterialButton btnPeopleTabOnline;
     private MaterialButton btnPeopleTabFriends;
@@ -190,7 +189,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     private OnlineUsersAdapter inlineOnlineAdapter;
     private FriendsAdapter inlineFriendsAdapter;
 
-    // Destination 3: My Saved Workspace (#31)
+    // Secondary Workspace 3: My Saved (#31)
     private LinearLayout workspaceSaved;
     private TextView tvSavedSectionTitle;
     private View viewSavedHighlighter;
@@ -201,7 +200,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     private TextView tvSavedEmptyText;
     private SavedMessagesAdapter savedMessagesAdapter;
 
-    // Floating FAB & Bottom Dock
+    // Floating '+' FAB & Bottom Dock
     private MaterialButton fabNewSpace;
     private LinearLayout bottomNavDock;
     private MaterialButton btnDockSpaces;
@@ -234,7 +233,6 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         requestNotificationPermissionIfNeeded();
         mqttManager.ensureConnected();
 
-        // Check if launched via deep link (#23)
         boolean openedDeepLink = handleIncomingDeepLink(getIntent());
         if (!openedDeepLink && !splashShownInProcess) {
             splashShownInProcess = true;
@@ -253,7 +251,6 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     public void onWindowFocusChanged(boolean hasFocus) {
         super.onWindowFocusChanged(hasFocus);
         if (hasFocus && !prefs.isDeferredInviteChecked()) {
-            // #23: Deferred deep link check on first run after install
             prefs.setDeferredInviteChecked(true);
             checkClipboardForDeferredInvite();
         }
@@ -441,7 +438,14 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         btnDockPeople = findViewById(R.id.btnDockPeople);
         btnDockSaved = findViewById(R.id.btnDockSaved);
 
-        // Segment Switcher: Create vs Join
+        tvAppTitle.setOnClickListener(v -> {
+            if (currentDockTab != 0 || showingArchivedRooms) {
+                showingArchivedRooms = false;
+                switchDockWorkspace(0);
+                refreshRecentRoomsUI();
+            }
+        });
+
         btnSegmentCreate.setOnClickListener(v -> switchHeroSegment(true));
         btnSegmentJoin.setOnClickListener(v -> switchHeroSegment(false));
 
@@ -449,15 +453,19 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             etPublicPassword.setVisibility(isChecked ? View.VISIBLE : View.GONE);
         });
 
-        // Floating Bottom Dock Navigation (#14)
-        btnDockSpaces.setOnClickListener(v -> switchDockWorkspace(0));
+        btnDockSpaces.setOnClickListener(v -> {
+            showingArchivedRooms = false;
+            switchDockWorkspace(0);
+            refreshRecentRoomsUI();
+        });
         btnDockDiscover.setOnClickListener(v -> switchDockWorkspace(1));
         btnDockPeople.setOnClickListener(v -> switchDockWorkspace(2));
         btnDockSaved.setOnClickListener(v -> switchDockWorkspace(3));
 
-        // Floating '+' Button toggles the Create/Join Studio Card
+        // Floating '+' Button toggles the Create/Join Studio Card with theme-aware motion
         fabNewSpace.setOnClickListener(v -> {
             FeedbackTouchHelper.onGestureTick(this, prefs, v);
+            MotionHelper.animateButtonPulse(fabNewSpace, prefs.isLiteModeEnabled());
             if (currentDockTab != 0) {
                 switchDockWorkspace(0);
             }
@@ -470,7 +478,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             }
         });
 
-        // Quick Code / Filter Bar
+        // Slim Join / Create / Filter Bar
         etQuickCodeOrSearch.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -485,6 +493,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         });
 
         btnQuickCodeEnter.setOnClickListener(v -> {
+            MotionHelper.animateButtonPulse(btnQuickCodeEnter, prefs.isLiteModeEnabled());
             String raw = etQuickCodeOrSearch.getText().toString().trim();
             String code = extractCodeFromInputOrLink(raw);
             if (RoomCryptoUtils.isValidRoomCode(code)) {
@@ -492,11 +501,17 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
                 etQuickCodeOrSearch.setText("");
                 mqttManager.joinRoom(code, "Room " + code, null);
                 openRoomActivity(code, "Room " + code, null);
-            } else {
-                // Open Create/Join studio if not a valid code yet
+            } else if (!raw.isEmpty()) {
+                // Open Create studio pre-filled with the typed room name
                 mainCard.setVisibility(View.VISIBLE);
+                MotionHelper.animatePanelEntrance(mainCard, prefs.isLiteModeEnabled());
+                switchHeroSegment(true);
+                etRoomName.setText(raw);
+                etRoomName.requestFocus();
+            } else {
+                mainCard.setVisibility(View.VISIBLE);
+                MotionHelper.animatePanelEntrance(mainCard, prefs.isLiteModeEnabled());
                 switchHeroSegment(false);
-                etJoinRoomCode.setText(raw);
                 etJoinRoomCode.requestFocus();
             }
         });
@@ -510,13 +525,10 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             refreshRecentRoomsUI();
         });
 
-        // #29: Calm connection quality status sheet on tap
         pillConnectionQuality.setOnClickListener(v -> showConnectionStatusToast());
-
-        // Online Directory Pill click -> switches to People workspace
         pillOnlineDirectory.setOnClickListener(v -> switchDockWorkspace(2));
+        tvOnlineStripTitle.setOnClickListener(v -> switchDockWorkspace(2));
 
-        // #28: Quick Language Switcher (EN <-> عربي RTL)
         btnQuickLangToggle.setOnClickListener(v -> {
             String nextLang = prefs.isArabic() ? "en" : "ar";
             prefs.setUiLanguage(nextLang);
@@ -529,7 +541,6 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             refreshSavedMessagesWorkspace();
         });
 
-        // #25 & #30: Account Pairing & Phone Transfer Dialog
         btnAccountPairing.setOnClickListener(v -> showAccountPairingDialog());
         btnPairDeviceFromSaved.setOnClickListener(v -> showAccountPairingDialog());
 
@@ -549,7 +560,6 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             switchDiscoverSubtab(false);
         });
 
-        // #22: Live Theme Preview & Profile Settings Sheet
         profileCard.setOnClickListener(v -> showLiveThemeAndSettingsSheet());
         btnEditProfile.setOnClickListener(v -> showLiveThemeAndSettingsSheet());
         btnThemeSettings.setOnClickListener(v -> showLiveThemeAndSettingsSheet());
@@ -561,7 +571,6 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     }
 
     private void setupInlineWorkspaces() {
-        // 1. Discover Workspace (Public Groups + Feedback Board)
         btnDiscoverTabPublic.setOnClickListener(v -> switchDiscoverSubtab(false));
         btnDiscoverTabFeedback.setOnClickListener(v -> switchDiscoverSubtab(true));
 
@@ -585,7 +594,6 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         rvDiscoverFeedback.setAdapter(inlineFeedbackAdapter);
         btnNewFeedbackInline.setOnClickListener(v -> showNewSuggestionDialog(this::refreshInlineFeedbackUI));
 
-        // 2. People Workspace (Online Users + Friends & Invites)
         rvPeopleInline.setLayoutManager(new LinearLayoutManager(this));
         inlineOnlineAdapter = new OnlineUsersAdapter(this, prefs, palette, new OnlineUsersAdapter.UserActionListener() {
             @Override
@@ -655,7 +663,6 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             public void afterTextChanged(Editable s) {}
         });
 
-        // 3. My Saved Workspace (#31)
         rvSavedMessages.setLayoutManager(new LinearLayoutManager(this));
         savedMessagesAdapter = new SavedMessagesAdapter(prefs, palette, new SavedMessagesAdapter.SavedMessageListener() {
             @Override
@@ -678,12 +685,21 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     private void switchDockWorkspace(int index) {
         currentDockTab = index;
         boolean lite = prefs.isLiteModeEnabled();
+        boolean glassTheme = ThemeHelper.isGlassTheme(palette.themeKey);
 
         rootScroll.setVisibility(index == 0 ? View.VISIBLE : View.GONE);
         workspaceDiscover.setVisibility(index == 1 ? View.VISIBLE : View.GONE);
         workspacePeople.setVisibility(index == 2 ? View.VISIBLE : View.GONE);
         workspaceSaved.setVisibility(index == 3 ? View.VISIBLE : View.GONE);
         fabNewSpace.setVisibility(index == 0 ? View.VISIBLE : View.GONE);
+
+        // On Home (index == 0), hide bottomNavDock so Home matches Design A (7196.png) 100%,
+        // except in Liquid Glass theme or when navigating inside secondary workspaces (1/2/3).
+        bottomNavDock.setVisibility((index != 0 || glassTheme) ? View.VISIBLE : View.GONE);
+
+        FrameLayout.LayoutParams fabLp = (FrameLayout.LayoutParams) fabNewSpace.getLayoutParams();
+        fabLp.bottomMargin = dp(glassTheme ? 76 : 24);
+        fabNewSpace.setLayoutParams(fabLp);
 
         View activePanel = index == 0 ? rootScroll
                 : (index == 1 ? workspaceDiscover : (index == 2 ? workspacePeople : workspaceSaved));
@@ -778,7 +794,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             tvTitle.setText((g.hasPassword ? "🔒 " : "🌐 ") + gName);
             tvTitle.setTextColor(palette.text);
             tvTitle.setTextSize(15f);
-            tvTitle.setTypeface(tvTitle.getTypeface(), android.graphics.Typeface.BOLD);
+            tvTitle.setTypeface(tvTitle.getTypeface(), Typeface.BOLD);
             textCol.addView(tvTitle);
 
             TextView tvSub = new TextView(this);
@@ -791,7 +807,6 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
 
             row.addView(textCol);
 
-            // Allow creator to remove their own public listing (matches Web v2 Pro)
             if (g.by != null && g.by.equals(prefs.getUserId())) {
                 ImageButton btnRm = new ImageButton(this);
                 btnRm.setImageResource(R.drawable.ic_delete);
@@ -882,95 +897,56 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         layoutSavedEmpty.setVisibility(saved.isEmpty() ? View.VISIBLE : View.GONE);
     }
 
+    /**
+     * Slim single-line online strip: shows compact user chips horizontally so it never eats vertical space.
+     */
     private void refreshOnlineOrbsRow(List<OnlineUser> onlineUsers) {
         layoutOnlineOrbsRow.removeAllViews();
         float d = getResources().getDisplayMetrics().density;
         boolean ar = prefs.isArabic();
 
         List<OnlineUser> list = onlineUsers != null ? onlineUsers : new ArrayList<>();
+        int count = Math.max(1, list.size());
+        tvOnlineStripTitle.setText("● " + LocaleHelper.formatNumber(count, ar) + (ar ? " متصل" : " online"));
+
+        GradientDrawable pillBg = new GradientDrawable();
+        pillBg.setCornerRadius(14 * d);
+        pillBg.setColor(palette.highlighter);
+        tvOnlineStripTitle.setBackground(pillBg);
+        tvOnlineStripTitle.setTextColor(palette.accentInk);
+
         for (OnlineUser u : list) {
             if (u == null) continue;
-            LinearLayout item = new LinearLayout(this);
-            item.setOrientation(LinearLayout.VERTICAL);
-            item.setGravity(Gravity.CENTER_HORIZONTAL);
+            TextView chip = new TextView(this);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                     ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
+                    (int) (26 * d)
             );
-            lp.setMarginEnd((int) (14 * d));
-            item.setLayoutParams(lp);
+            lp.setMarginEnd((int) (6 * d));
+            chip.setLayoutParams(lp);
+            chip.setGravity(Gravity.CENTER_VERTICAL);
+            chip.setPadding((int) (10 * d), 0, (int) (10 * d), 0);
+            chip.setSingleLine(true);
+            String label = u.isSelf ? (ar ? "أنت" : "You") : (u.name != null ? u.name : "User");
+            chip.setText(label);
+            chip.setTextSize(11.5f);
+            chip.setTextColor(palette.text);
 
-            TextView orb = new TextView(this);
-            int orbSize = (int) (48 * d);
-            orb.setLayoutParams(new LinearLayout.LayoutParams(orbSize, orbSize));
-            orb.setGravity(Gravity.CENTER);
-            String initial = (u.name != null && !u.name.isEmpty()) ? u.name.substring(0, 1).toUpperCase(Locale.US) : "U";
-            orb.setText(initial);
-            orb.setTextSize(16f);
-            orb.setTypeface(orb.getTypeface(), android.graphics.Typeface.BOLD);
-            orb.setTextColor(palette.text);
+            GradientDrawable chipBg = new GradientDrawable();
+            chipBg.setCornerRadius(13 * d);
+            chipBg.setColor(palette.panel);
+            chipBg.setStroke((int) (1 * d), u.isSelf ? palette.accent : palette.panelHover);
+            chip.setBackground(chipBg);
 
-            GradientDrawable circle = new GradientDrawable();
-            circle.setShape(GradientDrawable.OVAL);
-            circle.setColor(u.isSelf ? ThemeHelper.withAlpha(palette.accent, 65) : palette.panel);
-            circle.setStroke((int) (2.2f * d), palette.accent);
-            orb.setBackground(circle);
-            item.addView(orb);
-
-            TextView nameTv = new TextView(this);
-            nameTv.setText(u.isSelf ? (ar ? "أنت" : "You") : u.name);
-            nameTv.setTextSize(11f);
-            nameTv.setTextColor(palette.text);
-            nameTv.setMaxLines(1);
-            LinearLayout.LayoutParams nameLp = new LinearLayout.LayoutParams(
-                    ViewGroup.LayoutParams.WRAP_CONTENT,
-                    ViewGroup.LayoutParams.WRAP_CONTENT
-            );
-            nameLp.topMargin = (int) (4 * d);
-            nameTv.setLayoutParams(nameLp);
-            item.addView(nameTv);
-
-            item.setOnClickListener(v -> {
+            chip.setOnClickListener(v -> {
                 if (u.isSelf) {
                     showLiveThemeAndSettingsSheet();
                 } else {
                     showInviteUserDialog(u);
                 }
             });
-            layoutOnlineOrbsRow.addView(item);
+            layoutOnlineOrbsRow.addView(chip);
         }
-
-        // Add "+ Invite" orb at the end (matches S2 Space)
-        LinearLayout addWrap = new LinearLayout(this);
-        addWrap.setOrientation(LinearLayout.VERTICAL);
-        addWrap.setGravity(Gravity.CENTER_HORIZONTAL);
-        TextView plusOrb = new TextView(this);
-        int orbSize = (int) (48 * d);
-        plusOrb.setLayoutParams(new LinearLayout.LayoutParams(orbSize, orbSize));
-        plusOrb.setGravity(Gravity.CENTER);
-        plusOrb.setText("+");
-        plusOrb.setTextSize(20f);
-        plusOrb.setTextColor(palette.text);
-        GradientDrawable dashed = new GradientDrawable();
-        dashed.setShape(GradientDrawable.OVAL);
-        dashed.setColor(palette.panelSoft);
-        dashed.setStroke((int) (1.5f * d), palette.accent);
-        plusOrb.setBackground(dashed);
-        addWrap.addView(plusOrb);
-
-        TextView invLabel = new TextView(this);
-        invLabel.setText(ar ? "المتصلون" : "Directory");
-        invLabel.setTextSize(11f);
-        invLabel.setTextColor(palette.muted);
-        LinearLayout.LayoutParams invLp = new LinearLayout.LayoutParams(
-                ViewGroup.LayoutParams.WRAP_CONTENT,
-                ViewGroup.LayoutParams.WRAP_CONTENT
-        );
-        invLp.topMargin = (int) (4 * d);
-        invLabel.setLayoutParams(invLp);
-        addWrap.addView(invLabel);
-        addWrap.setOnClickListener(v -> switchDockWorkspace(2));
-        layoutOnlineOrbsRow.addView(addWrap);
     }
 
     private void switchHeroSegment(boolean showCreate) {
@@ -996,7 +972,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     private void populateSavedUser() {
         boolean ar = prefs.isArabic();
         String name = prefs.getUserName();
-        if (name.isEmpty()) name = "Guest";
+        if (name.isEmpty()) name = "Taqi";
         etUserName.setText(name);
         tvGreetingName.setText(LocaleHelper.getGreeting(name, ar));
 
@@ -1022,13 +998,13 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     private void ensureDefaultDisplayName() {
         if (prefs.getUserName().isEmpty()) {
             String typed = etUserName != null ? etUserName.getText().toString().trim() : "";
-            prefs.setUserName(typed.isEmpty() ? "Guest" : typed);
+            prefs.setUserName(typed.isEmpty() ? "Taqi" : typed);
         }
     }
 
     private void saveUserNameFromInput() {
         String name = etUserName.getText().toString().trim();
-        if (name.isEmpty()) name = prefs.getUserName().isEmpty() ? "Guest" : prefs.getUserName();
+        if (name.isEmpty()) name = prefs.getUserName().isEmpty() ? "Taqi" : prefs.getUserName();
         prefs.setUserName(name);
         populateSavedUser();
     }
@@ -1061,9 +1037,6 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         openRoomActivity(extracted, "Room " + extracted, null);
     }
 
-    /**
-     * #23: Extracts room code from raw code, HTTPS link, or custom runapp:// link.
-     */
     private String extractCodeFromInputOrLink(String raw) {
         if (raw == null) return "";
         String trimmed = raw.trim();
@@ -1111,9 +1084,6 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         }
     }
 
-    /**
-     * #23: Smart Invite Link handler — opens the app straight into the invited room with zero intermediate steps.
-     */
     private boolean handleIncomingDeepLink(Intent intent) {
         if (intent == null || intent.getData() == null) return false;
         Uri uri = intent.getData();
@@ -1131,6 +1101,13 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         return false;
     }
 
+    /**
+     * Renders "Your rooms" and "Recent" room rows matching Design A (7196.png):
+     * - No nested outer card, no 3 action buttons on the right.
+     * - Room code in a single unbreakable line.
+     * - Single clean lime status badge ("● 1 online" / "🌐 Public group").
+     * - Long-press opens room quick actions sheet.
+     */
     private void refreshRecentRoomsUI() {
         List<RecentRoom> allRecent = prefs.getRecentRooms();
         layoutRecentRoomsContainer.removeAllViews();
@@ -1138,11 +1115,12 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         String filterText = etQuickCodeOrSearch != null
                 ? etQuickCodeOrSearch.getText().toString().trim().toLowerCase(Locale.US) : "";
 
-        // Highlight Active vs Archived filter pill
-        btnFilterActiveRooms.setBackgroundTintList(ColorStateList.valueOf(!showingArchivedRooms ? palette.accent : palette.panelSoft));
-        btnFilterActiveRooms.setTextColor(!showingArchivedRooms ? palette.accentInk : palette.text);
-        btnFilterArchivedRooms.setBackgroundTintList(ColorStateList.valueOf(showingArchivedRooms ? palette.accent : palette.panelSoft));
-        btnFilterArchivedRooms.setTextColor(showingArchivedRooms ? palette.accentInk : palette.text);
+        tvRecentTitle.setText(showingArchivedRooms
+                ? (ar ? "الأرشيف" : "Archived")
+                : (ar ? "غرفك" : "Your rooms"));
+        btnFilterActiveRooms.setVisibility(showingArchivedRooms ? View.VISIBLE : View.GONE);
+        btnFilterActiveRooms.setBackgroundTintList(ColorStateList.valueOf(palette.panelSoft));
+        btnFilterActiveRooms.setTextColor(palette.text);
 
         List<RecentRoom> filtered = new ArrayList<>();
         for (RecentRoom r : allRecent) {
@@ -1164,7 +1142,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             layoutRecentEmpty.setVisibility(View.VISIBLE);
             tvEmptyRoomsText.setText(showingArchivedRooms
                     ? (ar ? "لا توجد غرف مؤرشفة." : "No archived rooms.")
-                    : (ar ? "لا توجد غرف بعد. اضغط + لإنشاء مساحة أو الانضمام برمز!" : "No spaces yet. Tap + to create or join a room!"));
+                    : (ar ? "لا توجد غرف بعد. اضغط + لإنشاء غرفة أو الانضمام برمز!" : "No rooms yet. Tap + below to create or join a room."));
             return;
         }
 
@@ -1173,103 +1151,169 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
 
         LayoutInflater inflater = LayoutInflater.from(this);
         float d = getResources().getDisplayMetrics().density;
-        for (RecentRoom r : filtered) {
+        boolean recentHeaderAdded = false;
+
+        for (int idx = 0; idx < filtered.size(); idx++) {
+            RecentRoom r = filtered.get(idx);
+
+            // Insert "Recent" sub-heading after the top 3 active rooms (matches Design A 7196.png!)
+            if (!showingArchivedRooms && idx == 3 && !recentHeaderAdded) {
+                recentHeaderAdded = true;
+                TextView tvRecentSubHeader = new TextView(this);
+                LinearLayout.LayoutParams subLp = new LinearLayout.LayoutParams(
+                        ViewGroup.LayoutParams.WRAP_CONTENT,
+                        ViewGroup.LayoutParams.WRAP_CONTENT
+                );
+                subLp.topMargin = (int) (10 * d);
+                subLp.bottomMargin = (int) (10 * d);
+                tvRecentSubHeader.setLayoutParams(subLp);
+                tvRecentSubHeader.setText(ar ? "الأخيرة" : "Recent");
+                tvRecentSubHeader.setTextColor(palette.text);
+                tvRecentSubHeader.setTextSize(18f);
+                tvRecentSubHeader.setTypeface(tvRecentSubHeader.getTypeface(), Typeface.BOLD);
+                layoutRecentRoomsContainer.addView(tvRecentSubHeader);
+            }
+
             View itemView = inflater.inflate(R.layout.item_recent_room, layoutRecentRoomsContainer, false);
             MaterialCardView card = itemView.findViewById(R.id.cardRecentRoomItem);
-            TextView tvOrb = itemView.findViewById(R.id.tvRoomInitialsOrb);
             TextView tvName = itemView.findViewById(R.id.tvRecentRoomName);
             TextView tvPreview = itemView.findViewById(R.id.tvRecentRoomPreview);
             TextView tvCode = itemView.findViewById(R.id.tvRecentRoomCode);
             TextView tvMuted = itemView.findViewById(R.id.tvRoomMutedBadge);
             TextView tvTime = itemView.findViewById(R.id.tvRecentRoomTime);
-            ImageButton btnCopy = itemView.findViewById(R.id.btnCopyRecentCode);
-            ImageButton btnArchive = itemView.findViewById(R.id.btnArchiveRecent);
-            ImageButton btnDelete = itemView.findViewById(R.id.btnDeleteRecent);
+            View layoutBadgesRow = itemView.findViewById(R.id.layoutRoomBadgesRow);
 
             card.setCardBackgroundColor(palette.panel);
             card.setStrokeColor(palette.panelHover);
+            card.setStrokeWidth((int) (1 * d));
 
             String title = r.name != null && !r.name.isEmpty() ? r.name : ("Room " + r.code);
             tvName.setText(title);
             tvName.setTextColor(palette.text);
 
-            // #17: Tint room orb with room's custom identity color
-            int roomAccent = ThemeHelper.parseRoomAccentColor(r.accentColor, palette);
-            String initials = title.length() >= 2 ? title.substring(0, 2).toUpperCase(Locale.US) : title.toUpperCase(Locale.US);
-            tvOrb.setText(initials);
-            GradientDrawable orbBg = new GradientDrawable();
-            orbBg.setCornerRadius(16 * d);
-            orbBg.setColor(ThemeHelper.withAlpha(roomAccent, palette.isLight ? 95 : 75));
-            orbBg.setStroke((int) (1.5f * d), roomAccent);
-            tvOrb.setBackground(orbBg);
-            tvOrb.setTextColor(palette.text);
+            // Top-right single-line unbreakable room code
+            tvTime.setText("#" + r.code);
+            tvTime.setTextColor(palette.subtle);
 
-            String preview = (r.lastMessagePreview != null && !r.lastMessagePreview.isEmpty())
-                    ? r.lastMessagePreview
-                    : (ar ? "اضغط للدخول إلى المساحة المباشرة" : "Tap to open live space");
+            boolean isOlderRecentCard = (idx >= 3 && !showingArchivedRooms);
+            String relTime = LocaleHelper.formatRelativeTime(r.getEffectiveTime(), ar);
+            String preview;
+            if (r.lastMessagePreview != null && !r.lastMessagePreview.isEmpty()) {
+                preview = r.lastMessagePreview;
+            } else {
+                preview = ar ? ("آخر نشاط " + relTime) : ("Last active " + relTime);
+            }
             tvPreview.setText(preview);
             tvPreview.setTextColor(palette.muted);
 
-            tvCode.setText("● #" + r.code);
-            tvCode.setBackgroundTintList(ColorStateList.valueOf(ThemeHelper.withAlpha(roomAccent, palette.isLight ? 120 : 85)));
-            tvCode.setTextColor(palette.text);
+            // Single clean lime pill badge (Matches 7196.png: "● 12 online" or "🌐 Public group")
+            int roomAccent = ThemeHelper.parseRoomAccentColor(r.accentColor, palette);
+            GradientDrawable badgeBg = new GradientDrawable();
+            badgeBg.setCornerRadius(14 * d);
+            badgeBg.setColor(palette.isLight ? palette.highlighter : ThemeHelper.withAlpha(roomAccent, 70));
+            tvCode.setBackground(badgeBg);
+            tvCode.setTextColor(palette.isLight ? palette.accentInk : palette.text);
 
-            // #27: Show Timed Mute badge if room is muted
+            boolean isActiveRoom = r.code.equalsIgnoreCase(mqttManager.getActiveRoomCode());
+            int onlineInRoom = isActiveRoom ? Math.max(1, mqttManager.getGlobalOnlineCount()) : 1;
+            if (title.toLowerCase(Locale.US).contains("public")) {
+                tvCode.setText(ar ? "🌐 مجموعة عامة" : "🌐 Public group");
+            } else {
+                tvCode.setText("● " + LocaleHelper.formatNumber(onlineInRoom, ar) + (ar ? " متصل" : " online"));
+            }
+
+            if (isOlderRecentCard && !prefs.isRoomMuted(r.code)) {
+                layoutBadgesRow.setVisibility(View.GONE);
+            } else {
+                layoutBadgesRow.setVisibility(View.VISIBLE);
+            }
+
             if (prefs.isRoomMuted(r.code)) {
                 tvMuted.setVisibility(View.VISIBLE);
+                GradientDrawable muteBg = new GradientDrawable();
+                muteBg.setCornerRadius(14 * d);
+                muteBg.setColor(palette.panelSoft);
+                tvMuted.setBackground(muteBg);
                 tvMuted.setText("🔕 " + prefs.getRoomMuteRemainingLabel(r.code));
                 tvMuted.setTextColor(palette.muted);
             } else {
                 tvMuted.setVisibility(View.GONE);
             }
 
-            tvTime.setText(LocaleHelper.formatRelativeTime(r.getEffectiveTime(), ar));
-            tvTime.setTextColor(palette.subtle);
-
             itemView.setOnClickListener(v -> {
+                FeedbackTouchHelper.onGestureTick(this, prefs, v);
                 ensureDefaultDisplayName();
                 mqttManager.joinRoom(r.code, title, null);
                 openRoomActivity(r.code, title, null);
             });
 
-            btnCopy.setColorFilter(palette.muted);
-            btnCopy.setOnClickListener(v -> {
-                String inviteUrl = "https://takidz507.github.io/run/?room=" + r.code;
-                ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
-                if (cm != null) {
-                    cm.setPrimaryClip(ClipData.newPlainText("Room Invite", inviteUrl));
-                    Toast.makeText(this,
-                            ar ? ("تم نسخ رابط الدعوة #" + r.code) : ("Copied invite link for #" + r.code),
-                            Toast.LENGTH_SHORT).show();
-                }
-            });
-
-            btnArchive.setColorFilter(palette.muted);
-            btnArchive.setOnClickListener(v -> {
-                boolean nextArch = !r.archived;
-                prefs.setRoomArchived(r.code, nextArch);
-                Toast.makeText(this,
-                        nextArch
-                                ? (ar ? "تمت أرشفة الغرفة" : "Room archived")
-                                : (ar ? "تمت استعادة الغرفة" : "Room unarchived"),
-                        Toast.LENGTH_SHORT).show();
-                refreshRecentRoomsUI();
-            });
-
-            btnDelete.setColorFilter(palette.subtle);
-            btnDelete.setOnClickListener(v -> {
-                prefs.removeRecentRoom(r.code);
-                refreshRecentRoomsUI();
+            itemView.setOnLongClickListener(v -> {
+                FeedbackTouchHelper.onGestureTick(this, prefs, v);
+                showRoomQuickActionsSheet(r, title);
+                return true;
             });
 
             layoutRecentRoomsContainer.addView(itemView);
+            MotionHelper.animateStaggeredCard(itemView, idx, prefs.isLiteModeEnabled());
         }
+    }
+
+    /**
+     * Long-press sheet on any room card: houses Copy Invite/Code, Archive/Unarchive, and Remove
+     * so room cards remain clean and uncluttered like Design A (7196.png).
+     */
+    private void showRoomQuickActionsSheet(RecentRoom r, String title) {
+        boolean ar = prefs.isArabic();
+        BottomSheetDialog dialog = new BottomSheetDialog(this, R.style.Theme_RunApp);
+        LinearLayout container = new LinearLayout(this);
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(dp(20), dp(18), dp(20), dp(24));
+        LocaleHelper.applyViewDirection(container, ar);
+
+        TextView tvHeader = new TextView(this);
+        tvHeader.setText(title + "  ·  #" + r.code);
+        tvHeader.setTextColor(palette.text);
+        tvHeader.setTextSize(17f);
+        tvHeader.setTypeface(tvHeader.getTypeface(), Typeface.BOLD);
+        tvHeader.setPadding(dp(4), 0, dp(4), dp(10));
+        container.addView(tvHeader);
+
+        addMoreRow(container, "🔗", ar ? ("نسخ رابط الدعوة (#" + r.code + ")") : ("Copy Invite Link (#" + r.code + ")"), dialog, () -> {
+            String inviteUrl = "https://takidz507.github.io/run/?room=" + r.code;
+            ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            if (cm != null) {
+                cm.setPrimaryClip(ClipData.newPlainText("Room Invite", inviteUrl));
+                Toast.makeText(this,
+                        ar ? ("تم نسخ رابط الدعوة #" + r.code) : ("Copied invite link for #" + r.code),
+                        Toast.LENGTH_SHORT).show();
+            }
+        });
+
+        addMoreRow(container, "📦",
+                r.archived ? (ar ? "استعادة من الأرشيف" : "Unarchive Room") : (ar ? "نقل إلى الأرشيف" : "Archive Room"),
+                dialog, () -> {
+                    boolean nextArch = !r.archived;
+                    prefs.setRoomArchived(r.code, nextArch);
+                    Toast.makeText(this,
+                            nextArch ? (ar ? "تمت أرشفة الغرفة" : "Room archived") : (ar ? "تمت استعادة الغرفة" : "Room restored"),
+                            Toast.LENGTH_SHORT).show();
+                    refreshRecentRoomsUI();
+                });
+
+        addMoreRow(container, "🗑", ar ? "إزالة من القائمة" : "Remove from List", dialog, () -> {
+            prefs.removeRecentRoom(r.code);
+            refreshRecentRoomsUI();
+        });
+
+        dialog.setContentView(container);
+        ThemeHelper.prepareBottomSheet(dialog, container, palette);
+        MotionHelper.animatePanelEntrance(container, prefs.isLiteModeEnabled());
+        dialog.show();
     }
 
     private void showInviteUserDialog(OnlineUser user) {
         View root = LayoutInflater.from(this).inflate(R.layout.dialog_invite_user, null);
         LocaleHelper.applyViewDirection(root, prefs.isArabic());
-        root.setBackgroundColor(palette.panel);
 
         TextView tvTitle = root.findViewById(R.id.tvInviteDialogTitle);
         TextView tvSub = root.findViewById(R.id.tvInviteDialogSub);
@@ -1306,6 +1350,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
 
         BottomSheetDialog dialog = new BottomSheetDialog(this, R.style.Theme_RunApp);
         dialog.setContentView(root);
+        ThemeHelper.prepareBottomSheet(dialog, root, palette);
 
         btnCancel.setOnClickListener(v -> dialog.dismiss());
         btnSend.setOnClickListener(v -> {
@@ -1329,7 +1374,6 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     private void showNewSuggestionDialog(Runnable onPosted) {
         View root = LayoutInflater.from(this).inflate(R.layout.dialog_new_suggestion, null);
         LocaleHelper.applyViewDirection(root, prefs.isArabic());
-        root.setBackgroundColor(palette.panel);
 
         EditText etTitle = root.findViewById(R.id.etSuggestionTitle);
         EditText etContent = root.findViewById(R.id.etSuggestionContent);
@@ -1347,6 +1391,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
 
         BottomSheetDialog dialog = new BottomSheetDialog(this, R.style.Theme_RunApp);
         dialog.setContentView(root);
+        ThemeHelper.prepareBottomSheet(dialog, root, palette);
 
         btnCancel.setOnClickListener(v -> dialog.dismiss());
         btnSubmit.setOnClickListener(v -> {
@@ -1402,45 +1447,59 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     }
 
     // =========================================================================
-    // #22: Live Theme Preview on a Real Interactive UI Surface + Settings Sheet
+    // ⋮ MORE SHEET (Fixes v3.1 Bug #1: opaque/frosted palette.sheetBg in all themes)
     // =========================================================================
 
-
-    /**
-     * v3.1 (owner's rule): "whatever eats space goes into the three dots."
-     * The More sheet gathers every secondary destination that used to sit on
-     * the home screen as cards/buttons: Discover shortcuts, archived rooms,
-     * account pairing/transfer, language, and theme & profile. Each row simply
-     * re-fires the existing control's click, so no behavior is duplicated.
-     */
     private void showMoreSheet() {
         boolean ar = prefs.isArabic();
         BottomSheetDialog dialog = new BottomSheetDialog(this, R.style.Theme_RunApp);
         LinearLayout container = new LinearLayout(this);
         container.setOrientation(LinearLayout.VERTICAL);
         container.setPadding(dp(20), dp(16), dp(20), dp(24));
-        container.setBackgroundColor(palette.panel);
         LocaleHelper.applyViewDirection(container, ar);
+
+        // Drag handle pill at top of sheet
+        View handle = new View(this);
+        LinearLayout.LayoutParams hLp = new LinearLayout.LayoutParams(dp(38), dp(4));
+        hLp.gravity = Gravity.CENTER_HORIZONTAL;
+        hLp.bottomMargin = dp(12);
+        handle.setLayoutParams(hLp);
+        GradientDrawable hBg = new GradientDrawable();
+        hBg.setCornerRadius(dp(2));
+        hBg.setColor(palette.panelHover);
+        handle.setBackground(hBg);
+        container.addView(handle);
 
         TextView title = new TextView(this);
         title.setText(ar ? "المزيد" : "More");
         title.setTextColor(palette.text);
-        title.setTextSize(17f);
-        title.setTypeface(title.getTypeface(), android.graphics.Typeface.BOLD);
-        title.setPadding(0, 0, 0, dp(8));
+        title.setTextSize(18f);
+        title.setTypeface(title.getTypeface(), Typeface.BOLD);
+        title.setPadding(dp(6), 0, dp(6), dp(8));
         container.addView(title);
 
+        if (currentDockTab != 0 || showingArchivedRooms) {
+            addMoreRow(container, "🏠", ar ? "العودة للرئيسية (غرفك)" : "Back to Your Rooms", dialog, () -> {
+                showingArchivedRooms = false;
+                switchDockWorkspace(0);
+                refreshRecentRoomsUI();
+            });
+        }
         addMoreRow(container, "🌐", ar ? "المجموعات العامة" : "Public Groups", dialog, () -> cardPublicGroups.performClick());
         addMoreRow(container, "💡", ar ? "لوحة المقترحات" : "Feedback Board", dialog, () -> cardFeedbackQuick.performClick());
-        addMoreRow(container, "🗄", ar ? "الغرف المؤرشفة" : "Archived Rooms", dialog, () -> {
-            btnDockSpaces.performClick();
-            btnFilterArchivedRooms.performClick();
+        addMoreRow(container, "🗄", ar ? "الأرشيف (الغرف المؤرشفة)" : "Archived Rooms", dialog, () -> {
+            switchDockWorkspace(0);
+            showingArchivedRooms = true;
+            refreshRecentRoomsUI();
         });
+        addMoreRow(container, "🔖", ar ? "محفوظاتي (My Saved)" : "My Saved Messages", dialog, () -> switchDockWorkspace(3));
+        addMoreRow(container, "👥", ar ? "المتصلون والأصدقاء" : "Online People & Friends", dialog, () -> switchDockWorkspace(2));
         addMoreRow(container, "🔗", ar ? "ربط / نقل الحساب" : "Pair / Transfer Account", dialog, () -> btnAccountPairing.performClick());
-        addMoreRow(container, "🌍", ar ? "Switch to English" : "التبديل إلى العربية", dialog, () -> btnQuickLangToggle.performClick());
+        addMoreRow(container, "🌍", ar ? "اللغة: Switch to English" : "Language: التبديل إلى العربية", dialog, () -> btnQuickLangToggle.performClick());
         addMoreRow(container, "🎨", ar ? "المظهر والملف الشخصي" : "Theme & Profile", dialog, this::showLiveThemeAndSettingsSheet);
 
         dialog.setContentView(container);
+        ThemeHelper.prepareBottomSheet(dialog, container, palette);
         MotionHelper.animatePanelEntrance(container, prefs.isLiteModeEnabled());
         dialog.show();
     }
@@ -1450,10 +1509,10 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         LinearLayout row = new LinearLayout(this);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(6), dp(13), dp(6), dp(13));
+        row.setPadding(dp(8), dp(12), dp(8), dp(12));
         row.setClickable(true);
         row.setFocusable(true);
-        android.util.TypedValue ripple = new android.util.TypedValue();
+        TypedValue ripple = new TypedValue();
         if (getTheme().resolveAttribute(android.R.attr.selectableItemBackground, ripple, true)) {
             row.setBackgroundResource(ripple.resourceId);
         }
@@ -1467,7 +1526,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         labelView.setText(label);
         labelView.setTextColor(palette.text);
         labelView.setTextSize(15f);
-        labelView.setTypeface(labelView.getTypeface(), android.graphics.Typeface.BOLD);
+        labelView.setTypeface(labelView.getTypeface(), Typeface.BOLD);
         LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
                 ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
         lp.setMarginStart(dp(14));
@@ -1486,13 +1545,18 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         return (int) (value * getResources().getDisplayMetrics().density);
     }
 
+    // =========================================================================
+    // #22: Live Theme Preview & Settings Sheet (Fixes v3.1 Bug #1 & Bug #2)
+    // =========================================================================
+
     private void showLiveThemeAndSettingsSheet() {
         BottomSheetDialog dialog = new BottomSheetDialog(this, R.style.Theme_RunApp);
         View root = LayoutInflater.from(this).inflate(R.layout.dialog_theme_live_preview, null);
         LocaleHelper.applyViewDirection(root, prefs.isArabic());
         dialog.setContentView(root);
 
-        ScrollView scrollSheet = root.findViewById(R.id.scrollSettingsSheet);
+        NestedScrollView scrollSheet = root.findViewById(R.id.scrollSettingsSheet);
+        LinearLayout containerSettingsContent = root.findViewById(R.id.layoutSettingsContainer);
         TextView tvSheetTitle = root.findViewById(R.id.tvSettingsSheetTitle);
         TextView tvSheetSub = root.findViewById(R.id.tvSettingsSheetSub);
         ImageButton btnClose = root.findViewById(R.id.btnCloseSettingsSheet);
@@ -1516,7 +1580,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         CheckBox cbPreviewTask = root.findViewById(R.id.cbPreviewTask);
         TextView tvPreviewTaskText = root.findViewById(R.id.tvPreviewTaskText);
 
-        // 4 Selectable Theme Cards
+        // 5 Selectable Theme Family Cards + Dark Mode switch (7 themes total)
         MaterialCardView cardTheme1 = root.findViewById(R.id.cardThemeWarmPaper);
         MaterialCardView cardTheme2 = root.findViewById(R.id.cardThemeWarmPaperDark);
         MaterialCardView cardTheme3 = root.findViewById(R.id.cardThemeCleanAir);
@@ -1527,6 +1591,11 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         TextView tvCheck3 = root.findViewById(R.id.tvThemeCheck3);
         TextView tvCheck4 = root.findViewById(R.id.tvThemeCheck4);
         TextView tvCheck5 = root.findViewById(R.id.tvThemeCheck5);
+
+        TextView tvLivePreviewSectionLabel = root.findViewById(R.id.tvLivePreviewSectionLabel);
+        TextView tvThemeSectionTitle = root.findViewById(R.id.tvThemeSectionTitle);
+        TextView tvProfileSectionHeader = root.findViewById(R.id.tvProfileSectionLabel);
+        TextView tvExpSectionHeader = root.findViewById(R.id.tvLanguageSectionLabel);
 
         // Profile & Experience Inputs
         MaterialButton btnChangeAvatar = root.findViewById(R.id.btnChangeAvatar);
@@ -1554,30 +1623,46 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
 
         final String[] previewedThemeKey = {prefs.getThemeMode()};
         final String[] previewedLang = {prefs.getUiLanguage()};
+        final float d = getResources().getDisplayMetrics().density;
 
-        // Live UI Surface updater (#22: previews on a real UI surface before applying!)
+        // Live UI Surface updater (#22) — uses fresh GradientDrawables and opaque card fills (fixes Bug #2)
         Runnable updateLivePreviewSurface = () -> {
             ThemeHelper.Palette p = ThemeHelper.getPalette(previewedThemeKey[0]);
-            scrollSheet.setBackgroundColor(p.bg);
+            ThemeHelper.applySheetSurface(scrollSheet, p);
+            if (containerSettingsContent != null) {
+                containerSettingsContent.setBackgroundColor(Color.TRANSPARENT);
+            }
             tvSheetTitle.setTextColor(p.text);
             tvSheetSub.setTextColor(p.muted);
             btnClose.setColorFilter(p.text);
 
             cardLiveSurface.setCardBackgroundColor(p.bgElevated);
             cardLiveSurface.setStrokeColor(p.panelHover);
-            tvPreviewLogo.setTextColor(p.text);
-            viewPreviewHighlighter.setBackgroundTintList(ColorStateList.valueOf(p.highlighter));
-            tvPreviewOrb.setBackgroundTintList(ColorStateList.valueOf(p.accent));
+            tvPreviewLogo.setText(buildBrandLogoSpannable(p));
+
+            GradientDrawable previewHiBg = new GradientDrawable();
+            previewHiBg.setCornerRadius(4 * d);
+            previewHiBg.setColor(p.highlighter);
+            viewPreviewHighlighter.setBackground(previewHiBg);
+
+            GradientDrawable previewOrbBg = new GradientDrawable();
+            previewOrbBg.setShape(GradientDrawable.OVAL);
+            previewOrbBg.setColor(p.accent);
+            tvPreviewOrb.setBackground(previewOrbBg);
             tvPreviewOrb.setTextColor(p.accentInk);
 
-            cardPreviewRoom.setCardBackgroundColor(p.panel);
+            cardPreviewRoom.setCardBackgroundColor(p.cardOpaque);
             cardPreviewRoom.setStrokeColor(p.panelHover);
             tvPreviewRoomTitle.setTextColor(p.text);
             tvPreviewRoomSub.setTextColor(p.muted);
-            tvPreviewOnlinePill.setBackgroundTintList(ColorStateList.valueOf(p.highlighter));
+
+            GradientDrawable onlinePillBg = new GradientDrawable();
+            onlinePillBg.setCornerRadius(12 * d);
+            onlinePillBg.setColor(p.highlighter);
+            tvPreviewOnlinePill.setBackground(onlinePillBg);
             tvPreviewOnlinePill.setTextColor(p.accentInk);
 
-            cardPreviewIncoming.setCardBackgroundColor(p.panel);
+            cardPreviewIncoming.setCardBackgroundColor(p.cardOpaque);
             cardPreviewIncoming.setStrokeColor(p.panelHover);
             tvPreviewIncomingAuthor.setTextColor(p.text);
             tvPreviewIncomingText.setTextColor(p.text);
@@ -1587,12 +1672,11 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             tvPreviewOutgoingAuthor.setTextColor(p.ownBubbleText);
             tvPreviewOutgoingText.setTextColor(p.ownBubbleText);
 
-            cardPreviewTask.setCardBackgroundColor(p.panel);
+            cardPreviewTask.setCardBackgroundColor(p.cardOpaque);
             cardPreviewTask.setStrokeColor(p.panelHover);
             cbPreviewTask.setButtonTintList(ColorStateList.valueOf(p.accent));
             tvPreviewTaskText.setTextColor(p.text);
 
-            // Highlight selected theme card
             MaterialCardView[] cards = {cardTheme1, cardTheme2, cardTheme3, cardTheme4, cardTheme5};
             TextView[] checks = {tvCheck1, tvCheck2, tvCheck3, tvCheck4, tvCheck5};
             String[] keys = {
@@ -1608,12 +1692,20 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             for (int i = 0; i < cards.length; i++) {
                 boolean selected = keys[i].equals(previewedThemeKey[0])
                         || (!previewedIsCardKey && keys[i].equals(previewedBase));
-                cards[i].setCardBackgroundColor(p.panel);
+                cards[i].setCardBackgroundColor(p.cardOpaque);
                 cards[i].setStrokeColor(selected ? p.accent : p.panelHover);
-                cards[i].setStrokeWidth(selected ? 5 : 2);
-                checks[i].setVisibility(selected ? View.VISIBLE : View.GONE);
-                checks[i].setBackgroundTintList(ColorStateList.valueOf(p.accent));
-                checks[i].setTextColor(p.accentInk);
+                cards[i].setStrokeWidth((int) ((selected ? 2.2f : 1f) * d));
+
+                if (selected) {
+                    GradientDrawable checkBg = new GradientDrawable();
+                    checkBg.setShape(GradientDrawable.OVAL);
+                    checkBg.setColor(p.accent);
+                    checks[i].setBackground(checkBg);
+                    checks[i].setTextColor(p.accentInk);
+                    checks[i].setVisibility(View.VISIBLE);
+                } else {
+                    checks[i].setVisibility(View.GONE);
+                }
             }
 
             ((TextView) root.findViewById(R.id.tvThemeName1)).setTextColor(p.text);
@@ -1627,18 +1719,34 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             ((TextView) root.findViewById(R.id.tvThemeDesc4)).setTextColor(p.muted);
             ((TextView) root.findViewById(R.id.tvThemeDesc5)).setTextColor(p.muted);
 
+            if (tvLivePreviewSectionLabel != null) tvLivePreviewSectionLabel.setTextColor(p.muted);
+            if (tvThemeSectionTitle != null) tvThemeSectionTitle.setTextColor(p.muted);
+            if (tvProfileSectionHeader != null) tvProfileSectionHeader.setTextColor(p.muted);
+            if (tvExpSectionHeader != null) tvExpSectionHeader.setTextColor(p.muted);
+
             etName.setTextColor(p.text);
             etName.setHintTextColor(p.subtle);
             etBio.setTextColor(p.text);
             etBio.setHintTextColor(p.subtle);
             cbTouch.setTextColor(p.text);
+            cbTouch.setButtonTintList(ColorStateList.valueOf(p.accent));
             cbLite.setTextColor(p.text);
+            cbLite.setButtonTintList(ColorStateList.valueOf(p.accent));
             cbDark.setTextColor(p.text);
             cbDark.setButtonTintList(ColorStateList.valueOf(p.accent));
             cbDark.setChecked(ThemeHelper.isDarkKey(previewedThemeKey[0]));
             tvLiteInfo.setTextColor(p.muted);
             cbNotify.setTextColor(p.text);
+            cbNotify.setButtonTintList(ColorStateList.valueOf(p.accent));
             cbTranslate.setTextColor(p.text);
+            cbTranslate.setButtonTintList(ColorStateList.valueOf(p.accent));
+
+            btnChangeAvatar.setBackgroundTintList(ColorStateList.valueOf(p.panelSoft));
+            btnChangeAvatar.setTextColor(p.text);
+            btnChangeAvatar.setIconTint(ColorStateList.valueOf(p.text));
+            btnOpenPairing.setBackgroundTintList(ColorStateList.valueOf(p.panelSoft));
+            btnOpenPairing.setTextColor(p.text);
+            btnOpenPairing.setIconTint(ColorStateList.valueOf(p.text));
 
             boolean isAr = "ar".equalsIgnoreCase(previewedLang[0]);
             btnLangEn.setBackgroundTintList(ColorStateList.valueOf(!isAr ? p.accent : p.panelSoft));
@@ -1733,6 +1841,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             dialog.dismiss();
         });
 
+        ThemeHelper.prepareBottomSheet(dialog, scrollSheet, ThemeHelper.getPalette(previewedThemeKey[0]));
         updateLivePreviewSurface.run();
         dialog.show();
     }
@@ -1747,7 +1856,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         LocaleHelper.applyViewDirection(root, prefs.isArabic());
         dialog.setContentView(root);
 
-        ScrollView scroll = root.findViewById(R.id.scrollPairingSheet);
+        NestedScrollView scroll = root.findViewById(R.id.scrollPairingSheet);
         MaterialCardView cardGen = root.findViewById(R.id.cardGenerateCode);
         MaterialCardView cardRedeem = root.findViewById(R.id.cardRedeemCode);
         TextView tvTitle = root.findViewById(R.id.tvPairingTitle);
@@ -1761,10 +1870,10 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         MaterialButton btnExport = root.findViewById(R.id.btnExportBackupJson);
         MaterialButton btnImport = root.findViewById(R.id.btnImportBackupClipboard);
 
-        scroll.setBackgroundColor(palette.bg);
-        cardGen.setCardBackgroundColor(palette.panel);
+        ThemeHelper.prepareBottomSheet(dialog, scroll, palette);
+        cardGen.setCardBackgroundColor(palette.cardOpaque);
         cardGen.setStrokeColor(palette.panelHover);
-        cardRedeem.setCardBackgroundColor(palette.panel);
+        cardRedeem.setCardBackgroundColor(palette.cardOpaque);
         cardRedeem.setStrokeColor(palette.panelHover);
         tvTitle.setTextColor(palette.text);
         tvSub.setTextColor(palette.muted);
@@ -1893,24 +2002,30 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
     }
 
+    private SpannableString buildBrandLogoSpannable(ThemeHelper.Palette p) {
+        SpannableString ss = new SpannableString("Run.");
+        ss.setSpan(new ForegroundColorSpan(p.text), 0, 3, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        ss.setSpan(new ForegroundColorSpan(p.accent), 3, 4, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        return ss;
+    }
+
     private void applyLocalizedLabels() {
         boolean ar = prefs.isArabic();
         btnQuickLangToggle.setText(ar ? "EN" : "عربي");
-        tvOnlineStripTitle.setText(ar ? "متصلون الآن" : "Online now");
-        etQuickCodeOrSearch.setHint(ar ? "أدخل رمز غرفة (6 أحرف)، رابط دعوة، أو ابحث…" : "Enter 6-char room code, invite link, or filter…");
+        etQuickCodeOrSearch.setHint(ar ? "أدخل رمز غرفة أو أنشئ / ابحث…" : "Enter room code or create / filter…");
         btnQuickCodeEnter.setText(ar ? "انضمام ←" : "Join →");
-        btnSegmentCreate.setText(ar ? "إنشاء مساحة" : "Create Space");
+        btnSegmentCreate.setText(ar ? "إنشاء غرفة" : "Create Room");
         btnSegmentJoin.setText(ar ? "انضمام برمز" : "Join by Code");
         etUserName.setHint(ar ? "اسم العرض الخاص بك" : "Your display name");
-        etRoomName.setHint(ar ? "اسم الغرفة (اختياري)" : "Space / Room name (optional)");
+        etRoomName.setHint(ar ? "اسم الغرفة (مثال: Study Group D5)" : "Room name (e.g. Study Group D5)");
         cbPublicGroup.setText(ar ? "إدراج في دليل المجموعات العامة" : "List in Public Groups Directory");
         etPublicPassword.setHint(ar ? "كلمة المرور (اختياري)" : "Password protection (optional)");
-        btnCreateRoom.setText(ar ? "إنشاء وفتح الغرفة" : "Create & Open Space");
+        btnCreateRoom.setText(ar ? "إنشاء وفتح الغرفة" : "Create & Open Room");
         etJoinRoomCode.setHint(ar ? "رمز الغرفة (6 أو 12 حرفاً) أو الرابط" : "Enter 6 or 12 character code or link");
-        btnJoinByCodeSubmit.setText(ar ? "انضمام للغرفة" : "Join Space Now");
+        btnJoinByCodeSubmit.setText(ar ? "انضمام للغرفة" : "Join Room Now");
 
-        tvRecentTitle.setText(ar ? "غرفك" : "Your rooms");
-        btnFilterActiveRooms.setText(ar ? "النشطة" : "Active");
+        tvRecentTitle.setText(showingArchivedRooms ? (ar ? "الأرشيف" : "Archived") : (ar ? "غرفك" : "Your rooms"));
+        btnFilterActiveRooms.setText(ar ? "← الغرف النشطة" : "← Back to Active");
         btnFilterArchivedRooms.setText(ar ? "المؤرشفة" : "Archived");
         btnEditProfile.setText(ar ? "المظهر والملف" : "Theme & Profile");
 
@@ -1918,7 +2033,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         tvTileFeedbackTitle.setText(ar ? "💡 لوحة المقترحات" : "💡 Feedback Board");
         tvTileFeedbackSub.setText(ar ? "شارك وصوّت للأفكار" : "Vote & suggest ideas");
 
-        btnDockSpaces.setText(ar ? "مساحاتي" : "Spaces");
+        btnDockSpaces.setText(ar ? "غرفك" : "Spaces");
         btnDockDiscover.setText(ar ? "استكشاف" : "Discover");
         btnDockPeople.setText(ar ? "المتصلون" : "People");
         btnDockSaved.setText(ar ? "محفوظاتي" : "Saved");
@@ -1940,12 +2055,11 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
 
     private void applyCurrentTheme() {
         palette = ThemeHelper.getPalette(prefs.getThemeMode());
-        // v3.1: every theme speaks its own motion language
         MotionHelper.setThemeProfile(palette.themeKey);
         boolean glassTheme = ThemeHelper.isGlassTheme(palette.themeKey);
+        float d = getResources().getDisplayMetrics().density;
+
         if (glassTheme) {
-            // Liquid Glass backdrop: a deep, slowly-shifting gradient the
-            // translucent panels float over (iPhone-style).
             GradientDrawable glassBg = new GradientDrawable(
                     GradientDrawable.Orientation.TL_BR,
                     new int[]{
@@ -1957,30 +2071,30 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         } else {
             rootMainFrame.setBackgroundColor(palette.bg);
         }
+
+        // "Run." brand logo with lime dot (Matches Design A 7196.png)
+        tvAppTitle.setText(buildBrandLogoSpannable(palette));
         btnMoreMenu.setColorFilter(palette.text);
-        tvAppTitle.setTextColor(palette.text);
         btnAccountPairing.setColorFilter(palette.text);
         btnThemeSettings.setColorFilter(palette.text);
 
         btnQuickLangToggle.setBackgroundTintList(ColorStateList.valueOf(palette.panelSoft));
         btnQuickLangToggle.setTextColor(palette.text);
 
-        tvMainAvatarFallback.setBackgroundTintList(ColorStateList.valueOf(palette.accent));
+        // Top-right circular 'T' avatar orb (fresh GradientDrawable)
+        GradientDrawable avatarOrbBg = new GradientDrawable();
+        avatarOrbBg.setShape(GradientDrawable.OVAL);
+        avatarOrbBg.setColor(palette.accent);
+        tvMainAvatarFallback.setBackground(avatarOrbBg);
         tvMainAvatarFallback.setTextColor(palette.accentInk);
 
-        profileCard.setCardBackgroundColor(palette.panel);
-        profileCard.setStrokeColor(palette.panelHover);
-        profileCard.setStrokeWidth(0);
-        tvGreetingName.setTextColor(palette.text);
-        tvUserBioDisplay.setTextColor(palette.muted);
-        btnEditProfile.setBackgroundTintList(ColorStateList.valueOf(palette.panelSoft));
-        btnEditProfile.setTextColor(palette.text);
+        // One-line greeting directly on canvas
+        tvGreetingName.setTextColor(palette.muted);
 
-        tvOnlineStripTitle.setTextColor(palette.text);
-
+        // Slim Join / Create bar
         cardQuickCodeBar.setCardBackgroundColor(palette.panel);
         cardQuickCodeBar.setStrokeColor(palette.panelHover);
-        cardQuickCodeBar.setStrokeWidth(0);
+        cardQuickCodeBar.setStrokeWidth((int) (1 * d));
         etQuickCodeOrSearch.setTextColor(palette.text);
         etQuickCodeOrSearch.setHintTextColor(palette.subtle);
         btnQuickCodeEnter.setBackgroundTintList(ColorStateList.valueOf(palette.accent));
@@ -1988,7 +2102,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
 
         mainCard.setCardBackgroundColor(palette.panel);
         mainCard.setStrokeColor(palette.panelHover);
-        mainCard.setStrokeWidth(0);
+        mainCard.setStrokeWidth((int) (1 * d));
         etUserName.setTextColor(palette.text);
         etUserName.setHintTextColor(palette.subtle);
         etRoomName.setTextColor(palette.text);
@@ -2003,36 +2117,32 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         btnJoinByCodeSubmit.setBackgroundTintList(ColorStateList.valueOf(palette.accent));
         btnJoinByCodeSubmit.setTextColor(palette.accentInk);
 
+        // "Your rooms" overlapping highlighter bar (fresh GradientDrawable)
         tvRecentTitle.setTextColor(palette.text);
-        viewYourRoomsHighlighter.setBackgroundTintList(ColorStateList.valueOf(palette.highlighter));
+        GradientDrawable hiBg = new GradientDrawable();
+        hiBg.setCornerRadius(4.5f * d);
+        hiBg.setColor(palette.highlighter);
+        viewYourRoomsHighlighter.setBackground(hiBg);
+
         tvRecentCount.setTextColor(palette.muted);
         cardEmptyRoomsPrompt.setCardBackgroundColor(palette.panel);
         cardEmptyRoomsPrompt.setStrokeColor(palette.panelHover);
         tvEmptyRoomsText.setTextColor(palette.muted);
 
-        cardPublicGroups.setCardBackgroundColor(palette.panel);
-        cardPublicGroups.setStrokeColor(palette.panelHover);
-        tvTilePublicTitle.setTextColor(palette.text);
-        tvPublicCount.setTextColor(palette.muted);
-
-        cardFeedbackQuick.setCardBackgroundColor(palette.panel);
-        cardFeedbackQuick.setStrokeColor(palette.panelHover);
-        tvTileFeedbackTitle.setTextColor(palette.text);
-        tvTileFeedbackSub.setTextColor(palette.muted);
-
         tvSavedSectionTitle.setTextColor(palette.text);
-        viewSavedHighlighter.setBackgroundTintList(ColorStateList.valueOf(palette.highlighter));
+        GradientDrawable savedHiBg = new GradientDrawable();
+        savedHiBg.setCornerRadius(4.5f * d);
+        savedHiBg.setColor(palette.highlighter);
+        viewSavedHighlighter.setBackground(savedHiBg);
         tvSavedSectionSub.setTextColor(palette.muted);
         btnPairDeviceFromSaved.setBackgroundTintList(ColorStateList.valueOf(palette.panelSoft));
         btnPairDeviceFromSaved.setTextColor(palette.text);
 
         if (glassTheme) {
-            // The '+' becomes a frosted glass droplet: translucent white fill,
-            // bright glass edge, white glyph — and a soft sheen on theme apply.
             fabNewSpace.setBackgroundTintList(ColorStateList.valueOf(Color.argb(64, 255, 255, 255)));
             fabNewSpace.setTextColor(Color.WHITE);
             fabNewSpace.setStrokeColor(ColorStateList.valueOf(Color.argb(150, 255, 255, 255)));
-            fabNewSpace.setStrokeWidth((int) (1.2f * getResources().getDisplayMetrics().density));
+            fabNewSpace.setStrokeWidth((int) (1.2f * d));
             MotionHelper.animateGlassSheen(fabNewSpace, prefs.isLiteModeEnabled());
         } else {
             fabNewSpace.setBackgroundTintList(ColorStateList.valueOf(palette.accent));
@@ -2041,23 +2151,26 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         }
 
         GradientDrawable dockBg = new GradientDrawable();
-        dockBg.setCornerRadius(32f * getResources().getDisplayMetrics().density);
+        dockBg.setCornerRadius(32f * d);
         dockBg.setColor(palette.dockBg);
         if (glassTheme) {
-            dockBg.setStroke((int) (1f * getResources().getDisplayMetrics().density), palette.panelHover);
+            dockBg.setStroke((int) (1f * d), palette.panelHover);
         }
         bottomNavDock.setBackground(dockBg);
+        bottomNavDock.setVisibility((currentDockTab != 0 || glassTheme) ? View.VISIBLE : View.GONE);
+
+        FrameLayout.LayoutParams fabLp = (FrameLayout.LayoutParams) fabNewSpace.getLayoutParams();
+        fabLp.bottomMargin = dp(glassTheme ? 76 : 24);
+        fabNewSpace.setLayoutParams(fabLp);
+
         updateDockButtonsVisuals();
 
-        if ( getWindow() != null ) {
+        if (getWindow() != null) {
             getWindow().setStatusBarColor(palette.bg);
             getWindow().setNavigationBarColor(palette.bg);
         }
     }
 
-    /**
-     * #29: Updates live connection quality pill (Connected / Weak signal / Reconnecting automatically).
-     */
     private void updateConnectionQualityUI(MqttRoomManager.ConnectionQuality quality) {
         boolean ar = prefs.isArabic();
         GradientDrawable dot = new GradientDrawable();
@@ -2086,8 +2199,9 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     public void onConnectionChanged(boolean connected, String brokerUrl) {
         runOnUiThread(() -> {
             boolean ar = prefs.isArabic();
-            int count = mqttManager.getGlobalOnlineCount();
+            int count = Math.max(1, mqttManager.getGlobalOnlineCount());
             tvOnlineStatus.setText("● " + LocaleHelper.formatNumber(count, ar) + (ar ? " متصل الآن" : " online"));
+            tvOnlineStripTitle.setText("● " + LocaleHelper.formatNumber(count, ar) + (ar ? " متصل" : " online"));
             updateConnectionQualityUI(mqttManager.getConnectionQuality());
         });
     }
@@ -2101,7 +2215,9 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     public void onGlobalPresenceChanged(int onlineCount) {
         runOnUiThread(() -> {
             boolean ar = prefs.isArabic();
-            tvOnlineStatus.setText("● " + LocaleHelper.formatNumber(onlineCount, ar) + (ar ? " متصل الآن" : " online"));
+            int c = Math.max(1, onlineCount);
+            tvOnlineStatus.setText("● " + LocaleHelper.formatNumber(c, ar) + (ar ? " متصل الآن" : " online"));
+            tvOnlineStripTitle.setText("● " + LocaleHelper.formatNumber(c, ar) + (ar ? " متصل" : " online"));
         });
     }
 
