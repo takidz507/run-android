@@ -211,6 +211,8 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
         translationHelper = new TranslationHelper();
         voiceHelper = new VoiceRecorderHelper(this);
         palette = ThemeHelper.getPalette(prefs.getThemeMode());
+        MotionHelper.setThemeProfile(palette.themeKey);
+        MotionHelper.setThemeProfile(palette.themeKey);
         roomAccentColor = palette.accent;
 
         roomCode = getIntent().getStringExtra("room_code");
@@ -1489,6 +1491,7 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
 
     private void applyThemeAndRoomIdentity() {
         palette = ThemeHelper.getPalette(prefs.getThemeMode());
+        MotionHelper.setThemeProfile(palette.themeKey);
         RoomData.RoomIdentity id = mqttManager.getActiveRoomIdentity();
         if (id != null) {
             roomAccentColor = ThemeHelper.parseRoomAccentColor(id.accentColor, palette);
