@@ -1,57 +1,82 @@
-# IMPLEMENTATION-NOTES.md — Run Android v3.0.0 (`com.takidz.run`)
+# Run Android v3.2.0 — Implementation Notes (`IMPLEMENTATION-NOTES.md`)
 
-This document maps every owner-approved requirement (**#14–#31**) and non-negotiable contract in the Radar v3.0.0 brief to its exact implementation in the project, and documents any platform-level constraints honestly.
-
----
-
-## 1. Non-Negotiable Contracts Verification
-
-1. **Wire Protocol & Interoperability (`current-web-index-v2pro.html` & Android `2.0.0-pro`)**
-   - **Brokers**: `wss://broker.emqx.io:8084/mqtt` and `wss://broker.hivemq.com:8884/mqtt` (`MqttRoomManager.java`).
-   - **Topics**:
-     - `runapp/v1/directory` (retained, QoS 1, `DirectoryData`)
-     - `runapp/v1/presence/<userId>` (retained, QoS 0, includes `userId`, `deviceHash`, `name`, `avatarUrl`, `avatar`, `bio`, `lastSeenTs`, `at`, `ts`, `platform` so both Web v2 Pro and Android v2/v3 parse timestamps and avatars identically)
-     - `runapp/v1/room/<code>` (retained, QoS 1, `RoomData`)
-     - `runapp/v1/room/<code>/typing` (non-retained, QoS 0, includes `"typing": true`, `"at"`, and `"ts"` required by Web v2 Pro `handleTypingPayload`)
-     - `runapp/v1/room/<code>/presence/<userId>` (retained, QoS 0)
-     - `runapp/v1/feedback/board` (retained, QoS 1, `FeedbackBoardData`)
-     - `runapp/v1/signals/<userId>` (non-retained, QoS 1, `SignalMessage` with custom Gson adapter in `RoomCryptoUtils.createProtocolGson()` accepting both ISO-8601 strings from Web and epoch `long` from Android)
-   - **Password-Protected Public Groups**: `RoomCryptoUtils.java` computes the Web v2 Pro verifier (`SHA256(seed + "::" + pw).slice(0, 12)`) and topic key (`groupKeyFromHash(SHA256(seed + "::pw::" + pw), 12)`), while `verifyPublicGroupPassword` accepts both Web (`seed + "::" + pw`) and legacy Android v2 (`seed + "::pw::" + pw`) verifiers.
-   - **Avatars & Media**: `RoomCryptoUtils.createProtocolGson()` serializes `RoomData.AvatarProfile` as a String URL (matching `current-web-index-v2pro.html`'s `roomData.avatars[userId]`) while deserializing both String URLs (from Web) and JSON objects (from Android v2.0.0-pro). Voice and inline image attachments populate `msg.type = "file"`, `file.voice = true` (for voice), `file.dataUrl`, and `file.url` so both Web and Android render images and play voice notes natively.
-2. **Zero Data Loss on Upgrade (`2.0.0-pro` → `3.0.0`)**
-   - `PrefsManager.java` preserves the exact `SharedPreferences` store name (`"run_native_prefs_v1"`) and all v2.0.0-pro keys (`run_user_id`, `run_user_name`, `run_user_bio`, `run_user_avatar_url`, `run_theme_mode`, `run_pref_lang`, `run_auto_translate`, `run_notifications_enabled`, `run_recent_rooms_v1`, `run_friends_list_v1`, `run_pending_requests_v1`, `run_sent_requests_v1`, `run_pending_invites_v1`), migrating legacy theme strings automatically on first v3 launch and caching room state locally (`run_room_cache_v3_<CODE>`).
-3. **Versioning & Signing**
-   - `app/build.gradle.kts`: `applicationId = "com.takidz.run"`, `versionCode = 3`, `versionName = "3.0.0"` (no marketing codename added). Existing `signingConfigs` (`release` and `debugConfig`) are untouched for CI compatibility.
-4. **Strict Adherence to Rejected List (Section 1.7)**
-   - None of the rejected items (polls, pinned messages, message editing, in-room search, whiteboard, offline message queue, in-room games, flashcards, badges, avatar builder, seasonal themes, spoiler messages) were added.
+- **Application ID**: `com.takidz.run`
+- **Version**: `versionCode = 5`, `versionName = "3.2.0"`
+- **Signing Keystore**: `debug.keystore` preserved untouched in the project root (`2666` bytes).
+- **Wire Protocol & Storage**: 100% unchanged from v3.0.0 / v3.1.0 and Web v2 Pro (`MqttRoomManager.java`, `RoomCryptoUtils.java`, `PrefsManager.java`).
 
 ---
 
-## 2. Feature-by-Feature Implementation Map (#14–#31)
+## 1. Summary of v3.2.0 Visual Rebuild (Design A — `7196.png`) & Bug Fixes
 
-| # | Feature | Where & How Implemented |
-|---|---|---|
-| **#14** | **Genuinely NEW design (structure, not just colors) + 4 switchable themes** | **`res/layout/activity_main.xml`, `res/layout/activity_room.xml`, `MainActivity.java`, `RoomActivity.java`, `ThemeHelper.java`**: Replaces the old single-column stacked form layout with an editorial **Warm Paper** workspace architecture featuring a Top Editorial Bar (`Run.` wordmark + live connection pill + online counter + quick language toggle + avatar orb), a live horizontal **Online Now** avatar strip, a fast code/filter bar, direct tactile space cards with lime highlighter bars (`bg_highlighter_bar.xml`), a floating `+` action button that toggles the Create/Join Studio, and a **Floating Dark Pill Bottom Dock** (`Spaces` · `Discover` · `People` · `My Saved`). Implements all 4 approved themes in `ThemeHelper.java`: `warm_paper` (Default), `warm_paper_dark`, `clean_air`, and `deep_night`. |
-| **#15** | **Excellent animations** | **`MotionHelper.java`, `MessagesAdapter.java`, `MainActivity.java`, `RoomActivity.java`**: 60fps panel entrance transitions (`DecelerateInterpolator`), message bubble pop-in animations (`OvershootInterpolator`), button press micro-interactions, and activity transitions. |
-| **#16** | **Fits and works on ALL devices** | **`RoomActivity.java` (`updateAdaptiveLayoutMode`), `res/layout/activity_room.xml`, `AndroidManifest.xml`**: Responsive across small phones, large phones, foldables, and tablets. On screens with `screenWidthDp >= 600` (tablets/foldables/wide landscape), `RoomActivity` automatically engages **Two-Pane Study Desk Mode** displaying Chat on the start pane and Tasks/Shared Notes side-by-side on the end pane. |
-| **#17** | **Per-room identity** | **`RoomData.java` (`RoomIdentity`), `RoomPatternBackgroundView.java`, `MqttRoomManager.java` (`updateActiveRoomIdentity`, `TOPIC_ROOM_PREFIX + code + "/identity"`), `RoomActivity.java` (`showRoomIdentitySheet`)**: Room owners choose from 8 curated accent colors and 6 background patterns (`paper`, `dots`, `lines`, `grid`, `waves`, `origami`). Synced both inside `RoomData.meta` / `RoomData.identity` AND on a dedicated retained MQTT topic `runapp/v1/room/<CODE>/identity` (`qos: 1, retain: true`) so late joiners always receive the current room identity even if a Web client normalizes and republishes `RoomData`. |
-| **#18** | **Quick gestures + first-use hints** | **`RoomActivity.java` (`setupSwipeToReplyGesture`, `showMessageReactionAndActionSheet`, `showFullscreenImageDialog`), `MessagesAdapter.java`**: (1) Horizontal swipe on a message draws a dynamic reply icon, triggers a subtle haptic tick, springs back without fighting vertical scroll, and quotes the message. (2) Long-press on a message opens the 6-emoji reaction picker (`👍 ❤️ 😂 🔥 👏 🎯`) + Save/Reply/Copy sheet; reactions sync via `Message.reactions` and retained topic `runapp/v1/room/<CODE>/reactions`. (3) Vertical swipe-down on the fullscreen media viewer scales/fades and dismisses the viewer. Discoverable first-use hint banners (`cardGestureHintBanner` and media viewer pill) guide the user. |
-| **#19** | **New beginning: Origami icon + animated splash** | **`res/mipmap-*/ic_launcher*.png`, `res/drawable-nodpi/ic_launcher_origami_fg.png`, `res/drawable-nodpi/ic_origami_brand.png`, `res/mipmap-anydpi-v26/ic_launcher*.xml`, `OrigamiSplashView.java`**: Wired from `icon-origami-master-1600.png` and `icon-origami-512.png` with matching `#502516` adaptive background. `OrigamiSplashView` animates the Origami "R" facets folding in under ~0.98s on cold start, skips instantly (`0ms`) on tap, and fast-paths in Lite Mode. |
-| **#20** | **Light sound & vibration touches** | **`FeedbackTouchHelper.java`, `PrefsManager.java` (`isTouchFeedbackEnabled`), `dialog_theme_live_preview.xml`**: Optional subtle haptic tick (`VibrationEffect.EFFECT_TICK`) and synthesized warm paper acoustic tap (`AudioTrack`) on message send/receive and gestures. Strictly checks OS Ringer mode and Do Not Disturb (`NotificationManager.getCurrentInterruptionFilter()`) so it never vibrates or plays sound in silent/DND situations. |
-| **#21** | **Lite mode for weak devices** | **`DeviceCapabilityHelper.java`, `PrefsManager.java` (`isLiteModeEnabled`), `MotionHelper.java`, `OrigamiSplashView.java`**: Automatically detects `ActivityManager.isLowRamDevice()`, total RAM `< 3 GB`, CPU cores `<= 4`, OS Battery Saver (`PowerManager.isPowerSaveMode()`), or disabled system animator scale, and simplifies animations while keeping all features fast. Manual override checkbox in Settings (`dialog_theme_live_preview.xml`). |
-| **#22** | **Live theme preview** | **`res/layout/dialog_theme_live_preview.xml`, `MainActivity.java` (`showLiveThemeAndSettingsSheet`)**: Tapping any of the 4 theme cards in Settings immediately updates a real interactive UI surface preview (header, highlighter bar, room card, incoming message bubble, outgoing lime message bubble, interactive task checkbox, and sheet background) live before the user taps **Apply & Save** or **Cancel**. |
-| **#23** | **Smart invite link** | **`AndroidManifest.xml`, `MainActivity.java` (`handleIncomingDeepLink`, `checkClipboardForDeferredInvite`), `RoomActivity.java` (`showSmartInviteShareDialog`)**: Supports HTTPS App Links (`https://takidz507.github.io/run/?room=CODE`) and direct custom scheme (`runapp://room/CODE`). Tapped with the app installed → opens `RoomActivity` directly inside the room with zero intermediate steps. Tapped without the app → opens the web room / download page; on first open after install, `checkClipboardForDeferredInvite()` checks the clipboard for a copied invite URL/token to enter the room automatically, and re-tapping the invite link after install (owner-approved fallback) enters the room directly. |
-| **#24** | **Serial number per phone (device identity)** | **`PrefsManager.java` (`getDeviceIdentityHash`, `getUserId`), `OnlineUser.java`, `MqttRoomManager.java` (`updatePresenceMap`, `getOnlineUsersList`, `getGlobalOnlineCount`, `getRoomOnlineCount`)**: Uses Android's `Settings.Secure.ANDROID_ID` (scoped to signing key & device user, persists across app data clear and reinstall). Hashed with SHA-256 (`d-<16hex>`) before ever leaving the device, never displayed in the UI. After app data clear, `getUserId()` also derives deterministically from `ANDROID_ID` so the device overwrites its own retained MQTT presence topic and is deduplicated by `deviceHash` — counting as **ONE user** even after clearing data and renaming. |
-| **#25 & #30** | **Transfer data to a new phone with a code & One account on web and in the app** | **`RoomCryptoUtils.java` (`encryptTransferPayload`, `decryptTransferPayload`, `deriveTransferTopicId`), `TransferBundle.java`, `PrefsManager.java` (`createTransferBundle`, `importTransferOrBackupJson`), `MqttRoomManager.java` (`publishAccountTransferCode`, `redeemAccountTransferCode`), `dialog_account_pairing.xml`**: Generates a short 6-character code, encrypts the user's canonical `userId`, profile, settings, rooms, friends, and saved messages with AES-GCM keyed by the code, and publishes to `runapp/v1/transfer/<topicId>`. Entering the 6-character code on a new phone (#25) or between Web and Android (#30) decrypts and imports the bundle, linking the canonical `userId` and re-anchoring `deviceHash` so the user is one unified account everywhere. Also retains clipboard JSON backup export/import. |
-| **#26** | **Delivery & read indicators** | **`AckPayload.java`, `Message.java` (`ackState`), `MqttRoomManager.java` (`queueAckForMessagesFromOthers`, `flushPendingAcksNow`, `handleIncomingAckPayload`, `refreshAckStatesForActiveRoom`), `MessagesAdapter.java`**: Shows `○` (sending), `✓` (sent to broker), `✓✓` (delivered), and highlighted `✓✓` (read). Uses a throttled/batched MQTT sub-topic `runapp/v1/room/<CODE>/acks` (`1.5s` batch window, ignored by older clients) AND infers delivered/read states when old v2 Pro Web/Android clients are present in the room via room presence and message/typing activity. |
-| **#27** | **Timed room mute** | **`PrefsManager.java` (`setRoomMutedForDurationMs`, `setRoomMutedUntilTomorrow`, `isRoomMuted`, `getRoomMuteRemainingLabel`), `RoomActivity.java` (`showTimedMuteSheet`, `updateMuteHeaderUI`), `MqttRoomManager.java` (`triggerLocalMessageNotification`)**: Per-room mute for **1 hour**, **8 hours**, or **until tomorrow (8:00 AM)** with automatic expiration, visible muted badge + remaining countdown in both `RoomActivity` and `MainActivity` room cards, and 1-tap early unmute. |
-| **#28** | **Full Arabic mode** | **`LocaleHelper.java`, `res/values-ar/strings.xml`, `res/drawable/ic_arrow_back.xml`, `ic_send.xml`, `ic_reply.xml`**: Complete RTL layout mirroring (`View.LAYOUT_DIRECTION_RTL` + `autoMirrored="true"` directional icons), full native Arabic copy across all screens and dialogs, and Arabic-formatted dates, relative timestamps, and numerals (`NumberFormat` / `SimpleDateFormat` with `Locale("ar")`). English (`en`) remains the default language. |
-| **#29** | **Connection quality indicator** | **`MqttRoomManager.java` (`ConnectionQuality`: `CONNECTED`, `WEAK`, `RECONNECTING`), `MainActivity.java` (`updateConnectionQualityUI`), `RoomActivity.java` (`updateHeaderSubtitle`)**: Live indicator in both the home header and room header reflecting real MQTT state and publish latency with calm wording (`Connected` / `Weak signal` / `Reconnecting…`) and automatic background reconnect. |
-| **#31** | **Personal saved messages ("My saved")** | **`SavedMessage.java`, `PrefsManager.java` (`toggleSaveMessage`, `getSavedMessages`), `SavedMessagesAdapter.java`, `res/layout/item_saved_message.xml`, `MainActivity.java`, `RoomActivity.java`**: Any message can be saved privately into the **My Saved** tab (`workspaceSaved`), which gathers saved messages across all rooms on the device. Tapping a saved item opens `RoomActivity` with `jump_to_message_id`, smoothly scrolling to and highlighting the source message in its room. |
+### A. Visual Rebuild Strictly Following Reference Image `7196.png` (Design A · Warm Paper)
+1. **Home Screen (`activity_main.xml`, `item_recent_room.xml`, `MainActivity.java`)**:
+   - **Light Top Bar**: `Run.` brand wordmark with a lime period dot (`SpannableString`), subtle connection status dot (`#29`), `⋮` More menu button, and circular `T` user avatar orb on the top-right. Zero duplicate header icons.
+   - **Single-Line Greeting**: Rendered directly on the warm paper canvas (`Good evening, Taqi` / `مساء الخير، تقي`) with no enclosing profile card box.
+   - **Slim 1-Line Online Strip**: Compact horizontal pill (`● 1 online`) + single-line horizontal user chips instead of tall 2-line avatar blocks.
+   - **Slim Join / Create Bar**: Single-line pill input (`Enter room code or create / filter…`) with a compact `Join →` pill button.
+   - **`Your rooms` + `Recent` Sections**:
+     - `Your rooms` title sits directly over an overlapping lime highlighter marker bar (`FrameLayout` with `viewYourRoomsHighlighter` at `bottom|start`), matching `7196.png`.
+     - Room rows sit directly on the canvas (`recentRoomsCard` is transparent with `0dp` stroke — no card-inside-card nesting).
+     - Each room card (`item_recent_room.xml`) displays:
+       - **Line 1**: Bold room title on the start + single-line unbreakable `#CODE` on the end (`singleLine="true"`, `maxLines="1"`).
+       - **Line 2**: Single-line last message preview (`Salim: I uploaded the TD solutions`) or relative activity (`Last active 2h ago`).
+       - **Line 3**: Single clean lime pill badge (`● 1 online` or `🌐 Public group`), with the 3 right-hand action buttons (`copy`, `archive`, `delete`) removed from the row and moved to a long-press BottomSheet (`showRoomQuickActionsSheet`).
+     - When more than 3 active rooms exist, a **`Recent`** sub-heading is automatically inserted above older rooms (matching `Chemistry Lab` under `Recent` in `7196.png`).
+   - **Floating `+` Button**: Circular `56dp` floating `+` button at bottom-end (`#B9E832` in Warm Paper; translucent frosted glass droplet with specular stroke in Liquid Glass).
+   - **Owner's Strict `⋮` Rule (*"أي شيء يأكل مساحة يروح لقائمة ⋮"*)**: The `⋮` More sheet gathers Public Groups, Feedback Board, Archived Rooms, My Saved Messages (`#31`), Online People & Friends (`#13`), Pair/Transfer Account (`#25`/`#30`), Language (`#28`), and Theme & Profile (`#14`/`#22`).
+
+2. **Room Screen (`activity_room.xml`, `item_message.xml`, `item_task.xml`, `RoomActivity.java`, `MessagesAdapter.java`)**:
+   - **Borderless Room Header**: Sits directly on the room paper canvas (`topBarCard` is transparent with `0dp` border) — Back arrow + Room Title (`Study Group D5` with overlapping lime highlighter marker) + single-line subtitle (`12 online · 48 messages`) on the start; `⋮` Room More button + circular single-letter room orb (`S`) on the end.
+   - **Three Separate Pill Tabs**: `Chat` (dark charcoal `#23211C` pill with cream text in light themes), `Tasks` (soft warm beige `#ECE6D8` pill), and `Notes` (soft warm beige `#ECE6D8` pill) — separate rounded pills rather than a full-width segmented box.
+   - **Clean Message Bubbles**: Incoming bubbles (`Salim`, `Amine`) use warm cream (`#FAF6EE`) with a `1dp` `#EDE7DA` border; outgoing bubbles (`You`) use warm lime (`#D9F27E`) with a `1dp` `#C5E265` border. Removed the cramped 3-button text bar from the bottom of every bubble (Swipe-to-Reply `#18` and Long-Press Sheet `#18`/`#28`/`#31` provide 1-tap Emoji Reactions, Save to My Saved, Reply/Quote, Translate, and Copy).
+   - **Inline Tasks Preview on Chat**: Renders up to 2 compact rounded task pills (`[✓] Revise Analysis ch.2`, `[ ] Physics TP report — Friday`) directly below the chat list in `chatPanel` (matching the right phone in `7196.png`), with 1-tap checkbox toggling and tap-to-open `Tasks`.
+   - **Slim Stadium Composer Pill**: Single clean bottom pill (`Write a message...` with attach, mic, and send icons inside).
 
 ---
 
-## 3. Honest Disclosures & Platform Notes
+### B. Root-Cause Fixes for the 3 Owner-Reported v3.1 Bugs
 
-- **#23 Deferred Deep Link Without a Play Store Referrer Server**: Because Run is strictly serverless and distributed via direct APK / GitHub without Google Play Install Referrer servers or paid third-party SDKs (Branch/Firebase Dynamic Links), automatic post-install room entry uses a clipboard bridge (`checkClipboardForDeferredInvite()` on first window focus after install) alongside Android App Links (`https://takidz507.github.io/run/?room=CODE`) and the `runapp://room/CODE` custom scheme. As approved in Section 4 (#23 Owner-approved fallback), re-tapping the invite link after installing always opens the app directly inside the invited room with zero intermediate steps.
-- **#30 Web ↔ App Pairing**: As specified in Section 4 (#30), linking the Web identity and Android app identity is a one-time code/backup pairing flow (`dialog_account_pairing.xml`). For pairing with a current v2 Pro Web tab that does not yet have the v3 MQTT `/transfer/` UI, `importTransferOrBackupJson` in `PrefsManager.java` also accepts pasted JSON backups directly alongside the 6-character MQTT transfer code.
+1. **Bug #1 Fixed — Unreadable `⋮` More Sheet in Liquid Glass (White Text on Light Cream Background)**:
+   - *Cause*: `BottomSheetDialog` uses `@style/Theme.RunApp`, whose Material `colorSurface` is `#FCF9F2` (light cream). In `THEME_GLASS`, `palette.panel` is `#29FFFFFF` (`16%` translucent white). Setting `container.setBackgroundColor(palette.panel)` painted 16% white over the default `#FCF9F2` cream sheet while text used `palette.text` (`#F4FAF6` white).
+   - *Fix*: Added `palette.sheetBg` and `ThemeHelper.prepareBottomSheet(BottomSheetDialog, View, Palette)` in `ThemeHelper.java`. Every BottomSheet across `MainActivity` and `RoomActivity` now clears Material's default `@id/design_bottom_sheet` background to `Color.TRANSPARENT` and paints the sheet root with a rounded `28dp` top-corner `GradientDrawable` filled with `palette.sheetBg` (`#122536` frosted deep ocean in `liquid_glass`, `#0B1520` in `liquid_glass_dark`, `#FAF6EE` in `warm_paper`, etc.) and a `1dp` specular top border.
+
+2. **Bug #2 Fixed — Settings Sheet Scrolling Disappearing List & Stray Lime Artifacts**:
+   - *Cause*:
+     1. `dialog_theme_live_preview.xml` used a plain `android.widget.ScrollView` inside `BottomSheetDialog`, which does not participate in `CoordinatorLayout` nested scrolling — causing `BottomSheetBehavior` to intercept vertical drags and collapse/clip the sheet content during up/down scrolling.
+     2. Calling `setBackgroundTintList(...)` on views backed by shared XML drawables (`@drawable/bg_brand_logo`, `@drawable/bg_highlighter_bar`, `@drawable/bg_code_pill`) mutated shared drawable constant state across views, leaving stray lime rectangles when views scrolled.
+     3. In `THEME_GLASS`, setting `cards[i].setCardBackgroundColor(p.panel)` (`#29FFFFFF`) inside the scrollable sheet caused translucent overlaps during scroll invalidation.
+   - *Fix*:
+     1. Replaced `ScrollView` with `androidx.core.widget.NestedScrollView` in `dialog_theme_live_preview.xml` and `dialog_account_pairing.xml`, and configured `BottomSheetBehavior` in `ThemeHelper.prepareBottomSheet(...)` with `setSkipCollapsed(true)` and `STATE_EXPANDED`.
+     2. Replaced shared XML drawable tinting with fresh programmatic `GradientDrawable` instances on every preview badge, highlighter bar, and checkmark.
+     3. Added `palette.cardOpaque` in `ThemeHelper.java` so cards inside scrollable BottomSheets always have a clean, non-bleeding surface fill across all 7 themes.
+
+3. **Bug #3 Fixed — Cramped Feel (`محشوراً`)**:
+   - Removed the outer card around `Your rooms`, removed the profile card box around the greeting, removed the 3 action buttons from every room row, removed the outer card around the Room header, and removed the 3-button footer bar from every message bubble.
+
+---
+
+## 2. File-by-File Changelog (v3.1.0 → v3.2.0)
+
+| File | What Changed in v3.2.0 |
+|---|---|
+| `app/build.gradle.kts` | Bumped `versionCode = 5` and `versionName = "3.2.0"`. |
+| `app/src/main/java/com/takidz/run/utils/ThemeHelper.java` | Added `sheetBg` and `cardOpaque` to `Palette` across all 7 themes (`warm_paper`, `warm_paper_dark`, `clean_air`, `clean_air_dark`, `deep_night`, `liquid_glass`, `liquid_glass_dark`), and added `prepareBottomSheet(...)` & `applySheetSurface(...)` to fix Bug #1 and Bug #2. |
+| `app/src/main/java/com/takidz/run/utils/MotionHelper.java` | Preserved `LIQUID_GLASS` droplet/elastic physics (`OvershootInterpolator(2.15f)` + specular glass sheen) as the gold standard and elevated `WARM_PAPER`, `CLEAN_AIR`, and `DEEP_NIGHT` with tactile scale and `animateStaggeredCard(...)` while respecting Lite Mode (`#21`). |
+| `app/src/main/res/layout/activity_main.xml` | Rebuilt Home screen layout to match Design A (`7196.png`): light top bar (`Run.` + `⋮` + `T`), 1-line greeting directly on canvas, slim 1-line online strip, slim join/create bar, overlapping lime highlighter on `Your rooms`, unnested room list, and floating `+` button. |
+| `app/src/main/res/layout/item_recent_room.xml` | Rebuilt room card to match Design A (`7196.png`): title + single-line unbreakable `#CODE`, 1-line message preview, and single clean lime status pill (`● 1 online` / `🌐 Public group`) with zero button clutter. |
+| `app/src/main/res/layout/activity_room.xml` | Rebuilt Room screen layout to match Design A (`7196.png` right phone): borderless room header on canvas, overlapping lime highlighter under title, circular `S` room orb + `⋮` button, 3 separate pill tabs (`Chat`, `Tasks`, `Notes`), inline tasks preview strip below chat messages, and slim bottom stadium composer pill. |
+| `app/src/main/res/layout/item_message.xml` | Rebuilt message bubble layout to match Design A (`7196.png`): `20dp` radius, `1dp` border, clean author + message body without the bottom 3-button text bar. |
+| `app/src/main/res/layout/item_task.xml` | Streamlined task pill card (`16dp` radius) matching Design A (`7196.png`). |
+| `app/src/main/res/layout/dialog_theme_live_preview.xml` | Switched root from `ScrollView` to `androidx.core.widget.NestedScrollView` (`overScrollMode="never"`) and isolated preview drawables to fix Bug #2. |
+| `app/src/main/res/layout/dialog_account_pairing.xml` | Switched root from `ScrollView` to `androidx.core.widget.NestedScrollView`. |
+| `app/src/main/java/com/takidz/run/ui/MainActivity.java` | Wired Design A Home structure, `Run.` lime-dot Spannable, `Recent` room sub-section, long-press room action sheet, `ThemeHelper.prepareBottomSheet(...)` on all BottomSheets, and fresh `GradientDrawable` instances in Settings Live Preview. |
+| `app/src/main/java/com/takidz/run/ui/RoomActivity.java` | Wired Design A Room header, separate pill tabs, inline tasks preview (`renderInlineTasksPreview`), `⋮` Room More BottomSheet (`showRoomMoreSheet`), and `ThemeHelper.prepareBottomSheet(...)` on all Room BottomSheets. |
+| `app/src/main/java/com/takidz/run/ui/adapters/MessagesAdapter.java` | Updated bubble stroke width (`1dp`) and tap/long-press handling to match Design A (`7196.png`). |
+| `debug.keystore` | Preserved byte-for-byte in project root (`2666` bytes). |
+
+---
+
+## 3. Honesty & Trade-offs Disclosure
+- **No APK built locally**: Per instructions, only the complete source tree + `debug.keystore` is delivered in the ZIP for CI/Mous verification.
+- **No protocol or storage changes**: All MQTT brokers (`broker.emqx.io`, `broker.hivemq.com`, `test.mosquitto.org`), topic structures (`run-v2-pro/room-...`, `run-v2-pro/signal-...`), `SharedPreferences` keys (`run_v2_pro_prefs`), and SHA-256 hashed `ANDROID_ID` serial counting (`#24`) remain 100% untouched.
