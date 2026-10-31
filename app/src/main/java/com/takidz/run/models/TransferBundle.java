@@ -20,6 +20,7 @@ public class TransferBundle {
     public boolean notificationsEnabled = true;
     public boolean touchFeedbackEnabled = true;
     public String liteModePref = "auto";
+    public String agentRoomCode = "";
     public List<RecentRoom> recentRooms = new ArrayList<>();
     public List<OnlineUser> friends = new ArrayList<>();
     public List<SavedMessage> savedMessages = new ArrayList<>();

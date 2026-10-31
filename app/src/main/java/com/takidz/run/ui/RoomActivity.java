@@ -29,6 +29,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.Window;
+import android.view.inputmethod.InputMethodManager;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
@@ -64,6 +65,7 @@ import com.takidz.run.ui.adapters.MessagesAdapter;
 import com.takidz.run.ui.adapters.TasksAdapter;
 import com.takidz.run.ui.views.RoomPatternBackgroundView;
 import com.takidz.run.ui.views.TaskProgressRingView;
+import com.takidz.run.utils.AgentHelper;
 import com.takidz.run.utils.FeedbackTouchHelper;
 import com.takidz.run.utils.LocaleHelper;
 import com.takidz.run.utils.MotionHelper;
@@ -76,13 +78,14 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Run v3.2.0 RoomActivity — Rebuilt strictly from Design A (Right Phone in 7196.png):
- * - Borderless room header directly on the paper canvas: Back + Title ("Study Group D5" with overlapping
- *   lime highlighter marker) + subtitle ("12 online · 48 messages") on start; ⋮ Room More + circular 'S' orb on end.
- * - Three separate rounded pill tabs (Chat dark pill, Tasks and Notes soft beige pills).
- * - Clean message bubbles (Salim / Amine on cream, You on warm lime) + inline task pills below messages.
- * - Single slim bottom stadium pill composer ("Write a message..." with mic & send icons).
- * - All BottomSheets use ThemeHelper.prepareBottomSheet(...) so Liquid Glass & Dark themes have 100% readable contrast.
+ * Run v3.3.0 RoomActivity — Built on v3.2.0 Design A (Right Phone in 7196.png) + Run Agent ("موس") surfaces:
+ * - Borderless room header directly on the paper canvas: Back + Title + subtitle on start; ⋮ Room More + circular orb on end.
+ * - Prominent Shared Room Note bar (cardAgentSharedNoteBar) in the Agent room for one-tap read/edit/save of RoomData.note.
+ * - Honest Agent Presence in header ("موس: متصل" vs "موس: غير متاح حالياً" in calm muted gray).
+ * - Agent typing indicator ("موس يكتب…") via /typing.
+ * - Quick Command Chips above the message input in the Agent room only (الحالة, كتم ساعة, رد بصوتك, طلب إصلاح)
+ *   that insert text into the composer without sending immediately.
+ * - Full voice message player with caption rendered directly underneath, plus APK attachment/link opening.
  */
 public class RoomActivity extends AppCompatActivity implements MqttRoomManager.RoomListener {
 
@@ -99,6 +102,7 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
 
     private String roomCode;
     private String roomName;
+    private boolean isAgentRoom = false;
     private String pendingJumpMessageId = null;
     private Message.ReplyRef activeReplyRef = null;
     private int currentTab = 0; // 0: Chat, 1: Tasks, 2: Notes
@@ -125,11 +129,15 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
     private ImageButton btnShareRoom;
     private ImageButton btnDeleteRoom;
 
-    // 3 Separate Pill Tabs
+    // 3 Separate Pill Tabs + Prominent Agent Shared Note Surface
     private LinearLayout layoutRoomTabsBar;
     private MaterialButton btnTabChat;
     private MaterialButton btnTabTasks;
     private MaterialButton btnTabNotes;
+    private MaterialCardView cardAgentSharedNoteBar;
+    private TextView tvAgentSharedNoteTitle;
+    private TextView tvAgentSharedNotePreview;
+    private MaterialButton btnOpenAgentSharedNote;
 
     // Chat Panel Views
     private LinearLayout chatPanel;
@@ -144,6 +152,8 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
     private LinearLayout replyBanner;
     private TextView tvReplyingToText;
     private ImageButton btnCancelReply;
+    private HorizontalScrollView scrollAgentQuickCommands;
+    private LinearLayout layoutAgentQuickChips;
     private MaterialCardView cardComposerBar;
     private ImageButton btnAttachFile;
     private ImageButton btnRecordVoice;
@@ -181,6 +191,7 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
             String text = etSharedNoteContent.getText().toString();
             mqttManager.updateRoomNote(text);
             tvNoteStatus.setText(prefs.isArabic() ? "تم الحفظ والمزامنة مع الغرفة" : "Saved & synced with room");
+            updateAgentSharedNoteBarPreview(text);
         }
     };
 
@@ -188,7 +199,10 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
         @Override
         public void run() {
             updateMuteHeaderUI();
-            mainHandler.postDelayed(this, 30_000L);
+            if (isAgentRoom) {
+                updateHeaderSubtitle();
+            }
+            mainHandler.postDelayed(this, 15_000L);
         }
     };
 
@@ -218,15 +232,20 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
             finish();
             return;
         }
+        isAgentRoom = prefs.isAgentRoom(roomCode) || getIntent().getBooleanExtra("is_agent_room", false);
 
         if (mqttManager.getActiveRoomCode() == null || !mqttManager.getActiveRoomCode().equalsIgnoreCase(roomCode)) {
-            mqttManager.joinRoom(roomCode, roomName != null ? roomName : ("Room " + roomCode), null);
+            String fallbackName = isAgentRoom
+                    ? (prefs.isArabic() ? "Run Agent — موس" : "Run Agent — Mous")
+                    : ("Room " + roomCode);
+            mqttManager.joinRoom(roomCode, roomName != null && !roomName.isEmpty() ? roomName : fallbackName, null);
         }
 
         setupFilePicker();
         initViews();
         setupSwipeToReplyGesture();
         setupNotesTab();
+        refreshAgentRoomSurfaces();
         applyThemeAndRoomIdentity();
         applyLocalizedRoomLabels();
         updateAdaptiveLayoutMode(getResources().getConfiguration());
@@ -277,6 +296,11 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
         btnTabTasks = findViewById(R.id.btnTabTasks);
         btnTabNotes = findViewById(R.id.btnTabNotes);
 
+        cardAgentSharedNoteBar = findViewById(R.id.cardAgentSharedNoteBar);
+        tvAgentSharedNoteTitle = findViewById(R.id.tvAgentSharedNoteTitle);
+        tvAgentSharedNotePreview = findViewById(R.id.tvAgentSharedNotePreview);
+        btnOpenAgentSharedNote = findViewById(R.id.btnOpenAgentSharedNote);
+
         chatPanel = findViewById(R.id.chatPanel);
         cardGestureHintBanner = findViewById(R.id.cardGestureHintBanner);
         tvGestureHintText = findViewById(R.id.tvGestureHintText);
@@ -289,6 +313,8 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
         replyBanner = findViewById(R.id.replyBanner);
         tvReplyingToText = findViewById(R.id.tvReplyingToText);
         btnCancelReply = findViewById(R.id.btnCancelReply);
+        scrollAgentQuickCommands = findViewById(R.id.scrollAgentQuickCommands);
+        layoutAgentQuickChips = findViewById(R.id.layoutAgentQuickChips);
         cardComposerBar = findViewById(R.id.cardComposerBar);
         btnAttachFile = findViewById(R.id.btnAttachFile);
         btnRecordVoice = findViewById(R.id.btnRecordVoice);
@@ -316,7 +342,10 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
         etSharedNoteContent = findViewById(R.id.etSharedNoteContent);
         tvNoteWordCount = findViewById(R.id.tvNoteWordCount);
 
-        String titleText = roomName != null && !roomName.isEmpty() ? roomName : ("Room " + roomCode);
+        String defaultTitle = isAgentRoom
+                ? (prefs.isArabic() ? "Run Agent — موس" : "Run Agent — Mous")
+                : ("Room " + roomCode);
+        String titleText = (roomName != null && !roomName.isEmpty()) ? roomName : defaultTitle;
         tvRoomTitle.setText(titleText);
         tvRoomCodeBadge.setText("#" + roomCode);
         updateRoomHeaderOrbText(titleText);
@@ -346,6 +375,19 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
         btnTabChat.setOnClickListener(v -> switchTab(0));
         btnTabTasks.setOnClickListener(v -> switchTab(1));
         btnTabNotes.setOnClickListener(v -> switchTab(2));
+
+        if (cardAgentSharedNoteBar != null) {
+            cardAgentSharedNoteBar.setOnClickListener(v -> {
+                FeedbackTouchHelper.onGestureTick(this, prefs, v);
+                showAgentSharedNoteEditorSheet();
+            });
+        }
+        if (btnOpenAgentSharedNote != null) {
+            btnOpenAgentSharedNote.setOnClickListener(v -> {
+                FeedbackTouchHelper.onGestureTick(this, prefs, v);
+                showAgentSharedNoteEditorSheet();
+            });
+        }
 
         LinearLayoutManager chatLm = new LinearLayoutManager(this);
         chatLm.setStackFromEnd(true);
@@ -395,6 +437,7 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
             }
         });
         messagesAdapter.setRoomCode(roomCode);
+        messagesAdapter.setAgentRoom(isAgentRoom);
         rvMessages.setAdapter(messagesAdapter);
 
         rvMessages.addOnScrollListener(new RecyclerView.OnScrollListener() {
@@ -473,6 +516,270 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
             mqttManager.addTask(taskTitle);
             etNewTaskInput.setText("");
         });
+    }
+
+    // =========================================================================
+    // v3.3.0 Run Agent Surfaces: Prominent Shared Note & Quick Command Chips
+    // =========================================================================
+
+    private void refreshAgentRoomSurfaces() {
+        isAgentRoom = prefs.isAgentRoom(roomCode);
+        if (messagesAdapter != null) {
+            messagesAdapter.setAgentRoom(isAgentRoom);
+        }
+
+        if (cardAgentSharedNoteBar != null) {
+            cardAgentSharedNoteBar.setVisibility(isAgentRoom ? View.VISIBLE : View.GONE);
+        }
+        if (scrollAgentQuickCommands != null) {
+            scrollAgentQuickCommands.setVisibility(isAgentRoom ? View.VISIBLE : View.GONE);
+        }
+
+        if (isAgentRoom) {
+            RoomData active = mqttManager.getActiveRoomData();
+            String currentNote = (active != null && active.note != null && active.note.content != null)
+                    ? active.note.content
+                    : (etSharedNoteContent != null && etSharedNoteContent.getText() != null
+                    ? etSharedNoteContent.getText().toString() : "");
+            updateAgentSharedNoteBarPreview(currentNote);
+            buildAgentQuickCommandChips();
+        }
+    }
+
+    private void updateAgentSharedNoteBarPreview(String noteContent) {
+        if (!isAgentRoom || tvAgentSharedNotePreview == null) return;
+        boolean ar = prefs.isArabic();
+        if (tvAgentSharedNoteTitle != null) {
+            tvAgentSharedNoteTitle.setText(ar ? "المذكرة المشتركة" : "Shared Room Note");
+        }
+        if (btnOpenAgentSharedNote != null) {
+            btnOpenAgentSharedNote.setText(ar ? "فتح وتحرير" : "Open & Edit");
+        }
+        String trimmed = noteContent != null ? noteContent.trim() : "";
+        if (trimmed.isEmpty()) {
+            tvAgentSharedNotePreview.setText(ar
+                    ? "ذاكرة مشتركة بينك وبين موس — اضغط للقراءة أو التحرير"
+                    : "Shared memory between you and Mous — tap to read or edit");
+        } else {
+            String singleLine = trimmed.replace('\n', ' ').replaceAll("\\s+", " ");
+            tvAgentSharedNotePreview.setText(singleLine);
+        }
+    }
+
+    /**
+     * Builds the 4 Quick Command Chips above the message input inside the Agent room only:
+     * - «الحالة» -> /حالة
+     * - «كتم ساعة» -> /كتم 1h
+     * - «رد بصوتك» -> «رد بصوتك: »
+     * - «طلب إصلاح» -> «طلب إصلاح: »
+     * Tapping inserts the text into etMessageInput without sending immediately.
+     */
+    private void buildAgentQuickCommandChips() {
+        if (layoutAgentQuickChips == null) return;
+        layoutAgentQuickChips.removeAllViews();
+        if (!isAgentRoom) return;
+
+        boolean ar = prefs.isArabic();
+        float d = getResources().getDisplayMetrics().density;
+
+        for (final AgentHelper.QuickCommand cmd : AgentHelper.QUICK_COMMANDS) {
+            MaterialButton chip = new MaterialButton(this);
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
+                    ViewGroup.LayoutParams.WRAP_CONTENT,
+                    (int) (34 * d)
+            );
+            lp.setMarginEnd((int) (8 * d));
+            chip.setLayoutParams(lp);
+            chip.setInsetTop(0);
+            chip.setInsetBottom(0);
+            chip.setMinHeight(0);
+            chip.setMinimumHeight(0);
+            chip.setMinWidth(0);
+            chip.setMinimumWidth(0);
+            chip.setPadding((int) (13 * d), 0, (int) (13 * d), 0);
+            chip.setAllCaps(false);
+            chip.setTextSize(12f);
+            chip.setTypeface(chip.getTypeface(), Typeface.BOLD);
+            chip.setText(ar ? cmd.labelAr : cmd.labelEn);
+            chip.setCornerRadius((int) (17 * d));
+            chip.setBackgroundTintList(ColorStateList.valueOf(palette.panelSoft));
+            chip.setTextColor(palette.text);
+            chip.setStrokeColor(ColorStateList.valueOf(ThemeHelper.withAlpha(roomAccentColor, palette.isLight ? 150 : 120)));
+            chip.setStrokeWidth((int) (1 * d));
+
+            chip.setOnClickListener(v -> {
+                FeedbackTouchHelper.onGestureTick(this, prefs, v);
+                MotionHelper.animateButtonPulse(chip, prefs.isLiteModeEnabled());
+                insertQuickCommandIntoInput(cmd.insertText);
+            });
+
+            layoutAgentQuickChips.addView(chip);
+        }
+    }
+
+    private void insertQuickCommandIntoInput(String textToInsert) {
+        if (etMessageInput == null || textToInsert == null) return;
+        if (currentTab != 0 && !isTwoPaneTabletDesk) {
+            switchTab(0);
+        }
+        etMessageInput.setText(textToInsert);
+        etMessageInput.setSelection(textToInsert.length());
+        etMessageInput.requestFocus();
+        InputMethodManager imm = (InputMethodManager) getSystemService(Context.INPUT_METHOD_SERVICE);
+        if (imm != null) {
+            imm.showSoftInput(etMessageInput, InputMethodManager.SHOW_IMPLICIT);
+        }
+    }
+
+    /**
+     * Prominent Shared Note Editor Sheet for the Agent Room (#3 in v3.3.0 spec):
+     * Reads, edits, and saves RoomData.note by republishing room state via mqttManager.updateRoomNote(...).
+     */
+    private void showAgentSharedNoteEditorSheet() {
+        boolean ar = prefs.isArabic();
+        BottomSheetDialog dialog = new BottomSheetDialog(this, R.style.Theme_RunApp);
+        float d = getResources().getDisplayMetrics().density;
+
+        LinearLayout root = new LinearLayout(this);
+        LocaleHelper.applyViewDirection(root, ar);
+        root.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (20 * d);
+        root.setPadding(pad, (int) (16 * d), pad, (int) (24 * d));
+
+        View handle = new View(this);
+        LinearLayout.LayoutParams hLp = new LinearLayout.LayoutParams((int) (38 * d), (int) (4 * d));
+        hLp.gravity = Gravity.CENTER_HORIZONTAL;
+        hLp.bottomMargin = (int) (12 * d);
+        handle.setLayoutParams(hLp);
+        GradientDrawable hBg = new GradientDrawable();
+        hBg.setCornerRadius(2 * d);
+        hBg.setColor(palette.panelHover);
+        handle.setBackground(hBg);
+        root.addView(handle);
+
+        TextView tvTitle = new TextView(this);
+        tvTitle.setText(ar ? "📝 المذكرة المشتركة (Run Agent — موس)" : "📝 Shared Room Note (Run Agent — Mous)");
+        tvTitle.setTextColor(palette.text);
+        tvTitle.setTextSize(17.5f);
+        tvTitle.setTypeface(tvTitle.getTypeface(), Typeface.BOLD);
+        root.addView(tvTitle);
+
+        RoomData activeData = mqttManager.getActiveRoomData();
+        String currentNote = (activeData != null && activeData.note != null && activeData.note.content != null)
+                ? activeData.note.content
+                : (etSharedNoteContent != null && etSharedNoteContent.getText() != null
+                ? etSharedNoteContent.getText().toString() : "");
+        String lastEditor = (activeData != null && activeData.note != null && activeData.note.lastEditedBy != null
+                && !activeData.note.lastEditedBy.isEmpty())
+                ? activeData.note.lastEditedBy
+                : null;
+
+        TextView tvSub = new TextView(this);
+        String subText = ar
+                ? "ذاكرة مشتركة دائمة بينك وبين موس في نفس الغرفة (تُحفظ وتُنشر عبر حالة الغرفة)."
+                : "Shared persistent note between you and Mous (saved & republished via room state).";
+        if (lastEditor != null) {
+            subText += ar ? (" · آخر تعديل: " + lastEditor) : (" · Last edited by: " + lastEditor);
+        }
+        tvSub.setText(subText);
+        tvSub.setTextColor(palette.muted);
+        tvSub.setTextSize(12f);
+        LinearLayout.LayoutParams subLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        subLp.topMargin = (int) (4 * d);
+        subLp.bottomMargin = (int) (12 * d);
+        tvSub.setLayoutParams(subLp);
+        root.addView(tvSub);
+
+        EditText etModalNote = new EditText(this);
+        LinearLayout.LayoutParams editLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, (int) (190 * d)
+        );
+        etModalNote.setLayoutParams(editLp);
+        etModalNote.setGravity(Gravity.TOP | Gravity.START);
+        etModalNote.setPadding((int) (14 * d), (int) (12 * d), (int) (14 * d), (int) (12 * d));
+        etModalNote.setText(currentNote);
+        etModalNote.setSelection(currentNote.length());
+        etModalNote.setHint(ar
+                ? "اكتب ملاحظات أو تفضيلات أو مهام مشتركة ليقرأها موس ويحدّثها…"
+                : "Write shared notes, context, or instructions for Mous…");
+        etModalNote.setTextColor(palette.text);
+        etModalNote.setHintTextColor(palette.subtle);
+        etModalNote.setTextSize(14f);
+
+        GradientDrawable editorBg = new GradientDrawable();
+        editorBg.setCornerRadius(16 * d);
+        editorBg.setColor(palette.panelSoft);
+        editorBg.setStroke((int) (1 * d), palette.panelHover);
+        etModalNote.setBackground(editorBg);
+        root.addView(etModalNote);
+
+        // Action row: Save & Republish + Copy + Switch to full Notes tab
+        LinearLayout btnRow = new LinearLayout(this);
+        btnRow.setOrientation(LinearLayout.HORIZONTAL);
+        LinearLayout.LayoutParams rowLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        rowLp.topMargin = (int) (14 * d);
+        btnRow.setLayoutParams(rowLp);
+
+        MaterialButton btnCopyNote = new MaterialButton(this);
+        LinearLayout.LayoutParams copyLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.WRAP_CONTENT, (int) (46 * d)
+        );
+        copyLp.setMarginEnd((int) (8 * d));
+        btnCopyNote.setLayoutParams(copyLp);
+        btnCopyNote.setText(ar ? "نسخ" : "Copy");
+        btnCopyNote.setAllCaps(false);
+        btnCopyNote.setCornerRadius((int) (14 * d));
+        btnCopyNote.setBackgroundTintList(ColorStateList.valueOf(palette.panelSoft));
+        btnCopyNote.setTextColor(palette.text);
+        btnCopyNote.setOnClickListener(v -> {
+            String text = etModalNote.getText() != null ? etModalNote.getText().toString() : "";
+            copyToClipboard("Shared Note", text, ar ? "تم نسخ المذكرة المشتركة" : "Copied shared note");
+        });
+        btnRow.addView(btnCopyNote);
+
+        MaterialButton btnSaveNote = new MaterialButton(this);
+        LinearLayout.LayoutParams saveLp = new LinearLayout.LayoutParams(
+                0, (int) (46 * d), 1f
+        );
+        btnSaveNote.setLayoutParams(saveLp);
+        btnSaveNote.setText(ar ? "حفظ ومزامنة المذكرة" : "Save & Sync Note");
+        btnSaveNote.setAllCaps(false);
+        btnSaveNote.setTypeface(btnSaveNote.getTypeface(), Typeface.BOLD);
+        btnSaveNote.setCornerRadius((int) (14 * d));
+        btnSaveNote.setBackgroundTintList(ColorStateList.valueOf(roomAccentColor));
+        btnSaveNote.setTextColor(palette.accentInk);
+        btnSaveNote.setOnClickListener(v -> {
+            String updated = etModalNote.getText() != null ? etModalNote.getText().toString() : "";
+            mainHandler.removeCallbacks(noteDebounceSaveRunnable);
+            isUpdatingNoteRemotely = true;
+            if (etSharedNoteContent != null) {
+                etSharedNoteContent.setText(updated);
+                updateNoteStats(updated);
+            }
+            isUpdatingNoteRemotely = false;
+            mqttManager.updateRoomNote(updated);
+            updateAgentSharedNoteBarPreview(updated);
+            if (tvNoteStatus != null) {
+                tvNoteStatus.setText(ar ? "تم الحفظ والمزامنة مع الغرفة" : "Saved & synced with room");
+            }
+            FeedbackTouchHelper.onMessageSent(this, prefs, btnSaveNote);
+            Toast.makeText(this,
+                    ar ? "تم حفظ المذكرة المشتركة ومزامنتها" : "Shared note saved & synced",
+                    Toast.LENGTH_SHORT).show();
+            dialog.dismiss();
+        });
+        btnRow.addView(btnSaveNote);
+
+        root.addView(btnRow);
+
+        dialog.setContentView(root);
+        ThemeHelper.prepareBottomSheet(dialog, root, palette);
+        MotionHelper.animatePanelEntrance(root, prefs.isLiteModeEnabled());
+        dialog.show();
     }
 
     /**
@@ -721,7 +1028,7 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
     }
 
     // =========================================================================
-    // ⋮ ROOM MORE SHEET (Houses Room Identity, Invite, Copy Code, Mute, Archive, Leave)
+    // ⋮ ROOM MORE SHEET (Houses Shared Note, Agent Pin, Room Identity, Invite, Copy Code, Mute, Archive, Leave)
     // =========================================================================
 
     private void showRoomMoreSheet() {
@@ -754,6 +1061,22 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
         tvTitle.setPadding((int) (6 * d), 0, (int) (6 * d), (int) (8 * d));
         container.addView(tvTitle);
 
+        addRoomOptionRow(container, "📝", ar ? "المذكرة المشتركة للغرفة" : "Shared Room Note", dialog, this::showAgentSharedNoteEditorSheet);
+        addRoomOptionRow(container, "🤖", isAgentRoom
+                ? (ar ? "إلغاء تثبيت هذه الغرفة كغرفة Run Agent" : "Unpin as Run Agent Room")
+                : (ar ? "تثبيت هذه الغرفة كغرفة Run Agent (موس)" : "Pin as Run Agent Room (Mous)"), dialog, () -> {
+            if (isAgentRoom) {
+                prefs.setAgentRoomCode("");
+                Toast.makeText(this, ar ? "تم إلغاء تثبيت غرفة الوكيل" : "Unpinned Run Agent room", Toast.LENGTH_SHORT).show();
+            } else {
+                prefs.setAgentRoomCode(roomCode);
+                mqttManager.refreshAgentRoomSubscription();
+                Toast.makeText(this, ar ? ("تم تثبيت الغرفة #" + roomCode + " كغرفة Run Agent") : ("Pinned #" + roomCode + " as Run Agent room"), Toast.LENGTH_SHORT).show();
+            }
+            refreshAgentRoomSurfaces();
+            applyThemeAndRoomIdentity();
+            updateHeaderSubtitle();
+        });
         addRoomOptionRow(container, "🎨", ar ? "هوية الغرفة (اللون والخلفية)" : "Room Identity (Color & Pattern)", dialog, this::showRoomIdentitySheet);
         addRoomOptionRow(container, "🔗", ar ? "مشاركة رابط الدعوة الذكي" : "Share Smart Invite Link", dialog, this::showSmartInviteShareDialog);
         addRoomOptionRow(container, "📋", ar ? ("نسخ رمز الغرفة (#" + roomCode + ")") : ("Copy Room Code (#" + roomCode + ")"), dialog, () ->
@@ -1016,7 +1339,9 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
 
             @Override
             public void onTextChanged(CharSequence s, int start, int before, int count) {
-                updateNoteStats(s != null ? s.toString() : "");
+                String current = s != null ? s.toString() : "";
+                updateNoteStats(current);
+                updateAgentSharedNoteBarPreview(current);
                 if (!isUpdatingNoteRemotely) {
                     tvNoteStatus.setText(prefs.isArabic() ? "جارٍ الكتابة… (مزامنة تلقائية)" : "Editing… (auto-syncing)");
                     mainHandler.removeCallbacks(noteDebounceSaveRunnable);
@@ -1032,6 +1357,7 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
             mainHandler.removeCallbacks(noteDebounceSaveRunnable);
             String text = etSharedNoteContent.getText().toString();
             mqttManager.updateRoomNote(text);
+            updateAgentSharedNoteBarPreview(text);
             tvNoteStatus.setText(prefs.isArabic() ? "تمت المزامنة الآن" : "Synced with room now");
         });
 
@@ -1053,6 +1379,7 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
                     .setPositiveButton(ar ? "مسح" : "Clear", (dialog, which) -> {
                         etSharedNoteContent.setText("");
                         mqttManager.updateRoomNote("");
+                        updateAgentSharedNoteBarPreview("");
                         tvNoteStatus.setText(ar ? "تم مسح الملاحظات" : "Notes cleared");
                     })
                     .setNegativeButton(ar ? "إلغاء" : "Cancel", null)
@@ -1154,7 +1481,6 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
             row.setGravity(Gravity.CENTER_VERTICAL);
             row.setPadding((int) (12 * d), (int) (9 * d), (int) (12 * d), (int) (9 * d));
 
-            // Custom rounded square checkbox badge matching 7196.png ("[✓]" lime square or "[ ]" outlined square)
             TextView checkBadge = new TextView(this);
             int boxSize = (int) (22 * d);
             LinearLayout.LayoutParams boxLp = new LinearLayout.LayoutParams(boxSize, boxSize);
@@ -1520,9 +1846,9 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
     }
 
     private void handleVoicePlayback(Message message) {
-        if (message.file == null) return;
-        String effectiveUrl = message.file.getEffectiveUrl();
-        if (effectiveUrl.isEmpty()) return;
+        if (message == null) return;
+        String effectiveUrl = message.getEffectiveMediaUrl();
+        if (effectiveUrl == null || effectiveUrl.isEmpty()) return;
 
         if (message.id != null && message.id.equals(voiceHelper.getPlayingMessageId())) {
             voiceHelper.stopPlayback();
@@ -1624,9 +1950,14 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
     }
 
     /**
-     * Matches Design A (7196.png): single-letter uppercase room initial inside the circular lime orb ('S').
+     * Matches Design A (7196.png): single-letter uppercase room initial inside the circular lime orb ('S'),
+     * or '🤖' when inside the pinned Run Agent room.
      */
     private void updateRoomHeaderOrbText(String name) {
+        if (isAgentRoom) {
+            tvRoomHeaderOrb.setText("🤖");
+            return;
+        }
         String clean = (name != null && !name.trim().isEmpty()) ? name.trim() : roomCode;
         String initial = clean.substring(0, 1).toUpperCase(Locale.US);
         tvRoomHeaderOrb.setText(initial);
@@ -1637,13 +1968,16 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
         btnTabChat.setText(ar ? "المحادثة" : "Chat");
         btnTabTasks.setText(ar ? "المهام" : "Tasks");
         btnTabNotes.setText(ar ? "الملاحظات" : "Notes");
-        etMessageInput.setHint(ar ? "اكتب رسالة..." : "Write a message...");
+        etMessageInput.setHint(isAgentRoom
+                ? (ar ? "اكتب رسالة لموس…" : "Message Mous…")
+                : (ar ? "اكتب رسالة..." : "Write a message..."));
         etNewTaskInput.setHint(ar ? "أضف مهمة مشتركة…" : "Add a shared task…");
         btnAddTask.setText(ar ? "إضافة" : "Add");
         tvGestureHintText.setText(ar
                 ? "💡 اسحب الرسالة للرد • اضغط مطولاً للتفاعل أو الحفظ أو الترجمة"
                 : "💡 Swipe a message to reply • Long-press to react, save, or translate");
         btnDismissGestureHint.setText(ar ? "حسناً" : "Got it");
+        refreshAgentRoomSurfaces();
         updateMuteHeaderUI();
         updateHeaderSubtitle();
     }
@@ -1685,6 +2019,21 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
 
         btnDeleteRoom.setColorFilter(palette.text);
         updateMuteHeaderUI();
+
+        if (cardAgentSharedNoteBar != null) {
+            cardAgentSharedNoteBar.setCardBackgroundColor(palette.panel);
+            cardAgentSharedNoteBar.setStrokeColor(ThemeHelper.withAlpha(roomAccentColor, palette.isLight ? 150 : 120));
+            if (tvAgentSharedNoteTitle != null) tvAgentSharedNoteTitle.setTextColor(palette.text);
+            if (tvAgentSharedNotePreview != null) tvAgentSharedNotePreview.setTextColor(palette.muted);
+            if (btnOpenAgentSharedNote != null) {
+                btnOpenAgentSharedNote.setBackgroundTintList(ColorStateList.valueOf(roomAccentColor));
+                btnOpenAgentSharedNote.setTextColor(palette.accentInk);
+            }
+        }
+
+        if (isAgentRoom) {
+            buildAgentQuickCommandChips();
+        }
 
         cardGestureHintBanner.setCardBackgroundColor(palette.panel);
         cardGestureHintBanner.setStrokeColor(palette.panelHover);
@@ -1730,18 +2079,29 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
     }
 
     /**
-     * Matches Design A (7196.png): "12 online · 48 messages" in normal connected state,
-     * and appends calm signal status if weak or reconnecting (#29).
+     * Matches Design A (7196.png): "12 online · 48 messages" in normal rooms,
+     * or honest Agent presence ("موس: متصل" vs "موس: غير متاح حالياً" in calm muted gray) in the Agent room.
      */
     private void updateHeaderSubtitle() {
         boolean ar = prefs.isArabic();
         MqttRoomManager.ConnectionQuality q = mqttManager.getConnectionQuality();
         String base;
-        if (ar) {
-            base = LocaleHelper.formatNumber(roomOnlineCount, true) + " متصل · "
-                    + LocaleHelper.formatNumber(lastMessageCount, true) + " رسالة";
+        if (isAgentRoom) {
+            boolean agentOnline = mqttManager.isAgentOnlineInRoom(roomCode);
+            if (ar) {
+                String agentStatus = agentOnline ? "موس: متصل" : "موس: غير متاح حالياً";
+                base = agentStatus + " · " + LocaleHelper.formatNumber(lastMessageCount, true) + " رسالة";
+            } else {
+                String agentStatus = agentOnline ? "Mous: Online" : "Mous: Currently unavailable";
+                base = agentStatus + " · " + lastMessageCount + (lastMessageCount == 1 ? " message" : " messages");
+            }
         } else {
-            base = roomOnlineCount + " online · " + lastMessageCount + (lastMessageCount == 1 ? " message" : " messages");
+            if (ar) {
+                base = LocaleHelper.formatNumber(roomOnlineCount, true) + " متصل · "
+                        + LocaleHelper.formatNumber(lastMessageCount, true) + " رسالة";
+            } else {
+                base = roomOnlineCount + " online · " + lastMessageCount + (lastMessageCount == 1 ? " message" : " messages");
+            }
         }
 
         if (q == MqttRoomManager.ConnectionQuality.CONNECTED) {
@@ -1760,6 +2120,8 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
     protected void onResume() {
         super.onResume();
         LocaleHelper.applyLocaleAndLayoutDirection(this, prefs);
+        isAgentRoom = prefs.isAgentRoom(roomCode);
+        refreshAgentRoomSurfaces();
         mqttManager.setAppForeground(true);
         mqttManager.setChatActivelyVisible(true);
         mqttManager.addRoomListener(this);
@@ -1789,7 +2151,10 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
         runOnUiThread(() -> {
             if (roomData == null) return;
             boolean ar = prefs.isArabic();
-            if (roomData.meta != null && roomData.meta.name != null) {
+            if (isAgentRoom) {
+                tvRoomTitle.setText(ar ? "Run Agent — موس" : "Run Agent — Mous");
+                updateRoomHeaderOrbText(tvRoomTitle.getText().toString());
+            } else if (roomData.meta != null && roomData.meta.name != null) {
                 tvRoomTitle.setText(roomData.meta.name);
                 updateRoomHeaderOrbText(roomData.meta.name);
             }
@@ -1825,6 +2190,7 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
             lastMessageCount = newCount;
             updateHeaderSubtitle();
 
+            messagesAdapter.setAgentRoom(isAgentRoom);
             messagesAdapter.setMessages(msgs);
 
             if (pendingJumpMessageId != null) {
@@ -1873,11 +2239,14 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
                     updateNoteStats(remoteNote);
                     isUpdatingNoteRemotely = false;
                 }
+                updateAgentSharedNoteBarPreview(remoteNote);
                 String author = (roomData.note.lastEditedBy != null && !roomData.note.lastEditedBy.isEmpty())
                         ? roomData.note.lastEditedBy : (ar ? "مستخدم" : "User");
                 tvNoteStatus.setText(ar
                         ? ("آخر تعديل بواسطة " + author + " • متزامن")
                         : ("Last edited by " + author + " • Synced"));
+            } else {
+                updateAgentSharedNoteBarPreview("");
             }
         });
     }
@@ -1910,8 +2279,22 @@ public class RoomActivity extends AppCompatActivity implements MqttRoomManager.R
                 tvTypingIndicator.setVisibility(View.GONE);
             } else {
                 tvTypingIndicator.setVisibility(View.VISIBLE);
-                if (typingNames.size() == 1) {
-                    tvTypingIndicator.setText(typingNames.get(0) + (ar ? " يكتب الآن…" : " is typing…"));
+                boolean agentTyping = false;
+                for (String name : typingNames) {
+                    if (AgentHelper.isAgentDisplayName(name) || "موس".equals(name)) {
+                        agentTyping = true;
+                        break;
+                    }
+                }
+                if (isAgentRoom && agentTyping && typingNames.size() == 1) {
+                    tvTypingIndicator.setText(ar ? "موس يكتب…" : "Mous is typing…");
+                } else if (typingNames.size() == 1) {
+                    String single = typingNames.get(0);
+                    if ("موس".equals(single)) {
+                        tvTypingIndicator.setText(ar ? "موس يكتب…" : "Mous is typing…");
+                    } else {
+                        tvTypingIndicator.setText(single + (ar ? " يكتب الآن…" : " is typing…"));
+                    }
                 } else {
                     tvTypingIndicator.setText(typingNames.size() + (ar ? " أعضاء يكتبون الآن…" : " members are typing…"));
                 }

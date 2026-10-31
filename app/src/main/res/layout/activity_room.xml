@@ -62,7 +62,6 @@
                         android:layout_marginEnd="8dp"
                         android:orientation="vertical">
 
-                        <!-- Room Title with Overlapping Lime Marker Bar (Matches 7196.png: "Study Group D5") -->
                         <FrameLayout
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content">
@@ -88,7 +87,7 @@
                                 android:textStyle="bold" />
                         </FrameLayout>
 
-                        <!-- Subtitle: "12 online · 48 messages" + Timed Mute Pill -->
+                        <!-- Subtitle: "12 online · 48 messages" or Agent presence ("متصل" / "غير متاح حالياً") -->
                         <LinearLayout
                             android:layout_width="wrap_content"
                             android:layout_height="wrap_content"
@@ -125,7 +124,7 @@
                         </LinearLayout>
                     </LinearLayout>
 
-                    <!-- Hidden legacy header controls (accessible via ⋮ Room More sheet so header stays clean like 7196.png) -->
+                    <!-- Hidden legacy header controls -->
                     <TextView
                         android:id="@+id/tvRoomCodeBadge"
                         android:layout_width="1dp"
@@ -153,7 +152,7 @@
                         android:visibility="gone"
                         android:contentDescription="Share" />
 
-                    <!-- ⋮ Room More Button (opens sheet with Identity, Share Invite, Copy Code, Mute, Archive, Leave/Delete) -->
+                    <!-- ⋮ Room More Button -->
                     <ImageButton
                         android:id="@+id/btnDeleteRoom"
                         android:layout_width="36dp"
@@ -164,7 +163,7 @@
                         android:src="@drawable/ic_more_vert"
                         app:tint="@color/run_text" />
 
-                    <!-- Circular Lime Room Initials Orb on Top-Right ('S' in 7196.png) -->
+                    <!-- Circular Lime Room Initials Orb on Top-Right -->
                     <TextView
                         android:id="@+id/tvRoomHeaderOrb"
                         android:layout_width="40dp"
@@ -235,6 +234,87 @@
                         android:textStyle="bold"
                         app:cornerRadius="18dp" />
                 </LinearLayout>
+
+                <!-- ================= v3.3.0 REQUIREMENT 3: PROMINENT SHARED NOTE BAR IN AGENT ROOM ================= -->
+                <com.google.android.material.card.MaterialCardView
+                    android:id="@+id/cardAgentSharedNoteBar"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:layout_marginTop="10dp"
+                    android:clickable="true"
+                    android:focusable="true"
+                    android:visibility="gone"
+                    app:cardBackgroundColor="@color/run_panel"
+                    app:cardCornerRadius="18dp"
+                    app:cardElevation="0dp"
+                    app:strokeColor="@color/run_panel_hover"
+                    app:strokeWidth="1dp">
+
+                    <LinearLayout
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal"
+                        android:paddingStart="14dp"
+                        android:paddingTop="9dp"
+                        android:paddingEnd="10dp"
+                        android:paddingBottom="9dp">
+
+                        <ImageView
+                            android:id="@+id/ivAgentSharedNoteIcon"
+                            android:layout_width="18dp"
+                            android:layout_height="18dp"
+                            android:src="@drawable/ic_note"
+                            app:tint="@color/run_text"
+                            android:contentDescription="Shared Note" />
+
+                        <LinearLayout
+                            android:layout_width="0dp"
+                            android:layout_height="wrap_content"
+                            android:layout_marginStart="10dp"
+                            android:layout_marginEnd="8dp"
+                            android:layout_weight="1"
+                            android:orientation="vertical">
+
+                            <TextView
+                                android:id="@+id/tvAgentSharedNoteTitle"
+                                android:layout_width="wrap_content"
+                                android:layout_height="wrap_content"
+                                android:maxLines="1"
+                                android:singleLine="true"
+                                android:text="المذكرة المشتركة"
+                                android:textColor="@color/run_text"
+                                android:textSize="13sp"
+                                android:textStyle="bold" />
+
+                            <TextView
+                                android:id="@+id/tvAgentSharedNotePreview"
+                                android:layout_width="match_parent"
+                                android:layout_height="wrap_content"
+                                android:ellipsize="end"
+                                android:maxLines="1"
+                                android:singleLine="true"
+                                android:text="ذاكرة مشتركة مع موس — اضغط للقراءة أو التحرير"
+                                android:textColor="@color/run_muted"
+                                android:textSize="11.5sp" />
+                        </LinearLayout>
+
+                        <com.google.android.material.button.MaterialButton
+                            android:id="@+id/btnOpenAgentSharedNote"
+                            style="@style/Widget.Material3.Button.TonalButton"
+                            android:layout_width="wrap_content"
+                            android:layout_height="30dp"
+                            android:insetTop="0dp"
+                            android:insetBottom="0dp"
+                            android:paddingStart="12dp"
+                            android:paddingEnd="12dp"
+                            android:text="المذكرة المشتركة"
+                            android:textSize="11sp"
+                            android:textStyle="bold"
+                            app:cornerRadius="15dp" />
+                    </LinearLayout>
+                </com.google.android.material.card.MaterialCardView>
+
             </LinearLayout>
         </com.google.android.material.card.MaterialCardView>
 
@@ -334,7 +414,7 @@
                         app:cornerRadius="18dp" />
                 </RelativeLayout>
 
-                <!-- Inline Tasks Preview Strip in Chat (Matches Design A 7196.png: "[✓] Revise Analysis ch.2") -->
+                <!-- Inline Tasks Preview Strip in Chat -->
                 <LinearLayout
                     android:id="@+id/layoutInlineTasksPreview"
                     android:layout_width="match_parent"
@@ -345,7 +425,7 @@
                     android:paddingBottom="6dp"
                     android:visibility="gone" />
 
-                <!-- Typing indicator banner -->
+                <!-- Typing indicator banner (v3.3.0 Requirement 6: shows "موس يكتب…" in Agent room) -->
                 <TextView
                     android:id="@+id/tvTypingIndicator"
                     android:layout_width="match_parent"
@@ -353,10 +433,10 @@
                     android:paddingStart="22dp"
                     android:paddingTop="2dp"
                     android:paddingEnd="22dp"
-                    android:paddingBottom="2dp"
+                    android:paddingBottom="4dp"
                     android:textColor="@color/run_muted"
-                    android:textSize="11.5sp"
-                    android:textStyle="italic"
+                    android:textSize="12sp"
+                    android:textStyle="bold|italic"
                     android:visibility="gone" />
 
                 <!-- Voice recording live countdown banner -->
@@ -412,7 +492,27 @@
                         app:tint="@color/run_muted" />
                 </LinearLayout>
 
-                <!-- Slim Stadium Pill Composer Bar (Matches Bottom of Right Phone in 7196.png) -->
+                <!-- ================= v3.3.0 REQUIREMENT 7: QUICK COMMAND CHIPS BAR (AGENT ROOM ONLY) ================= -->
+                <HorizontalScrollView
+                    android:id="@+id/scrollAgentQuickCommands"
+                    android:layout_width="match_parent"
+                    android:layout_height="wrap_content"
+                    android:clipToPadding="false"
+                    android:paddingStart="18dp"
+                    android:paddingEnd="18dp"
+                    android:paddingBottom="6dp"
+                    android:scrollbars="none"
+                    android:visibility="gone">
+
+                    <LinearLayout
+                        android:id="@+id/layoutAgentQuickChips"
+                        android:layout_width="wrap_content"
+                        android:layout_height="wrap_content"
+                        android:gravity="center_vertical"
+                        android:orientation="horizontal" />
+                </HorizontalScrollView>
+
+                <!-- Slim Stadium Pill Composer Bar -->
                 <com.google.android.material.card.MaterialCardView
                     android:id="@+id/cardComposerBar"
                     android:layout_width="match_parent"

@@ -14,6 +14,7 @@ import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.DiffUtil;
@@ -25,6 +26,7 @@ import com.google.android.material.card.MaterialCardView;
 import com.takidz.run.R;
 import com.takidz.run.models.Message;
 import com.takidz.run.models.RoomData;
+import com.takidz.run.utils.AgentHelper;
 import com.takidz.run.utils.LocaleHelper;
 import com.takidz.run.utils.MotionHelper;
 import com.takidz.run.utils.PrefsManager;
@@ -33,14 +35,20 @@ import com.takidz.run.utils.ThemeHelper;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 
 /**
- * Run v3.2.0 MessagesAdapter — Rebuilt to match Design A (7196.png):
- * - Clean, airy message bubbles with 1dp subtle stroke and 20dp corner radius.
- * - Incoming bubbles ("Salim", "Amine") use warm cream surface; outgoing bubbles ("You") use signature warm lime (#D9F27E).
- * - Eliminates bottom 3-button clutter from every bubble; actions live on swipe-to-reply (#18) and long-press sheet (#18, #28, #31).
+ * Run v3.3.0 MessagesAdapter:
+ * - Preserves v3.2.0 Design A bubble styling across all 7 themes.
+ * - Requirement 4: Renders incoming/outgoing voice messages (type=voice or file.voice=true) with a full player
+ *   and displays any attached caption text directly underneath the player without breaking normal rooms.
+ * - Requirement 5: In the Agent room only, displays honest receipts derived from Message.deliveredTo and Message.readBy:
+ *   "✓ وصلت إلى الجسر" when an agent-* ID is in deliveredTo, and "✓✓ قرأها موس" when an agent-* ID is in readBy.
+ *   Normal rooms remain 100% unchanged.
+ * - Requirement 8: Ensures file attachments and .apk links in the room open/install cleanly via the existing
+ *   Intent.ACTION_VIEW path without adding any custom package installer.
  */
 public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgViewHolder> {
 
@@ -60,6 +68,7 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgVie
     private final String currentUserId;
     private final MessageInteractionListener listener;
     private String roomCode = "";
+    private boolean isAgentRoom = false;
     private List<Message> messages = new ArrayList<>();
     private Map<String, RoomData.AvatarProfile> avatars = new HashMap<>();
     private ThemeHelper.Palette palette;
@@ -79,6 +88,11 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgVie
 
     public void setRoomCode(String code) {
         this.roomCode = code != null ? code : "";
+        this.isAgentRoom = prefs.isAgentRoom(this.roomCode);
+    }
+
+    public void setIsAgentRoom(boolean agentRoom) {
+        this.isAgentRoom = agentRoom;
     }
 
     public void setRoomAccentColor(int accentColor) {
@@ -183,7 +197,9 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgVie
                         && o.showingTranslated == n.showingTranslated
                         && o.ackState == n.ackState
                         && Objects.equals(o.caption, n.caption)
-                        && Objects.equals(o.reactions, n.reactions);
+                        && Objects.equals(o.reactions, n.reactions)
+                        && Objects.equals(o.deliveredTo, n.deliveredTo)
+                        && Objects.equals(o.readBy, n.readBy);
             }
         });
 
@@ -203,6 +219,7 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgVie
         Message msg = messages.get(position);
         boolean isArabic = prefs.isArabic();
         boolean isMine = msg.userId != null && msg.userId.equals(currentUserId);
+        boolean isFromAgent = !isMine && (AgentHelper.isAgentUserId(msg.userId) || AgentHelper.isAgentDisplayName(msg.author));
         boolean isHighlighted = msg.id != null && msg.id.equals(highlightedMessageId);
         boolean isSaved = prefs.isMessageSaved(roomCode, msg.id);
         float d = context.getResources().getDisplayMetrics().density;
@@ -212,7 +229,8 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgVie
         holder.bubbleCard.setLayoutParams(params);
 
         int bubbleBg = isHighlighted ? palette.panelSoft : (isMine ? palette.ownBubble : palette.panel);
-        int bubbleStroke = isHighlighted ? roomAccentColor : (isMine ? palette.ownBubbleStroke : palette.panelHover);
+        int bubbleStroke = isHighlighted ? roomAccentColor
+                : (isMine ? palette.ownBubbleStroke : (isFromAgent ? ThemeHelper.withAlpha(roomAccentColor, 140) : palette.panelHover));
         int mainTextColor = isMine ? palette.ownBubbleText : palette.text;
         int subTextColor = isMine ? ThemeHelper.withAlpha(palette.ownBubbleText, 165) : palette.muted;
 
@@ -221,7 +239,16 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgVie
         holder.bubbleCard.setStrokeWidth((int) ((isHighlighted ? 2.2f : 1f) * d));
 
         String youLabel = isArabic ? "أنت" : "You";
-        holder.tvAuthor.setText(isMine ? youLabel : (msg.author != null && !msg.author.isEmpty() ? msg.author : "Guest"));
+        String authorLabel;
+        if (isMine) {
+            authorLabel = youLabel;
+        } else if (isFromAgent) {
+            authorLabel = (msg.author != null && !msg.author.isEmpty() && !msg.author.toLowerCase(Locale.US).startsWith("agent-"))
+                    ? msg.author : "موس";
+        } else {
+            authorLabel = (msg.author != null && !msg.author.isEmpty()) ? msg.author : "Guest";
+        }
+        holder.tvAuthor.setText(authorLabel);
         holder.tvAuthor.setTextColor(isMine ? mainTextColor : palette.text);
 
         holder.tvSavedBadge.setVisibility(isSaved ? View.VISIBLE : View.GONE);
@@ -238,20 +265,41 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgVie
         holder.tvTime.setText(LocaleHelper.formatIsoTime(msg.createdAt, isArabic));
         holder.tvTime.setTextColor(subTextColor);
 
+        // #26 & v3.3.0 Requirement 5: Honest Receipts in Agent Room Only vs Normal Rooms
         if (isMine) {
             holder.tvAckStatus.setVisibility(View.VISIBLE);
-            if (msg.ackState <= 0) {
-                holder.tvAckStatus.setText("○");
-                holder.tvAckStatus.setTextColor(subTextColor);
-            } else if (msg.ackState == 1) {
-                holder.tvAckStatus.setText("✓");
-                holder.tvAckStatus.setTextColor(subTextColor);
-            } else if (msg.ackState == 2) {
-                holder.tvAckStatus.setText("✓✓");
-                holder.tvAckStatus.setTextColor(subTextColor);
+            if (isAgentRoom) {
+                // Requirement 5: Derived strictly from Message.deliveredTo and Message.readBy for agent-* IDs
+                boolean readByAgent = AgentHelper.containsAgentId(msg.readBy);
+                boolean deliveredToAgent = AgentHelper.containsAgentId(msg.deliveredTo);
+                if (readByAgent) {
+                    holder.tvAckStatus.setText("✓✓ قرأها موس");
+                    holder.tvAckStatus.setTextColor(palette.isLight ? palette.success : palette.accent);
+                } else if (deliveredToAgent) {
+                    holder.tvAckStatus.setText("✓ وصلت إلى الجسر");
+                    holder.tvAckStatus.setTextColor(subTextColor);
+                } else if (msg.ackState <= 0) {
+                    holder.tvAckStatus.setText("○");
+                    holder.tvAckStatus.setTextColor(subTextColor);
+                } else {
+                    holder.tvAckStatus.setText("✓");
+                    holder.tvAckStatus.setTextColor(subTextColor);
+                }
             } else {
-                holder.tvAckStatus.setText("✓✓");
-                holder.tvAckStatus.setTextColor(palette.isLight ? palette.success : palette.accent);
+                // Normal rooms: keep exact existing receipt behavior unchanged
+                if (msg.ackState <= 0) {
+                    holder.tvAckStatus.setText("○");
+                    holder.tvAckStatus.setTextColor(subTextColor);
+                } else if (msg.ackState == 1) {
+                    holder.tvAckStatus.setText("✓");
+                    holder.tvAckStatus.setTextColor(subTextColor);
+                } else if (msg.ackState == 2) {
+                    holder.tvAckStatus.setText("✓✓");
+                    holder.tvAckStatus.setTextColor(subTextColor);
+                } else {
+                    holder.tvAckStatus.setText("✓✓");
+                    holder.tvAckStatus.setTextColor(palette.isLight ? palette.success : palette.accent);
+                }
             }
         } else {
             holder.tvAckStatus.setVisibility(View.GONE);
@@ -278,24 +326,13 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgVie
             holder.replyContainer.setOnClickListener(null);
         }
 
-        String displayText = (msg.showingTranslated && msg.translatedText != null)
-                ? ("🌐 " + msg.translatedText)
-                : (msg.text != null ? msg.text : "");
-
-        if (!displayText.isEmpty() && !msg.isVoiceMessage()) {
-            holder.tvMessageText.setVisibility(View.VISIBLE);
-            holder.tvMessageText.setText(displayText);
-            holder.tvMessageText.setTextColor(mainTextColor);
-        } else {
-            holder.tvMessageText.setVisibility(View.GONE);
-        }
-
         holder.cardAttachmentImage.setVisibility(View.GONE);
         holder.ivAttachmentImage.setVisibility(View.GONE);
         holder.voiceContainer.setVisibility(View.GONE);
         holder.btnOpenExternalFile.setVisibility(View.GONE);
 
-        if (msg.isVoiceMessage() && msg.file != null) {
+        // Requirement 4: Voice messages (type=voice or file.voice=true) with full player + caption underneath
+        if (msg.isVoiceMessage() && !msg.getEffectiveMediaUrl().isEmpty()) {
             holder.voiceContainer.setVisibility(View.VISIBLE);
             boolean isPlaying = msg.id != null && msg.id.equals(playingMessageId);
             holder.btnPlayVoice.setText(isPlaying ? (isArabic ? "إيقاف" : "Stop") : (isArabic ? "تشغيل" : "Play"));
@@ -303,38 +340,88 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgVie
             holder.btnPlayVoice.setBackgroundTintList(ColorStateList.valueOf(roomAccentColor));
             holder.btnPlayVoice.setTextColor(palette.accentInk);
             holder.btnPlayVoice.setIconTint(ColorStateList.valueOf(palette.accentInk));
-            int dur = msg.file.duration;
+
+            if (holder.viewVoiceTrack != null) {
+                GradientDrawable trackBg = new GradientDrawable();
+                trackBg.setCornerRadius(3 * d);
+                trackBg.setColor(isPlaying ? roomAccentColor : ThemeHelper.withAlpha(mainTextColor, 75));
+                holder.viewVoiceTrack.setBackground(trackBg);
+            }
+
+            int dur = msg.getEffectiveVoiceDuration();
             holder.tvVoiceDuration.setText(dur > 0 ? (dur + "s") : (isArabic ? "رسالة صوتية" : "Voice note"));
             holder.tvVoiceDuration.setTextColor(subTextColor);
             holder.btnPlayVoice.setOnClickListener(v -> listener.onPlayVoiceClicked(msg));
-        } else if ("file".equals(msg.type) && msg.file != null) {
-            String mime = msg.file.mime != null ? msg.file.mime : "";
-            String url = msg.file.getEffectiveUrl();
-            String nameLower = msg.file.name != null ? msg.file.name.toLowerCase() : "";
-            boolean isImg = mime.startsWith("image/") || url.startsWith("data:image/")
+
+            // Attached caption directly underneath the voice player
+            String voiceCaption = (msg.showingTranslated && msg.translatedText != null)
+                    ? ("🌐 " + msg.translatedText)
+                    : msg.getEffectiveVoiceCaption();
+            if (!voiceCaption.isEmpty()) {
+                holder.tvMessageText.setVisibility(View.VISIBLE);
+                holder.tvMessageText.setText(voiceCaption);
+                holder.tvMessageText.setTextColor(mainTextColor);
+            } else {
+                holder.tvMessageText.setVisibility(View.GONE);
+            }
+        } else {
+            // Non-voice message: text, image, file, or APK attachment/link (Requirement 8)
+            String displayText = (msg.showingTranslated && msg.translatedText != null)
+                    ? ("🌐 " + msg.translatedText)
+                    : (msg.text != null ? msg.text : "");
+
+            if (!displayText.isEmpty()) {
+                holder.tvMessageText.setVisibility(View.VISIBLE);
+                holder.tvMessageText.setText(displayText);
+                holder.tvMessageText.setTextColor(mainTextColor);
+            } else {
+                holder.tvMessageText.setVisibility(View.GONE);
+            }
+
+            String mediaUrl = msg.getEffectiveMediaUrl();
+            String mime = msg.getEffectiveMime();
+            String fileName = msg.getEffectiveFileName();
+            String nameLower = fileName.toLowerCase(Locale.US);
+
+            if ( mediaUrl.isEmpty() ) {
+                String inlineApkUrl = AgentHelper.extractFirstApkUrl(msg.text);
+                if (inlineApkUrl != null) {
+                    mediaUrl = inlineApkUrl;
+                    int slash = inlineApkUrl.lastIndexOf('/');
+                    fileName = (slash >= 0 && slash < inlineApkUrl.length() - 1)
+                            ? inlineApkUrl.substring(slash + 1) : "update.apk";
+                }
+            }
+
+            boolean isImg = mime.startsWith("image/") || mediaUrl.startsWith("data:image/")
                     || nameLower.endsWith(".png") || nameLower.endsWith(".jpg")
                     || nameLower.endsWith(".jpeg") || nameLower.endsWith(".webp") || nameLower.endsWith(".gif");
-            if (isImg && !url.isEmpty()) {
+
+            if (isImg && !mediaUrl.isEmpty()) {
+                final String finalImgUrl = mediaUrl;
                 holder.cardAttachmentImage.setVisibility(View.VISIBLE);
                 holder.ivAttachmentImage.setVisibility(View.VISIBLE);
-                loadImageOrDataUrl(holder.ivAttachmentImage, url, false);
+                loadImageOrDataUrl(holder.ivAttachmentImage, finalImgUrl, false);
                 holder.ivAttachmentImage.setOnClickListener(v ->
-                        listener.onImageClicked(url, msg.caption != null ? msg.caption : msg.text)
+                        listener.onImageClicked(finalImgUrl, msg.caption != null ? msg.caption : msg.text)
                 );
-            } else if (!url.isEmpty()) {
+            } else if (!mediaUrl.isEmpty()) {
+                final String targetUrl = mediaUrl;
                 holder.btnOpenExternalFile.setVisibility(View.VISIBLE);
+                boolean isApk = AgentHelper.isApkResource(fileName, mime, targetUrl);
                 boolean isVideo = mime.startsWith("video/");
-                String label = isVideo ? (isArabic ? "تشغيل الفيديو: " : "Play video: ")
-                        : (isArabic ? "فتح الملف: " : "Open file: ");
-                holder.btnOpenExternalFile.setText(label + (msg.file.name != null ? msg.file.name : "attachment"));
+                String label;
+                if (isApk) {
+                    label = (isArabic ? "📦 تثبيت / فتح APK: " : "📦 Open / Install APK: ") + fileName;
+                } else if (isVideo) {
+                    label = (isArabic ? "تشغيل الفيديو: " : "Play video: ") + fileName;
+                } else {
+                    label = (isArabic ? "فتح الملف: " : "Open file: ") + fileName;
+                }
+                holder.btnOpenExternalFile.setText(label);
                 holder.btnOpenExternalFile.setTextColor(mainTextColor);
                 holder.btnOpenExternalFile.setIconTint(ColorStateList.valueOf(mainTextColor));
-                holder.btnOpenExternalFile.setOnClickListener(v -> {
-                    if (url.startsWith("http")) {
-                        Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url));
-                        context.startActivity(browserIntent);
-                    }
-                });
+                holder.btnOpenExternalFile.setOnClickListener(v -> openExternalFileOrApkUrl(targetUrl));
             }
         }
 
@@ -344,13 +431,11 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgVie
         holder.btnTranslate.setOnClickListener(v -> listener.onTranslateClicked(msg));
         holder.btnSaveMsg.setOnClickListener(v -> listener.onSaveClicked(msg));
 
-        // Long-press on message bubble opens Emoji Reaction & Action Sheet (#18, #28, #31)
         holder.bubbleCard.setOnLongClickListener(v -> {
             listener.onMessageLongPressed(msg, holder.bubbleCard);
             return true;
         });
 
-        // Single tap on a translated message toggles back to original; otherwise opens action sheet on tap if desired
         holder.bubbleCard.setOnClickListener(v -> {
             if (msg.showingTranslated) {
                 listener.onTranslateClicked(msg);
@@ -360,6 +445,22 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgVie
         if (position > lastAnimatedPosition && position == messages.size() - 1) {
             lastAnimatedPosition = position;
             MotionHelper.animateMessageBubbleIn(holder.bubbleCard, prefs.isLiteModeEnabled());
+        }
+    }
+
+    /**
+     * Requirement 8: Opens external files and APK packages cleanly via the existing Intent.ACTION_VIEW path.
+     */
+    private void openExternalFileOrApkUrl(String url) {
+        if (url == null || url.trim().isEmpty()) return;
+        try {
+            Intent browserIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(url.trim()));
+            browserIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(browserIntent);
+        } catch (Exception e) {
+            Toast.makeText(context,
+                    prefs.isArabic() ? "تعذر فتح الرابط الخارجي" : "Could not open external link",
+                    Toast.LENGTH_SHORT).show();
         }
     }
 
@@ -443,6 +544,7 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgVie
         final ImageView ivAttachmentImage;
         final LinearLayout voiceContainer;
         final MaterialButton btnPlayVoice;
+        final View viewVoiceTrack;
         final TextView tvVoiceDuration;
         final MaterialButton btnOpenExternalFile;
         final HorizontalScrollView scrollReactions;
@@ -467,6 +569,7 @@ public class MessagesAdapter extends RecyclerView.Adapter<MessagesAdapter.MsgVie
             ivAttachmentImage = itemView.findViewById(R.id.ivAttachmentImage);
             voiceContainer = itemView.findViewById(R.id.voiceContainer);
             btnPlayVoice = itemView.findViewById(R.id.btnPlayVoice);
+            viewVoiceTrack = itemView.findViewById(R.id.viewVoiceTrack);
             tvVoiceDuration = itemView.findViewById(R.id.tvVoiceDuration);
             btnOpenExternalFile = itemView.findViewById(R.id.btnOpenExternalFile);
             scrollReactions = itemView.findViewById(R.id.scrollReactions);

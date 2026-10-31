@@ -700,6 +700,17 @@
                 app:cornerRadius="14dp" />
         </LinearLayout>
 
+        <com.google.android.material.button.MaterialButton
+            android:id="@+id/btnConfigureAgentFromSettings"
+            style="@style/Widget.Material3.Button.TonalButton"
+            android:layout_width="match_parent"
+            android:layout_height="42dp"
+            android:layout_marginBottom="10dp"
+            android:text="غرفة Run Agent — موس"
+            android:textSize="12.5sp"
+            android:textStyle="bold"
+            app:cornerRadius="14dp" />
+
         <EditText
             android:id="@+id/etSettingsDisplayName"
             android:layout_width="match_parent"

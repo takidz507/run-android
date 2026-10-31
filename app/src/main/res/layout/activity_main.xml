@@ -13,7 +13,6 @@
         android:orientation="vertical">
 
         <!-- ================= LIGHT TOP BAR MATCHING DESIGN A (7196.png) ================= -->
-        <!-- Logo ("Run.") + ⋮ More Button + Avatar Orb ('T') — zero visual duplication -->
         <LinearLayout
             android:id="@+id/layoutTopEditorialBar"
             android:layout_width="match_parent"
@@ -70,7 +69,7 @@
                 android:layout_height="1dp"
                 android:layout_weight="1" />
 
-            <!-- Hidden legacy header controls (triggered via ⋮ More sheet so nothing eats header space) -->
+            <!-- Hidden legacy header controls (triggered via ⋮ More sheet) -->
             <LinearLayout
                 android:id="@+id/pillOnlineDirectory"
                 android:layout_width="1dp"
@@ -102,7 +101,7 @@
                 android:visibility="gone"
                 android:contentDescription="Settings" />
 
-            <!-- ⋮ More Menu Button (houses Public Groups, Feedback, Archive, Pairing, Language, Theme & Profile) -->
+            <!-- ⋮ More Menu Button -->
             <ImageButton
                 android:id="@+id/btnMoreMenu"
                 android:layout_width="38dp"
@@ -168,7 +167,7 @@
                     android:paddingEnd="22dp"
                     android:paddingBottom="24dp">
 
-                    <!-- 1. One-Line Greeting directly on paper canvas (Matches 7196.png: "Good evening, Taqi") -->
+                    <!-- 1. One-Line Greeting directly on paper canvas -->
                     <TextView
                         android:id="@+id/tvGreetingName"
                         android:layout_width="match_parent"
@@ -446,7 +445,7 @@
                         </LinearLayout>
                     </com.google.android.material.card.MaterialCardView>
 
-                    <!-- 4. "Your rooms" Section Heading with Overlapping Highlighter Marker (Matches 7196.png!) -->
+                    <!-- 4. "Your rooms" Section Heading with Overlapping Highlighter Marker -->
                     <LinearLayout
                         android:layout_width="match_parent"
                         android:layout_height="wrap_content"
@@ -482,7 +481,6 @@
                             android:layout_height="1dp"
                             android:layout_weight="1" />
 
-                        <!-- Shown only when viewing Archived mode from ⋮ More menu -->
                         <com.google.android.material.button.MaterialButton
                             android:id="@+id/btnFilterActiveRooms"
                             style="@style/Widget.Material3.Button.TonalButton"
@@ -513,6 +511,138 @@
                             android:textSize="12sp"
                             android:visibility="gone" />
                     </LinearLayout>
+
+                    <!-- ================= v3.3.0 REQUIREMENT 1 & 2: PINNED RUN AGENT ROOM CARD ================= -->
+                    <com.google.android.material.card.MaterialCardView
+                        android:id="@+id/cardPinnedAgentRoom"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:layout_marginBottom="12dp"
+                        android:clickable="true"
+                        android:focusable="true"
+                        app:cardBackgroundColor="@color/run_panel"
+                        app:cardCornerRadius="22dp"
+                        app:cardElevation="0dp"
+                        app:strokeColor="@color/run_accent"
+                        app:strokeWidth="1.5dp">
+
+                        <LinearLayout
+                            android:layout_width="match_parent"
+                            android:layout_height="wrap_content"
+                            android:gravity="center_vertical"
+                            android:orientation="horizontal"
+                            android:paddingStart="16dp"
+                            android:paddingTop="14dp"
+                            android:paddingEnd="16dp"
+                            android:paddingBottom="14dp">
+
+                            <!-- Agent Avatar Orb ('م') -->
+                            <FrameLayout
+                                android:id="@+id/frameAgentAvatarOrb"
+                                android:layout_width="44dp"
+                                android:layout_height="44dp"
+                                android:layout_marginEnd="12dp">
+
+                                <ImageView
+                                    android:id="@+id/ivAgentPinnedAvatar"
+                                    android:layout_width="44dp"
+                                    android:layout_height="44dp"
+                                    android:scaleType="centerCrop"
+                                    android:visibility="gone"
+                                    android:contentDescription="Agent Avatar" />
+
+                                <TextView
+                                    android:id="@+id/tvAgentPinnedOrbFallback"
+                                    android:layout_width="44dp"
+                                    android:layout_height="44dp"
+                                    android:gravity="center"
+                                    android:text="م"
+                                    android:textColor="@color/run_accent_ink"
+                                    android:textSize="18sp"
+                                    android:textStyle="bold" />
+                            </FrameLayout>
+
+                            <LinearLayout
+                                android:layout_width="0dp"
+                                android:layout_height="wrap_content"
+                                android:layout_weight="1"
+                                android:orientation="vertical">
+
+                                <!-- Line 1: "Run Agent — موس" + Single-Line Unbreakable Code -->
+                                <LinearLayout
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:gravity="center_vertical"
+                                    android:orientation="horizontal">
+
+                                    <TextView
+                                        android:id="@+id/tvAgentPinnedTitle"
+                                        android:layout_width="0dp"
+                                        android:layout_height="wrap_content"
+                                        android:layout_weight="1"
+                                        android:ellipsize="end"
+                                        android:maxLines="1"
+                                        android:singleLine="true"
+                                        android:text="Run Agent — موس"
+                                        android:textColor="@color/run_text"
+                                        android:textSize="16.5sp"
+                                        android:textStyle="bold" />
+
+                                    <TextView
+                                        android:id="@+id/tvAgentPinnedCode"
+                                        android:layout_width="wrap_content"
+                                        android:layout_height="wrap_content"
+                                        android:layout_marginStart="8dp"
+                                        android:maxLines="1"
+                                        android:singleLine="true"
+                                        android:text=""
+                                        android:textColor="@color/run_subtle"
+                                        android:textSize="11.5sp" />
+
+                                    <ImageButton
+                                        android:id="@+id/btnConfigureAgentRoom"
+                                        android:layout_width="28dp"
+                                        android:layout_height="28dp"
+                                        android:layout_marginStart="4dp"
+                                        android:background="?attr/selectableItemBackgroundBorderless"
+                                        android:contentDescription="Configure Agent Room"
+                                        android:src="@drawable/ic_settings"
+                                        app:tint="@color/run_muted" />
+                                </LinearLayout>
+
+                                <!-- Line 2: Last Message Preview or Setup Prompt -->
+                                <TextView
+                                    android:id="@+id/tvAgentPinnedPreview"
+                                    android:layout_width="match_parent"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="3dp"
+                                    android:ellipsize="end"
+                                    android:maxLines="1"
+                                    android:singleLine="true"
+                                    android:text="اربط غرفة الوكيل"
+                                    android:textColor="@color/run_muted"
+                                    android:textSize="13sp" />
+
+                                <!-- Line 3: Real Agent Presence Pill ("متصل" or "غير متاح حالياً" or "اربط غرفة الوكيل") -->
+                                <TextView
+                                    android:id="@+id/tvAgentPinnedPresencePill"
+                                    android:layout_width="wrap_content"
+                                    android:layout_height="wrap_content"
+                                    android:layout_marginTop="8dp"
+                                    android:ellipsize="none"
+                                    android:maxLines="1"
+                                    android:singleLine="true"
+                                    android:paddingStart="10dp"
+                                    android:paddingTop="3dp"
+                                    android:paddingEnd="10dp"
+                                    android:paddingBottom="3dp"
+                                    android:text="اربط غرفة الوكيل"
+                                    android:textColor="@color/run_muted"
+                                    android:textSize="11.5sp"
+                                    android:textStyle="bold" />
+                            </LinearLayout>
+                        </LinearLayout>
+                    </com.google.android.material.card.MaterialCardView>
 
                     <!-- 5. Direct Room Rows List (NO card-inside-card wrapper!) -->
                     <com.google.android.material.card.MaterialCardView
@@ -930,7 +1060,7 @@
                 android:textStyle="bold"
                 app:cornerRadius="28dp" />
 
-            <!-- Secondary-view return dock (hidden on Home so Home matches Design A 7196.png 100%; shown when viewing secondary tabs or in Glass mode) -->
+            <!-- Secondary-view return dock -->
             <LinearLayout
                 android:id="@+id/bottomNavDock"
                 android:layout_width="wrap_content"

@@ -16,8 +16,8 @@ android {
     applicationId = "com.takidz.run"
     minSdk = 24
     targetSdk = 34
-    versionCode = 5
-    versionName = "3.2.0"
+    versionCode = 6
+    versionName = "3.3.0"
 
     testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
   }

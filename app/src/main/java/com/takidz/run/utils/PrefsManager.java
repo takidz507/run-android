@@ -31,20 +31,9 @@ import java.util.Set;
 import java.util.UUID;
 
 /**
- * Preserves 100% of v2.0.0-pro SharedPreferences keys in "run_native_prefs_v1"
- * so existing users upgrading to v3.0.0 never lose rooms, messages, profile, or settings.
- * Adds v3.0.0 support for:
- * - #14 / #22: 4 switchable themes (warm_paper, warm_paper_dark, clean_air, deep_night)
- * - #17: Per-room identity & room ownership persistence
- * - #18: First-use gesture hint tracking
- * - #20: Light sound & vibration touches toggle
- * - #21: Lite mode preference (auto / on / off)
- * - #23: Deferred deep-link first-launch check
- * - #24: Hashed per-device serial (ANDROID_ID SHA-256) so clearing data + renaming still counts as 1 user
- * - #25 & #30: Account transfer & Web-App pairing bundle export/import
- * - #27: Timed per-room mute (1h, 8h, until tomorrow) with automatic expiry
- * - #28: Full Arabic mode (UI language en/ar)
- * - #31: Personal saved messages ("My saved") across all rooms
+ * Preserves 100% of v2.0.0-pro, v3.0.0, v3.1.0, and v3.2.0 SharedPreferences keys in "run_native_prefs_v1".
+ * Adds v3.3.0 «Run Agent» support:
+ * - KEY_AGENT_ROOM_CODE = "agent_room_code" (pinned Run Agent — موس room code).
  */
 public class PrefsManager {
     private static final String PREFS_NAME = "run_native_prefs_v1";
@@ -64,7 +53,7 @@ public class PrefsManager {
     private static final String KEY_SENT_REQUESTS = "run_sent_requests_v1";
     private static final String KEY_PENDING_INVITES = "run_pending_invites_v1";
 
-    // New v3.0.0 keys
+    // v3.0.0 - v3.2.0 keys
     private static final String KEY_V3_MIGRATED = "run_v3_migrated";
     private static final String KEY_UI_LANG = "run_ui_lang_v3"; // "en" (default) | "ar"
     private static final String KEY_TOUCH_FEEDBACK = "run_touch_feedback_v3"; // #20
@@ -77,6 +66,9 @@ public class PrefsManager {
     private static final String KEY_CACHED_ROOM_PREFIX = "run_room_cache_v3_"; // Local room cache for offline/upgrade continuity
     private static final String KEY_DEFERRED_INVITE_CHECKED = "run_deferred_invite_checked_v3"; // #23
     private static final String KEY_PAIRED_ACCOUNT_ID = "run_paired_account_id_v3"; // #25 / #30
+
+    // v3.3.0 «Run Agent» key (exact key required by specification)
+    public static final String KEY_AGENT_ROOM_CODE = "agent_room_code";
 
     private final Context appContext;
     private final SharedPreferences prefs;
@@ -93,7 +85,6 @@ public class PrefsManager {
         SharedPreferences.Editor editor = prefs.edit();
         String existingTheme = prefs.getString(KEY_THEME_MODE, null);
         if (existingTheme != null) {
-            // Smoothly map legacy v2 theme names to the 4 approved v3 themes
             if ("light".equalsIgnoreCase(existingTheme)) {
                 editor.putString(KEY_THEME_MODE, ThemeHelper.THEME_WARM_PAPER);
             } else if ("amoled".equalsIgnoreCase(existingTheme)) {
@@ -108,10 +99,43 @@ public class PrefsManager {
         editor.apply();
     }
 
+    // ==========================================
+    // v3.3.0: Run Agent Room Code ("agent_room_code")
+    // ==========================================
+
+    public String getAgentRoomCode() {
+        String raw = prefs.getString(KEY_AGENT_ROOM_CODE, "");
+        if (raw == null || raw.trim().isEmpty()) return "";
+        String clean = raw.trim();
+        if (clean.startsWith("#")) clean = clean.substring(1).trim();
+        return clean.toUpperCase(Locale.US);
+    }
+
+    public void setAgentRoomCode(String code) {
+        if (code == null || code.trim().isEmpty()) {
+            prefs.edit().remove(KEY_AGENT_ROOM_CODE).apply();
+            return;
+        }
+        String clean = code.trim();
+        if (clean.startsWith("#")) clean = clean.substring(1).trim();
+        prefs.edit().putString(KEY_AGENT_ROOM_CODE, clean.toUpperCase(Locale.US)).apply();
+    }
+
+    public boolean hasAgentRoomCode() {
+        return !getAgentRoomCode().isEmpty();
+    }
+
+    public boolean isAgentRoom(String roomCode) {
+        if (roomCode == null || roomCode.trim().isEmpty()) return false;
+        String agentCode = getAgentRoomCode();
+        if (agentCode.isEmpty()) return false;
+        String clean = roomCode.trim();
+        if (clean.startsWith("#")) clean = clean.substring(1).trim();
+        return agentCode.equalsIgnoreCase(clean);
+    }
+
     /**
      * #24: Hardware/OS-anchored per-device serial hash.
-     * Uses Android's ANDROID_ID (scoped to app signing key & user, survives app data clear).
-     * Always SHA-256 hashed before leaving the device, never shown in UI.
      */
     @SuppressLint("HardwareIds")
     public String getDeviceIdentityHash() {
@@ -120,7 +144,6 @@ public class PrefsManager {
             androidId = Settings.Secure.getString(appContext.getContentResolver(), Settings.Secure.ANDROID_ID);
         } catch (Exception ignored) {}
         if (androidId == null || androidId.trim().isEmpty() || "9774d56d682e549c".equalsIgnoreCase(androidId)) {
-            // Fallback only if OS returns null
             String fallback = prefs.getString("run_device_fallback_seed", null);
             if (fallback == null) {
                 fallback = UUID.randomUUID().toString();
@@ -132,12 +155,6 @@ public class PrefsManager {
         return "d-" + (hash.length() >= 16 ? hash.substring(0, 16) : hash);
     }
 
-    /**
-     * #24, #25, #30: Returns the user's stable account/device ID.
-     * - If the user upgraded from v2.0.0-pro or paired with Web/another phone (#25/#30), keeps that ID.
-     * - If app data was cleared on the same phone (#24), derives the ID deterministically from ANDROID_ID
-     *   so the phone overwrites its own MQTT presence topic and still counts as ONE user, not two!
-     */
     @SuppressLint("HardwareIds")
     public String getUserId() {
         String pairedId = prefs.getString(KEY_PAIRED_ACCOUNT_ID, null);
@@ -194,7 +211,6 @@ public class PrefsManager {
         prefs.edit().putString(KEY_USER_AVATAR, avatarUrl != null ? avatarUrl.trim() : "").apply();
     }
 
-    // #14 & #22: Theme Mode ("warm_paper" | "warm_paper_dark" | "clean_air" | "deep_night")
     public String getThemeMode() {
         String raw = prefs.getString(KEY_THEME_MODE, ThemeHelper.THEME_WARM_PAPER);
         return ThemeHelper.normalizeThemeMode(raw);
@@ -204,7 +220,6 @@ public class PrefsManager {
         prefs.edit().putString(KEY_THEME_MODE, ThemeHelper.normalizeThemeMode(mode)).apply();
     }
 
-    // #28: UI Language ("en" default | "ar" full RTL Arabic mode)
     public String getUiLanguage() {
         String lang = prefs.getString(KEY_UI_LANG, "en");
         return "ar".equalsIgnoreCase(lang) ? "ar" : "en";
@@ -219,7 +234,6 @@ public class PrefsManager {
         prefs.edit().putString(KEY_UI_LANG, normalized).apply();
     }
 
-    // Translation target language
     public String getPreferredLanguage() {
         return prefs.getString(KEY_PREF_LANG, "ar");
     }
@@ -244,7 +258,6 @@ public class PrefsManager {
         prefs.edit().putBoolean(KEY_NOTIFICATIONS, enabled).apply();
     }
 
-    // #20: Light sound & vibration touches
     public boolean isTouchFeedbackEnabled() {
         return prefs.getBoolean(KEY_TOUCH_FEEDBACK, true);
     }
@@ -253,7 +266,6 @@ public class PrefsManager {
         prefs.edit().putBoolean(KEY_TOUCH_FEEDBACK, enabled).apply();
     }
 
-    // #21: Lite mode for weak devices ("auto" | "on" | "off")
     public String getLiteModePref() {
         return prefs.getString(KEY_LITE_MODE, "auto");
     }
@@ -272,7 +284,6 @@ public class PrefsManager {
         return DeviceCapabilityHelper.isWeakOrPowerSaverDevice(appContext);
     }
 
-    // #18: First-use gesture hints
     public boolean hasSeenGestureHint() {
         return prefs.getBoolean(KEY_SEEN_GESTURE_HINT, false);
     }
@@ -289,7 +300,6 @@ public class PrefsManager {
         prefs.edit().putBoolean(KEY_SEEN_MEDIA_HINT, seen).apply();
     }
 
-    // #23: Deferred invite first-launch check
     public boolean isDeferredInviteChecked() {
         return prefs.getBoolean(KEY_DEFERRED_INVITE_CHECKED, false);
     }
@@ -326,7 +336,6 @@ public class PrefsManager {
         String displayName = (name == null || name.trim().isEmpty()) ? ("Room " + cleanCode) : name.trim();
         RecentRoom entry = new RecentRoom(cleanCode, displayName, RoomCryptoUtils.nowIso());
 
-        // Preserve existing metadata if not overridden
         for (RecentRoom r : current) {
             if (r != null && r.code != null && r.code.equalsIgnoreCase(cleanCode)) {
                 entry.joinedAt = r.joinedAt != null ? r.joinedAt : entry.joinedAt;
@@ -399,7 +408,6 @@ public class PrefsManager {
         return null;
     }
 
-    // #17: Room Ownership tracking
     public void markRoomOwned(String roomCode) {
         if (roomCode == null) return;
         Set<String> set = new HashSet<>(prefs.getStringSet(KEY_OWNED_ROOMS, new HashSet<>()));
@@ -421,7 +429,6 @@ public class PrefsManager {
             if (roomData.meta != null && roomData.meta.ownerId != null && !roomData.meta.ownerId.isEmpty()) {
                 return roomData.meta.ownerId.equals(myUserId) || roomData.meta.ownerId.equals(myDevHash);
             }
-            // If legacy room has no owner recorded yet, allow setting identity
             return true;
         }
         return false;
@@ -546,9 +553,6 @@ public class PrefsManager {
         return false;
     }
 
-    /**
-     * Toggles saving a message privately into "My saved". Returns true if now saved, false if removed.
-     */
     public boolean toggleSaveMessage(String roomCode, String roomName, Message msg) {
         if (roomCode == null || msg == null || msg.id == null) return false;
         String cleanCode = roomCode.trim().toUpperCase(Locale.US);
@@ -595,6 +599,7 @@ public class PrefsManager {
         b.notificationsEnabled = isNotificationsEnabled();
         b.touchFeedbackEnabled = isTouchFeedbackEnabled();
         b.liteModePref = getLiteModePref();
+        b.agentRoomCode = getAgentRoomCode();
         b.recentRooms = getRecentRooms();
         b.friends = getFriends();
         b.savedMessages = getSavedMessages();
@@ -607,16 +612,11 @@ public class PrefsManager {
         return gson.toJson(createTransferBundle());
     }
 
-    /**
-     * Imports a TransferBundle (from #25 phone-to-phone code, #30 Web-App pairing, or JSON backup).
-     * Also parses Web localStorage export format seamlessly!
-     */
     public boolean importTransferOrBackupJson(String rawJson, boolean linkAccountIdentity) {
         if (rawJson == null || rawJson.trim().isEmpty()) return false;
         try {
             JsonObject obj = JsonParser.parseString(rawJson.trim()).getAsJsonObject();
 
-            // Support both TransferBundle and Web v2 Pro backup JSON formats
             String importedUserId = getJsonStr(obj, "userId", getJsonStr(obj, "run_user_id", null));
             String importedName = getJsonStr(obj, "userName", getJsonStr(obj, "run_display_name", getJsonStr(obj, "name", null)));
             String importedBio = getJsonStr(obj, "userBio", getJsonStr(obj, "run_bio", getJsonStr(obj, "bio", null)));
@@ -624,6 +624,7 @@ public class PrefsManager {
             String importedTheme = getJsonStr(obj, "themeMode", getJsonStr(obj, "run_theme", null));
             String importedUiLang = getJsonStr(obj, "uiLang", getJsonStr(obj, "run_ui_lang", null));
             String importedPrefLang = getJsonStr(obj, "preferredLanguage", getJsonStr(obj, "run_lang", null));
+            String importedAgentRoom = getJsonStr(obj, "agentRoomCode", getJsonStr(obj, KEY_AGENT_ROOM_CODE, null));
 
             if (linkAccountIdentity && importedUserId != null && !importedUserId.isEmpty()) {
                 setUserId(importedUserId);
@@ -634,11 +635,13 @@ public class PrefsManager {
             if (importedTheme != null) setThemeMode(importedTheme);
             if (importedUiLang != null) setUiLanguage(importedUiLang);
             if (importedPrefLang != null) setPreferredLanguage(importedPrefLang);
+            if (importedAgentRoom != null && !importedAgentRoom.trim().isEmpty()) {
+                setAgentRoomCode(importedAgentRoom);
+            }
 
             TransferBundle parsed = gson.fromJson(rawJson, TransferBundle.class);
             if (parsed != null) {
                 if (parsed.recentRooms != null && !parsed.recentRooms.isEmpty()) {
-                    // Merge imported rooms with local rooms (no data loss!)
                     List<RecentRoom> mergedRooms = new ArrayList<>(parsed.recentRooms);
                     for (RecentRoom local : getRecentRooms()) {
                         boolean exists = false;
@@ -652,7 +655,6 @@ public class PrefsManager {
                     }
                     prefs.edit().putString(KEY_RECENT_ROOMS, gson.toJson(mergedRooms)).apply();
                 } else if (obj.has("run_recent_rooms_v1")) {
-                    // Web localStorage format
                     JsonElement roomsEl = obj.get("run_recent_rooms_v1");
                     JsonArray arr = roomsEl.isJsonArray() ? roomsEl.getAsJsonArray()
                             : JsonParser.parseString(roomsEl.getAsString()).getAsJsonArray();

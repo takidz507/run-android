@@ -10,6 +10,7 @@ import android.util.Base64;
 
 import java.io.File;
 import java.io.FileOutputStream;
+import java.util.Locale;
 
 public class VoiceRecorderHelper {
     public static final int MAX_RECORD_DURATION_SEC = 120; // 120 seconds cap (#8)
@@ -121,9 +122,6 @@ public class VoiceRecorderHelper {
         return durationSec;
     }
 
-    /**
-     * Safely stops and discards an active recording when the user leaves the activity (#3).
-     */
     public void cancelRecording() {
         timerHandler.removeCallbacks(recordingTimerRunnable);
         if (isRecording && recorder != null) {
@@ -164,9 +162,20 @@ public class VoiceRecorderHelper {
             if (urlOrDataUri.startsWith("data:")) {
                 int commaIdx = urlOrDataUri.indexOf(',');
                 if (commaIdx == -1) throw new Exception("Invalid Data URI");
+                String header = urlOrDataUri.substring(0, commaIdx).toLowerCase(Locale.US);
+                String ext = ".m4a";
+                if (header.contains("ogg") || header.contains("opus")) {
+                    ext = ".ogg";
+                } else if (header.contains("mpeg") || header.contains("mp3")) {
+                    ext = ".mp3";
+                } else if (header.contains("wav")) {
+                    ext = ".wav";
+                } else if (header.contains("webm")) {
+                    ext = ".webm";
+                }
                 String base64Part = urlOrDataUri.substring(commaIdx + 1);
                 byte[] audioBytes = Base64.decode(base64Part, Base64.DEFAULT);
-                activeTempPlaybackFile = new File(context.getCacheDir(), "play_" + messageId + "_" + System.currentTimeMillis() + ".m4a");
+                activeTempPlaybackFile = new File(context.getCacheDir(), "play_" + messageId + "_" + System.currentTimeMillis() + ext);
                 try (FileOutputStream fos = new FileOutputStream(activeTempPlaybackFile)) {
                     fos.write(audioBytes);
                 }

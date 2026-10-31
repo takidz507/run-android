@@ -21,15 +21,15 @@
         <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:minWidth="148dp"
-            android:maxWidth="300dp"
+            android:minWidth="156dp"
+            android:maxWidth="304dp"
             android:orientation="vertical"
             android:paddingStart="15dp"
             android:paddingTop="10dp"
             android:paddingEnd="15dp"
             android:paddingBottom="11dp">
 
-            <!-- Header: Author ("Salim" or "You") + Saved Badge + Subtle Time & Checkmarks (#26, #31) -->
+            <!-- Header: Author ("Salim", "موس", or "You") + Saved Badge + Subtle Time & Honest Receipts (#26, #31, v3.3 Req 5) -->
             <LinearLayout
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
@@ -77,12 +77,14 @@
                     android:textColor="@color/run_subtle"
                     android:textSize="10sp" />
 
-                <!-- #26: Delivery & Read State Indicator (✓ Sent, ✓✓ Delivered, Accent ✓✓ Read) -->
+                <!-- #26 & v3.3 Req 5: Delivery & Read State Indicator ("✓ وصلت إلى الجسر" / "✓✓ قرأها موس" in Agent room) -->
                 <TextView
                     android:id="@+id/tvAckStatus"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="3dp"
+                    android:layout_marginStart="4dp"
+                    android:maxLines="1"
+                    android:singleLine="true"
                     android:text="✓✓"
                     android:textColor="@color/run_accent"
                     android:textSize="10sp"
@@ -145,21 +147,21 @@
                     android:contentDescription="Attachment" />
             </com.google.android.material.card.MaterialCardView>
 
-            <!-- Voice Note Player -->
+            <!-- Voice Note Player (v3.3 Req 4: Full player with play/stop, waveform track, and duration; caption sits right below) -->
             <LinearLayout
                 android:id="@+id/voiceContainer"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
                 android:gravity="center_vertical"
                 android:orientation="horizontal"
-                android:layout_marginBottom="4dp"
+                android:layout_marginBottom="5dp"
                 android:visibility="gone">
 
                 <com.google.android.material.button.MaterialButton
                     android:id="@+id/btnPlayVoice"
                     style="@style/Widget.Material3.Button.TonalButton"
                     android:layout_width="wrap_content"
-                    android:layout_height="32dp"
+                    android:layout_height="34dp"
                     android:insetTop="0dp"
                     android:insetBottom="0dp"
                     android:paddingStart="10dp"
@@ -168,20 +170,27 @@
                     app:iconSize="14dp"
                     android:text="Play"
                     android:textSize="12sp"
-                    app:cornerRadius="16dp" />
+                    app:cornerRadius="17dp" />
+
+                <View
+                    android:id="@+id/viewVoiceTrack"
+                    android:layout_width="56dp"
+                    android:layout_height="4dp"
+                    android:layout_marginStart="8dp"
+                    android:layout_marginEnd="8dp"
+                    android:background="@drawable/bg_highlighter_bar" />
 
                 <TextView
                     android:id="@+id/tvVoiceDuration"
                     android:layout_width="wrap_content"
                     android:layout_height="wrap_content"
-                    android:layout_marginStart="10dp"
                     android:text="0:12"
                     android:textColor="@color/run_muted"
-                    android:textSize="12sp"
+                    android:textSize="11.5sp"
                     android:textStyle="bold" />
             </LinearLayout>
 
-            <!-- External File / Video Link Button -->
+            <!-- External File / Video / APK Link Button (v3.3 Req 8: opens files and APK packages via existing path) -->
             <com.google.android.material.button.MaterialButton
                 android:id="@+id/btnOpenExternalFile"
                 style="@style/Widget.Material3.Button.TextButton"
@@ -195,12 +204,13 @@
                 android:textSize="12sp"
                 android:visibility="gone" />
 
-            <!-- Message Text / Caption (Matches 7196.png clean typography) -->
+            <!-- Message Text OR Voice Message Attached Caption (v3.3 Req 4: directly under voice player) -->
             <TextView
                 android:id="@+id/tvMessageText"
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"
                 android:autoLink="web"
+                android:linksClickable="true"
                 android:lineSpacingExtra="2.5dp"
                 android:text="I uploaded the TD solutions, check page 3 📄"
                 android:textColor="@color/run_text"
@@ -222,7 +232,7 @@
                     android:orientation="horizontal" />
             </HorizontalScrollView>
 
-            <!-- Hidden legacy inline action buttons (actions are triggered via swipe-to-reply or long-press sheet so bubbles match 7196.png) -->
+            <!-- Hidden legacy inline action buttons -->
             <LinearLayout
                 android:layout_width="wrap_content"
                 android:layout_height="wrap_content"

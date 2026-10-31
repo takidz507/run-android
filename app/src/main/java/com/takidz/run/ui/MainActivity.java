@@ -55,6 +55,7 @@ import com.takidz.run.models.FeedbackBoardData;
 import com.takidz.run.models.FeedbackPost;
 import com.takidz.run.models.OnlineUser;
 import com.takidz.run.models.RecentRoom;
+import com.takidz.run.models.RoomData;
 import com.takidz.run.models.SavedMessage;
 import com.takidz.run.models.SignalMessage;
 import com.takidz.run.network.CatboxUploader;
@@ -64,6 +65,7 @@ import com.takidz.run.ui.adapters.FriendsAdapter;
 import com.takidz.run.ui.adapters.OnlineUsersAdapter;
 import com.takidz.run.ui.adapters.SavedMessagesAdapter;
 import com.takidz.run.ui.views.OrigamiSplashView;
+import com.takidz.run.utils.AgentHelper;
 import com.takidz.run.utils.DeviceCapabilityHelper;
 import com.takidz.run.utils.FeedbackTouchHelper;
 import com.takidz.run.utils.LocaleHelper;
@@ -77,14 +79,12 @@ import java.util.List;
 import java.util.Locale;
 
 /**
- * Run v3.2.0 MainActivity — Rebuilt strictly from Design A (7196.png):
- * - Light top bar ("Run." with lime dot + ⋮ More button + circular 'T' avatar orb).
- * - One-line greeting directly on the canvas ("Good evening, Taqi" — no card wrapper).
- * - Slim single-line online strip + slim join/create bar.
- * - "Your rooms" heading with overlapping lime highlighter marker + "Recent" sub-section.
- * - Clean room cards (no nested cards, no 3 action buttons crowding rows, unbreakable single-line room code).
- * - Strict owner rule: everything that eats screen space lives inside the ⋮ More sheet.
- * - Fixes v3.1 Bug #1 (Liquid Glass BottomSheet contrast) & Bug #2 (Settings sheet scroll clipping/artifacts).
+ * Run v3.3.0 MainActivity — Adds «Run Agent — موس» support on top of v3.2.0 Design A:
+ * - Requirement 1: Pinned Run Agent card at the top of the rooms list ("Run Agent — موس"), saved under "agent_room_code".
+ *   When configured, shows Agent avatar, title, and honest real-time presence; tapping enters the Agent room directly.
+ *   When unconfigured, shows a setup prompt ("اربط غرفة الوكيل") that opens the paste/create dialog.
+ * - Requirement 2: Honest Agent presence derived strictly from room/<agent_room_code>/presence/<agentUserId>
+ *   and active room members ("متصل" when fresh heartbeat <= 60s; "غير متاح حالياً" in calm muted gray when stale/absent).
  */
 public class MainActivity extends AppCompatActivity implements MqttRoomManager.GlobalListener {
 
@@ -105,7 +105,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     private FrameLayout rootMainFrame;
     private OrigamiSplashView origamiSplashOverlay;
 
-    // Light Top Header (Matches 7196.png)
+    // Light Top Header
     private TextView tvAppTitle;
     private LinearLayout pillConnectionQuality;
     private View viewConnQualityDot;
@@ -121,7 +121,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     private ImageView ivMainAvatar;
     private TextView tvMainAvatarFallback;
 
-    // Home Screen Views (Matches 7196.png)
+    // Home Screen Views
     private ScrollView rootScroll;
     private MaterialCardView profileCard;
     private TextView tvGreetingName;
@@ -133,7 +133,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     private EditText etQuickCodeOrSearch;
     private MaterialButton btnQuickCodeEnter;
 
-    // Expandable Create / Join Studio Card (opened by + FAB)
+    // Expandable Create / Join Studio Card
     private MaterialCardView mainCard;
     private MaterialButton btnSegmentCreate;
     private MaterialButton btnSegmentJoin;
@@ -147,19 +147,27 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     private EditText etJoinRoomCode;
     private MaterialButton btnJoinByCodeSubmit;
 
-    // Your Rooms Section
+    // Your Rooms Section + Pinned Run Agent Card (v3.3.0 Requirement 1 & 2)
     private TextView tvRecentTitle;
     private View viewYourRoomsHighlighter;
     private MaterialButton btnFilterActiveRooms;
     private MaterialButton btnFilterArchivedRooms;
     private TextView tvRecentCount;
+    private MaterialCardView cardPinnedAgentRoom;
+    private ImageView ivAgentPinnedAvatar;
+    private TextView tvAgentPinnedOrbFallback;
+    private TextView tvAgentPinnedTitle;
+    private TextView tvAgentPinnedCode;
+    private ImageButton btnConfigureAgentRoom;
+    private TextView tvAgentPinnedPreview;
+    private TextView tvAgentPinnedPresencePill;
     private MaterialCardView recentRoomsCard;
     private LinearLayout layoutRecentRoomsContainer;
     private MaterialCardView cardEmptyRoomsPrompt;
     private LinearLayout layoutRecentEmpty;
     private TextView tvEmptyRoomsText;
 
-    // Hidden Legacy Quick Tiles (triggered from ⋮ More menu)
+    // Hidden Legacy Quick Tiles
     private MaterialCardView cardPublicGroups;
     private TextView tvTilePublicTitle;
     private TextView tvPublicCount;
@@ -167,7 +175,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     private TextView tvTileFeedbackTitle;
     private TextView tvTileFeedbackSub;
 
-    // Secondary Workspace 1: Discover (Public Groups & Feedback Board)
+    // Secondary Workspace 1: Discover
     private LinearLayout workspaceDiscover;
     private MaterialButton btnDiscoverTabPublic;
     private MaterialButton btnDiscoverTabFeedback;
@@ -180,7 +188,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     private RecyclerView rvDiscoverFeedback;
     private FeedbackPostsAdapter inlineFeedbackAdapter;
 
-    // Secondary Workspace 2: People (Online Users & Friends)
+    // Secondary Workspace 2: People
     private LinearLayout workspacePeople;
     private MaterialButton btnPeopleTabOnline;
     private MaterialButton btnPeopleTabFriends;
@@ -227,6 +235,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         applyCurrentTheme();
         applyLocalizedLabels();
         populateSavedUser();
+        refreshPinnedAgentCardUI();
         refreshRecentRoomsUI();
         refreshOnlineOrbsRow(mqttManager.getOnlineUsersList());
 
@@ -330,9 +339,11 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         LocaleHelper.applyLocaleAndLayoutDirection(this, prefs);
         mqttManager.setAppForeground(true);
         mqttManager.addGlobalListener(this);
+        mqttManager.refreshAgentRoomSubscription();
         applyCurrentTheme();
         applyLocalizedLabels();
         populateSavedUser();
+        refreshPinnedAgentCardUI();
         refreshRecentRoomsUI();
         refreshSavedMessagesWorkspace();
     }
@@ -392,6 +403,16 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         btnFilterActiveRooms = findViewById(R.id.btnFilterActiveRooms);
         btnFilterArchivedRooms = findViewById(R.id.btnFilterArchivedRooms);
         tvRecentCount = findViewById(R.id.tvRecentCount);
+
+        cardPinnedAgentRoom = findViewById(R.id.cardPinnedAgentRoom);
+        ivAgentPinnedAvatar = findViewById(R.id.ivAgentPinnedAvatar);
+        tvAgentPinnedOrbFallback = findViewById(R.id.tvAgentPinnedOrbFallback);
+        tvAgentPinnedTitle = findViewById(R.id.tvAgentPinnedTitle);
+        tvAgentPinnedCode = findViewById(R.id.tvAgentPinnedCode);
+        btnConfigureAgentRoom = findViewById(R.id.btnConfigureAgentRoom);
+        tvAgentPinnedPreview = findViewById(R.id.tvAgentPinnedPreview);
+        tvAgentPinnedPresencePill = findViewById(R.id.tvAgentPinnedPresencePill);
+
         recentRoomsCard = findViewById(R.id.recentRoomsCard);
         layoutRecentRoomsContainer = findViewById(R.id.layoutRecentRoomsContainer);
         cardEmptyRoomsPrompt = findViewById(R.id.cardEmptyRoomsPrompt);
@@ -446,6 +467,30 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             }
         });
 
+        // Pinned Run Agent Card interactions (Requirement 1)
+        cardPinnedAgentRoom.setOnClickListener(v -> {
+            FeedbackTouchHelper.onGestureTick(this, prefs, v);
+            String agentCode = prefs.getAgentRoomCode();
+            if (agentCode.isEmpty()) {
+                showAgentRoomSetupSheet();
+            } else {
+                ensureDefaultDisplayName();
+                mqttManager.joinRoom(agentCode, AgentHelper.AGENT_ROOM_TITLE, null);
+                openRoomActivity(agentCode, AgentHelper.AGENT_ROOM_TITLE, null);
+            }
+        });
+
+        cardPinnedAgentRoom.setOnLongClickListener(v -> {
+            FeedbackTouchHelper.onGestureTick(this, prefs, v);
+            showAgentRoomSetupSheet();
+            return true;
+        });
+
+        btnConfigureAgentRoom.setOnClickListener(v -> {
+            FeedbackTouchHelper.onGestureTick(this, prefs, v);
+            showAgentRoomSetupSheet();
+        });
+
         btnSegmentCreate.setOnClickListener(v -> switchHeroSegment(true));
         btnSegmentJoin.setOnClickListener(v -> switchHeroSegment(false));
 
@@ -462,7 +507,6 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         btnDockPeople.setOnClickListener(v -> switchDockWorkspace(2));
         btnDockSaved.setOnClickListener(v -> switchDockWorkspace(3));
 
-        // Floating '+' Button toggles the Create/Join Studio Card with theme-aware motion
         fabNewSpace.setOnClickListener(v -> {
             FeedbackTouchHelper.onGestureTick(this, prefs, v);
             MotionHelper.animateButtonPulse(fabNewSpace, prefs.isLiteModeEnabled());
@@ -478,7 +522,6 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             }
         });
 
-        // Slim Join / Create / Filter Bar
         etQuickCodeOrSearch.addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
@@ -499,10 +542,10 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             if (RoomCryptoUtils.isValidRoomCode(code)) {
                 ensureDefaultDisplayName();
                 etQuickCodeOrSearch.setText("");
-                mqttManager.joinRoom(code, "Room " + code, null);
-                openRoomActivity(code, "Room " + code, null);
+                String targetName = prefs.isAgentRoom(code) ? AgentHelper.AGENT_ROOM_TITLE : ("Room " + code);
+                mqttManager.joinRoom(code, targetName, null);
+                openRoomActivity(code, targetName, null);
             } else if (!raw.isEmpty()) {
-                // Open Create studio pre-filled with the typed room name
                 mainCard.setVisibility(View.VISIBLE);
                 MotionHelper.animatePanelEntrance(mainCard, prefs.isLiteModeEnabled());
                 switchHeroSegment(true);
@@ -518,10 +561,12 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
 
         btnFilterActiveRooms.setOnClickListener(v -> {
             showingArchivedRooms = false;
+            refreshPinnedAgentCardUI();
             refreshRecentRoomsUI();
         });
         btnFilterArchivedRooms.setOnClickListener(v -> {
             showingArchivedRooms = true;
+            refreshPinnedAgentCardUI();
             refreshRecentRoomsUI();
         });
 
@@ -536,6 +581,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             applyLocalizedLabels();
             applyCurrentTheme();
             populateSavedUser();
+            refreshPinnedAgentCardUI();
             refreshRecentRoomsUI();
             refreshOnlineOrbsRow(mqttManager.getOnlineUsersList());
             refreshSavedMessagesWorkspace();
@@ -568,6 +614,288 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
 
         btnCreateRoom.setOnClickListener(v -> onCreateRoomClicked());
         btnJoinByCodeSubmit.setOnClickListener(v -> onJoinRoomClicked());
+    }
+
+    // =========================================================================
+    // v3.3.0 REQUIREMENT 1 & 2: Pinned Run Agent Card & Setup Dialog
+    // =========================================================================
+
+    private void refreshPinnedAgentCardUI() {
+        if (cardPinnedAgentRoom == null) return;
+        if (showingArchivedRooms) {
+            cardPinnedAgentRoom.setVisibility(View.GONE);
+            return;
+        }
+        cardPinnedAgentRoom.setVisibility(View.VISIBLE);
+
+        float d = getResources().getDisplayMetrics().density;
+        boolean ar = prefs.isArabic();
+        String agentCode = prefs.getAgentRoomCode();
+        boolean configured = !agentCode.isEmpty();
+
+        cardPinnedAgentRoom.setCardBackgroundColor(palette.panel);
+        cardPinnedAgentRoom.setStrokeColor(configured ? palette.accent : palette.panelHover);
+        cardPinnedAgentRoom.setStrokeWidth((int) ((configured ? 1.5f : 1f) * d));
+
+        tvAgentPinnedTitle.setText(AgentHelper.AGENT_ROOM_TITLE);
+        tvAgentPinnedTitle.setTextColor(palette.text);
+        btnConfigureAgentRoom.setColorFilter(palette.muted);
+
+        GradientDrawable orbBg = new GradientDrawable();
+        orbBg.setShape(GradientDrawable.OVAL);
+        orbBg.setColor(palette.accent);
+        tvAgentPinnedOrbFallback.setBackground(orbBg);
+        tvAgentPinnedOrbFallback.setTextColor(palette.accentInk);
+        tvAgentPinnedOrbFallback.setText("م");
+
+        if (!configured) {
+            ivAgentPinnedAvatar.setVisibility(View.GONE);
+            tvAgentPinnedOrbFallback.setVisibility(View.VISIBLE);
+            tvAgentPinnedCode.setText("");
+            tvAgentPinnedPreview.setText(ar
+                    ? "اربط غرفة الوكيل — الصق كود الغرفة أو أنشئ غرفة جديدة"
+                    : "اربط غرفة الوكيل — Paste room code or create a new Agent room");
+            tvAgentPinnedPreview.setTextColor(palette.muted);
+
+            GradientDrawable setupPillBg = new GradientDrawable();
+            setupPillBg.setCornerRadius(14 * d);
+            setupPillBg.setColor(palette.highlighter);
+            tvAgentPinnedPresencePill.setBackground(setupPillBg);
+            tvAgentPinnedPresencePill.setTextColor(palette.accentInk);
+            tvAgentPinnedPresencePill.setText("اربط غرفة الوكيل");
+            return;
+        }
+
+        // Configured Agent Room: show code, avatar if synced, preview, and honest real-time presence
+        tvAgentPinnedCode.setText("#" + agentCode);
+        tvAgentPinnedCode.setTextColor(palette.subtle);
+
+        String agentAvatarUrl = mqttManager.getAgentAvatarUrl(agentCode);
+        if (agentAvatarUrl != null && !agentAvatarUrl.isEmpty()) {
+            ivAgentPinnedAvatar.setVisibility(View.VISIBLE);
+            tvAgentPinnedOrbFallback.setVisibility(View.GONE);
+            Glide.with(this).load(agentAvatarUrl).circleCrop().into(ivAgentPinnedAvatar);
+        } else {
+            ivAgentPinnedAvatar.setVisibility(View.GONE);
+            tvAgentPinnedOrbFallback.setVisibility(View.VISIBLE);
+        }
+
+        // Preview from RecentRoom or cached RoomData
+        String preview = "";
+        for (RecentRoom r : prefs.getRecentRooms()) {
+            if (r != null && agentCode.equalsIgnoreCase(r.code) && r.lastMessagePreview != null && !r.lastMessagePreview.isEmpty()) {
+                preview = r.lastMessagePreview;
+                break;
+            }
+        }
+        if (preview.isEmpty()) {
+            RoomData cached = prefs.getCachedRoomData(agentCode);
+            if (cached != null && cached.messages != null && !cached.messages.isEmpty()) {
+                com.takidz.run.models.Message last = cached.messages.get(cached.messages.size() - 1);
+                if (last != null && last.text != null) {
+                    preview = last.text;
+                }
+            }
+        }
+        if (preview.isEmpty()) {
+            preview = ar ? "غرفة الوكيل المثبتة · اضغط للدخول المباشر" : "Pinned Agent room · Tap to open";
+        }
+        tvAgentPinnedPreview.setText(preview);
+        tvAgentPinnedPreview.setTextColor(palette.muted);
+
+        // Requirement 2: Honest Agent Presence ("متصل" only on fresh heartbeat; "غير متاح حالياً" in calm muted gray otherwise)
+        boolean agentOnline = mqttManager.isAgentOnlineInRoom(agentCode);
+        GradientDrawable statusPillBg = new GradientDrawable();
+        statusPillBg.setCornerRadius(14 * d);
+        if (agentOnline) {
+            statusPillBg.setColor(palette.isLight ? palette.highlighter : ThemeHelper.withAlpha(palette.accent, 75));
+            tvAgentPinnedPresencePill.setBackground(statusPillBg);
+            tvAgentPinnedPresencePill.setTextColor(palette.isLight ? palette.accentInk : palette.text);
+            tvAgentPinnedPresencePill.setText("● متصل");
+        } else {
+            statusPillBg.setColor(palette.panelSoft);
+            tvAgentPinnedPresencePill.setBackground(statusPillBg);
+            tvAgentPinnedPresencePill.setTextColor(palette.muted);
+            tvAgentPinnedPresencePill.setText("غير متاح حالياً");
+        }
+    }
+
+    /**
+     * Requirement 1: Setup & management sheet for «غرفة Run Agent» (`agent_room_code`).
+     * Allows pasting an existing room code once, creating a new room and copying its code, or unlinking.
+     */
+    private void showAgentRoomSetupSheet() {
+        boolean ar = prefs.isArabic();
+        BottomSheetDialog dialog = new BottomSheetDialog(this, R.style.Theme_RunApp);
+        float d = getResources().getDisplayMetrics().density;
+
+        LinearLayout root = new LinearLayout(this);
+        LocaleHelper.applyViewDirection(root, ar);
+        root.setOrientation(LinearLayout.VERTICAL);
+        int pad = (int) (20 * d);
+        root.setPadding(pad, (int) (16 * d), pad, (int) (24 * d));
+
+        View handle = new View(this);
+        LinearLayout.LayoutParams hLp = new LinearLayout.LayoutParams((int) (38 * d), (int) (4 * d));
+        hLp.gravity = Gravity.CENTER_HORIZONTAL;
+        hLp.bottomMargin = (int) (12 * d);
+        handle.setLayoutParams(hLp);
+        GradientDrawable hBg = new GradientDrawable();
+        hBg.setCornerRadius(2 * d);
+        hBg.setColor(palette.panelHover);
+        handle.setBackground(hBg);
+        root.addView(handle);
+
+        TextView tvTitle = new TextView(this);
+        tvTitle.setText("غرفة Run Agent — موس");
+        tvTitle.setTextColor(palette.text);
+        tvTitle.setTextSize(19f);
+        tvTitle.setTypeface(tvTitle.getTypeface(), Typeface.BOLD);
+        root.addView(tvTitle);
+
+        TextView tvSub = new TextView(this);
+        tvSub.setText(ar
+                ? "الصق كود الغرفة المخصّصة للوكيل (موس) ليتم تثبيتها أعلى القائمة، أو أنشئ غرفة وكيل جديدة وانسخ كودها للجسر."
+                : "Paste the room code for Run Agent (Mous) to pin it at the top of your rooms, or create a new room and copy its code for the bridge.");
+        tvSub.setTextColor(palette.muted);
+        tvSub.setTextSize(12.5f);
+        LinearLayout.LayoutParams subLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT
+        );
+        subLp.topMargin = (int) (4 * d);
+        subLp.bottomMargin = (int) (14 * d);
+        tvSub.setLayoutParams(subLp);
+        root.addView(tvSub);
+
+        final String currentAgentCode = prefs.getAgentRoomCode();
+
+        final EditText etAgentCode = new EditText(this);
+        LinearLayout.LayoutParams etLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, (int) (48 * d)
+        );
+        etLp.bottomMargin = (int) (12 * d);
+        etAgentCode.setLayoutParams(etLp);
+        etAgentCode.setBackgroundResource(R.drawable.bg_input_field);
+        etAgentCode.setPadding((int) (14 * d), 0, (int) (14 * d), 0);
+        etAgentCode.setSingleLine(true);
+        etAgentCode.setHint(ar ? "الصق كود الغرفة (6 أو 12 حرفاً) أو الرابط…" : "Paste 6 or 12-char room code or link…");
+        etAgentCode.setTextColor(palette.text);
+        etAgentCode.setHintTextColor(palette.subtle);
+        etAgentCode.setTextSize(14.5f);
+        if (!currentAgentCode.isEmpty()) {
+            etAgentCode.setText(currentAgentCode);
+            etAgentCode.setSelection(currentAgentCode.length());
+        }
+        root.addView(etAgentCode);
+
+        // Primary Button: Save pasted code to "agent_room_code"
+        MaterialButton btnSaveCode = new MaterialButton(this);
+        LinearLayout.LayoutParams btnLp = new LinearLayout.LayoutParams(
+                ViewGroup.LayoutParams.MATCH_PARENT, (int) (48 * d)
+        );
+        btnLp.bottomMargin = (int) (8 * d);
+        btnSaveCode.setLayoutParams(btnLp);
+        btnSaveCode.setText(ar ? "حفظ وتثبيت غرفة الوكيل" : "Save & Pin Agent Room");
+        btnSaveCode.setBackgroundTintList(ColorStateList.valueOf(palette.accent));
+        btnSaveCode.setTextColor(palette.accentInk);
+        btnSaveCode.setCornerRadius((int) (16 * d));
+        btnSaveCode.setOnClickListener(v -> {
+            String raw = etAgentCode.getText().toString().trim();
+            String extracted = extractCodeFromInputOrLink(raw);
+            if (!RoomCryptoUtils.isValidRoomCode(extracted)) {
+                Toast.makeText(this,
+                        ar ? "يرجى إدخال كود غرفة صحيح (6 أو 12 حرفاً)." : "Please enter a valid 6 or 12-character room code.",
+                        Toast.LENGTH_SHORT).show();
+                return;
+            }
+            prefs.setAgentRoomCode(extracted);
+            prefs.saveRecentRoom(extracted, AgentHelper.AGENT_ROOM_TITLE);
+            mqttManager.refreshAgentRoomSubscription();
+            refreshPinnedAgentCardUI();
+            refreshRecentRoomsUI();
+            Toast.makeText(this,
+                    ar ? ("تم تثبيت غرفة الوكيل #" + extracted) : ("Pinned Agent room #" + extracted),
+                    Toast.LENGTH_SHORT).show();
+            dialog.dismiss();
+        });
+        root.addView(btnSaveCode);
+
+        // Secondary Button: Create new room for Agent & copy code to clipboard
+        MaterialButton btnCreateAgentRoom = new MaterialButton(this);
+        btnCreateAgentRoom.setLayoutParams(btnLp);
+        btnCreateAgentRoom.setText(ar ? "+ إنشاء غرفة وكيل جديدة ونسخ كودها" : "+ Create New Agent Room & Copy Code");
+        btnCreateAgentRoom.setBackgroundTintList(ColorStateList.valueOf(palette.panelSoft));
+        btnCreateAgentRoom.setTextColor(palette.text);
+        btnCreateAgentRoom.setCornerRadius((int) (16 * d));
+        btnCreateAgentRoom.setOnClickListener(v -> {
+            ensureDefaultDisplayName();
+            String newCode = mqttManager.createNewRoom(AgentHelper.AGENT_ROOM_TITLE, false, null);
+            prefs.setAgentRoomCode(newCode);
+            mqttManager.refreshAgentRoomSubscription();
+            ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+            if (cm != null) {
+                cm.setPrimaryClip(ClipData.newPlainText("Agent Room Code", newCode));
+            }
+            refreshPinnedAgentCardUI();
+            refreshRecentRoomsUI();
+            Toast.makeText(this,
+                    ar ? ("تم إنشاء غرفة الوكيل ونسخ الكود: #" + newCode) : ("Created Agent room & copied code: #" + newCode),
+                    Toast.LENGTH_LONG).show();
+            dialog.dismiss();
+            openRoomActivity(newCode, AgentHelper.AGENT_ROOM_TITLE, null);
+        });
+        root.addView(btnCreateAgentRoom);
+
+        if (!currentAgentCode.isEmpty()) {
+            LinearLayout bottomRow = new LinearLayout(this);
+            bottomRow.setOrientation(LinearLayout.HORIZONTAL);
+
+            MaterialButton btnCopyCurrent = new MaterialButton(this);
+            LinearLayout.LayoutParams halfLp = new LinearLayout.LayoutParams(0, (int) (42 * d), 1f);
+            halfLp.setMarginEnd((int) (6 * d));
+            btnCopyCurrent.setLayoutParams(halfLp);
+            btnCopyCurrent.setText(ar ? ("نسخ #" + currentAgentCode) : ("Copy #" + currentAgentCode));
+            btnCopyCurrent.setTextSize(12f);
+            btnCopyCurrent.setBackgroundTintList(ColorStateList.valueOf(palette.panelSoft));
+            btnCopyCurrent.setTextColor(palette.text);
+            btnCopyCurrent.setCornerRadius((int) (14 * d));
+            btnCopyCurrent.setOnClickListener(v -> {
+                ClipboardManager cm = (ClipboardManager) getSystemService(Context.CLIPBOARD_SERVICE);
+                if (cm != null) {
+                    cm.setPrimaryClip(ClipData.newPlainText("Agent Room Code", currentAgentCode));
+                    Toast.makeText(this,
+                            ar ? ("تم نسخ كود غرفة الوكيل #" + currentAgentCode) : ("Copied Agent room code #" + currentAgentCode),
+                            Toast.LENGTH_SHORT).show();
+                }
+            });
+            bottomRow.addView(btnCopyCurrent);
+
+            MaterialButton btnUnlink = new MaterialButton(this);
+            LinearLayout.LayoutParams unlinkLp = new LinearLayout.LayoutParams(0, (int) (42 * d), 1f);
+            btnUnlink.setLayoutParams(unlinkLp);
+            btnUnlink.setText(ar ? "إلغاء الربط" : "Unlink Room");
+            btnUnlink.setTextSize(12f);
+            btnUnlink.setBackgroundTintList(ColorStateList.valueOf(palette.panelSoft));
+            btnUnlink.setTextColor(palette.danger);
+            btnUnlink.setCornerRadius((int) (14 * d));
+            btnUnlink.setOnClickListener(v -> {
+                prefs.setAgentRoomCode("");
+                mqttManager.refreshAgentRoomSubscription();
+                refreshPinnedAgentCardUI();
+                refreshRecentRoomsUI();
+                Toast.makeText(this,
+                        ar ? "تم إلغاء ربط غرفة الوكيل" : "Agent room unlinked",
+                        Toast.LENGTH_SHORT).show();
+                dialog.dismiss();
+            });
+            bottomRow.addView(btnUnlink);
+            root.addView(bottomRow);
+        }
+
+        dialog.setContentView(root);
+        ThemeHelper.prepareBottomSheet(dialog, root, palette);
+        MotionHelper.animatePanelEntrance(root, prefs.isLiteModeEnabled());
+        dialog.show();
     }
 
     private void setupInlineWorkspaces() {
@@ -693,8 +1021,6 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         workspaceSaved.setVisibility(index == 3 ? View.VISIBLE : View.GONE);
         fabNewSpace.setVisibility(index == 0 ? View.VISIBLE : View.GONE);
 
-        // On Home (index == 0), hide bottomNavDock so Home matches Design A (7196.png) 100%,
-        // except in Liquid Glass theme or when navigating inside secondary workspaces (1/2/3).
         bottomNavDock.setVisibility((index != 0 || glassTheme) ? View.VISIBLE : View.GONE);
 
         FrameLayout.LayoutParams fabLp = (FrameLayout.LayoutParams) fabNewSpace.getLayoutParams();
@@ -897,9 +1223,6 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         layoutSavedEmpty.setVisibility(saved.isEmpty() ? View.VISIBLE : View.GONE);
     }
 
-    /**
-     * Slim single-line online strip: shows compact user chips horizontally so it never eats vertical space.
-     */
     private void refreshOnlineOrbsRow(List<OnlineUser> onlineUsers) {
         layoutOnlineOrbsRow.removeAllViews();
         float d = getResources().getDisplayMetrics().density;
@@ -927,7 +1250,8 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             chip.setGravity(Gravity.CENTER_VERTICAL);
             chip.setPadding((int) (10 * d), 0, (int) (10 * d), 0);
             chip.setSingleLine(true);
-            String label = u.isSelf ? (ar ? "أنت" : "You") : (u.name != null ? u.name : "User");
+            String label = u.isSelf ? (ar ? "أنت" : "You")
+                    : (AgentHelper.isAgentUserId(u.userId) ? "موس" : (u.name != null ? u.name : "User"));
             chip.setText(label);
             chip.setTextSize(11.5f);
             chip.setTextColor(palette.text);
@@ -1033,8 +1357,9 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             return;
         }
         mainCard.setVisibility(View.GONE);
-        mqttManager.joinRoom(extracted, "Room " + extracted, null);
-        openRoomActivity(extracted, "Room " + extracted, null);
+        String targetName = prefs.isAgentRoom(extracted) ? AgentHelper.AGENT_ROOM_TITLE : ("Room " + extracted);
+        mqttManager.joinRoom(extracted, targetName, null);
+        openRoomActivity(extracted, targetName, null);
     }
 
     private String extractCodeFromInputOrLink(String raw) {
@@ -1091,7 +1416,8 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         if (RoomCryptoUtils.isValidRoomCode(code)) {
             String roomNameParam = uri.getQueryParameter("name");
             String rName = (roomNameParam != null && !roomNameParam.trim().isEmpty())
-                    ? roomNameParam.trim() : ("Room " + code);
+                    ? roomNameParam.trim()
+                    : (prefs.isAgentRoom(code) ? AgentHelper.AGENT_ROOM_TITLE : ("Room " + code));
             ensureDefaultDisplayName();
             mqttManager.joinRoom(code, rName, null);
             openRoomActivity(code, rName, null);
@@ -1101,19 +1427,15 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         return false;
     }
 
-    /**
-     * Renders "Your rooms" and "Recent" room rows matching Design A (7196.png):
-     * - No nested outer card, no 3 action buttons on the right.
-     * - Room code in a single unbreakable line.
-     * - Single clean lime status badge ("● 1 online" / "🌐 Public group").
-     * - Long-press opens room quick actions sheet.
-     */
     private void refreshRecentRoomsUI() {
+        refreshPinnedAgentCardUI();
+
         List<RecentRoom> allRecent = prefs.getRecentRooms();
         layoutRecentRoomsContainer.removeAllViews();
         boolean ar = prefs.isArabic();
         String filterText = etQuickCodeOrSearch != null
                 ? etQuickCodeOrSearch.getText().toString().trim().toLowerCase(Locale.US) : "";
+        String pinnedAgentCode = prefs.getAgentRoomCode();
 
         tvRecentTitle.setText(showingArchivedRooms
                 ? (ar ? "الأرشيف" : "Archived")
@@ -1125,6 +1447,10 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         List<RecentRoom> filtered = new ArrayList<>();
         for (RecentRoom r : allRecent) {
             if (r == null || r.code == null) continue;
+            // Do not duplicate the pinned Agent room in the regular list below the pinned card
+            if (!showingArchivedRooms && !pinnedAgentCode.isEmpty() && pinnedAgentCode.equalsIgnoreCase(r.code)) {
+                continue;
+            }
             if (r.archived != showingArchivedRooms) continue;
             String rName = r.name != null ? r.name : ("Room " + r.code);
             if (!filterText.isEmpty()
@@ -1142,7 +1468,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             layoutRecentEmpty.setVisibility(View.VISIBLE);
             tvEmptyRoomsText.setText(showingArchivedRooms
                     ? (ar ? "لا توجد غرف مؤرشفة." : "No archived rooms.")
-                    : (ar ? "لا توجد غرف بعد. اضغط + لإنشاء غرفة أو الانضمام برمز!" : "No rooms yet. Tap + below to create or join a room."));
+                    : (ar ? "لا توجد غرف أخرى بعد. اضغط + لإنشاء غرفة أو الانضمام برمز!" : "No other rooms yet. Tap + below to create or join a room."));
             return;
         }
 
@@ -1156,7 +1482,6 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         for (int idx = 0; idx < filtered.size(); idx++) {
             RecentRoom r = filtered.get(idx);
 
-            // Insert "Recent" sub-heading after the top 3 active rooms (matches Design A 7196.png!)
             if (!showingArchivedRooms && idx == 3 && !recentHeaderAdded) {
                 recentHeaderAdded = true;
                 TextView tvRecentSubHeader = new TextView(this);
@@ -1191,7 +1516,6 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             tvName.setText(title);
             tvName.setTextColor(palette.text);
 
-            // Top-right single-line unbreakable room code
             tvTime.setText("#" + r.code);
             tvTime.setTextColor(palette.subtle);
 
@@ -1206,7 +1530,6 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             tvPreview.setText(preview);
             tvPreview.setTextColor(palette.muted);
 
-            // Single clean lime pill badge (Matches 7196.png: "● 12 online" or "🌐 Public group")
             int roomAccent = ThemeHelper.parseRoomAccentColor(r.accentColor, palette);
             GradientDrawable badgeBg = new GradientDrawable();
             badgeBg.setCornerRadius(14 * d);
@@ -1258,10 +1581,6 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         }
     }
 
-    /**
-     * Long-press sheet on any room card: houses Copy Invite/Code, Archive/Unarchive, and Remove
-     * so room cards remain clean and uncluttered like Design A (7196.png).
-     */
     private void showRoomQuickActionsSheet(RecentRoom r, String title) {
         boolean ar = prefs.isArabic();
         BottomSheetDialog dialog = new BottomSheetDialog(this, R.style.Theme_RunApp);
@@ -1277,6 +1596,16 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         tvHeader.setTypeface(tvHeader.getTypeface(), Typeface.BOLD);
         tvHeader.setPadding(dp(4), 0, dp(4), dp(10));
         container.addView(tvHeader);
+
+        addMoreRow(container, "🤖", ar ? "تعيين كغرفة Run Agent (موس)" : "Pin as Run Agent Room (Mous)", dialog, () -> {
+            prefs.setAgentRoomCode(r.code);
+            mqttManager.refreshAgentRoomSubscription();
+            refreshPinnedAgentCardUI();
+            refreshRecentRoomsUI();
+            Toast.makeText(this,
+                    ar ? ("تم تثبيت #" + r.code + " كغرفة الوكيل") : ("Pinned #" + r.code + " as Run Agent room"),
+                    Toast.LENGTH_SHORT).show();
+        });
 
         addMoreRow(container, "🔗", ar ? ("نسخ رابط الدعوة (#" + r.code + ")") : ("Copy Invite Link (#" + r.code + ")"), dialog, () -> {
             String inviteUrl = "https://takidz507.github.io/run/?room=" + r.code;
@@ -1447,7 +1776,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     }
 
     // =========================================================================
-    // ⋮ MORE SHEET (Fixes v3.1 Bug #1: opaque/frosted palette.sheetBg in all themes)
+    // ⋮ MORE SHEET (Includes «غرفة Run Agent» setup row)
     // =========================================================================
 
     private void showMoreSheet() {
@@ -1458,7 +1787,6 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         container.setPadding(dp(20), dp(16), dp(20), dp(24));
         LocaleHelper.applyViewDirection(container, ar);
 
-        // Drag handle pill at top of sheet
         View handle = new View(this);
         LinearLayout.LayoutParams hLp = new LinearLayout.LayoutParams(dp(38), dp(4));
         hLp.gravity = Gravity.CENTER_HORIZONTAL;
@@ -1485,6 +1813,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
                 refreshRecentRoomsUI();
             });
         }
+        addMoreRow(container, "🤖", ar ? "غرفة Run Agent — موس" : "Run Agent Room — Mous", dialog, this::showAgentRoomSetupSheet);
         addMoreRow(container, "🌐", ar ? "المجموعات العامة" : "Public Groups", dialog, () -> cardPublicGroups.performClick());
         addMoreRow(container, "💡", ar ? "لوحة المقترحات" : "Feedback Board", dialog, () -> cardFeedbackQuick.performClick());
         addMoreRow(container, "🗄", ar ? "الأرشيف (الغرف المؤرشفة)" : "Archived Rooms", dialog, () -> {
@@ -1546,7 +1875,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     }
 
     // =========================================================================
-    // #22: Live Theme Preview & Settings Sheet (Fixes v3.1 Bug #1 & Bug #2)
+    // #22: Live Theme Preview & Settings Sheet
     // =========================================================================
 
     private void showLiveThemeAndSettingsSheet() {
@@ -1561,7 +1890,6 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         TextView tvSheetSub = root.findViewById(R.id.tvSettingsSheetSub);
         ImageButton btnClose = root.findViewById(R.id.btnCloseSettingsSheet);
 
-        // Live UI Preview Surface Views
         MaterialCardView cardLiveSurface = root.findViewById(R.id.cardLivePreviewSurface);
         TextView tvPreviewLogo = root.findViewById(R.id.tvPreviewRunLogo);
         View viewPreviewHighlighter = root.findViewById(R.id.viewPreviewHighlighter);
@@ -1580,7 +1908,6 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         CheckBox cbPreviewTask = root.findViewById(R.id.cbPreviewTask);
         TextView tvPreviewTaskText = root.findViewById(R.id.tvPreviewTaskText);
 
-        // 5 Selectable Theme Family Cards + Dark Mode switch (7 themes total)
         MaterialCardView cardTheme1 = root.findViewById(R.id.cardThemeWarmPaper);
         MaterialCardView cardTheme2 = root.findViewById(R.id.cardThemeWarmPaperDark);
         MaterialCardView cardTheme3 = root.findViewById(R.id.cardThemeCleanAir);
@@ -1597,9 +1924,9 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         TextView tvProfileSectionHeader = root.findViewById(R.id.tvProfileSectionLabel);
         TextView tvExpSectionHeader = root.findViewById(R.id.tvLanguageSectionLabel);
 
-        // Profile & Experience Inputs
         MaterialButton btnChangeAvatar = root.findViewById(R.id.btnChangeAvatar);
         MaterialButton btnOpenPairing = root.findViewById(R.id.btnOpenPairingFromSettings);
+        MaterialButton btnConfigureAgent = root.findViewById(R.id.btnConfigureAgentFromSettings);
         EditText etName = root.findViewById(R.id.etSettingsDisplayName);
         EditText etBio = root.findViewById(R.id.etSettingsBio);
         MaterialButton btnLangEn = root.findViewById(R.id.btnLangEnglish);
@@ -1621,11 +1948,21 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         cbNotify.setChecked(prefs.isNotificationsEnabled());
         cbTranslate.setChecked(prefs.isAutoTranslateEnabled());
 
+        if (btnConfigureAgent != null) {
+            String agCode = prefs.getAgentRoomCode();
+            btnConfigureAgent.setText(agCode.isEmpty()
+                    ? "🤖 غرفة Run Agent — موس (اربط الغرفة)"
+                    : ("🤖 غرفة Run Agent — موس (#" + agCode + ")"));
+            btnConfigureAgent.setOnClickListener(v -> {
+                dialog.dismiss();
+                showAgentRoomSetupSheet();
+            });
+        }
+
         final String[] previewedThemeKey = {prefs.getThemeMode()};
         final String[] previewedLang = {prefs.getUiLanguage()};
         final float d = getResources().getDisplayMetrics().density;
 
-        // Live UI Surface updater (#22) — uses fresh GradientDrawables and opaque card fills (fixes Bug #2)
         Runnable updateLivePreviewSurface = () -> {
             ThemeHelper.Palette p = ThemeHelper.getPalette(previewedThemeKey[0]);
             ThemeHelper.applySheetSurface(scrollSheet, p);
@@ -1747,6 +2084,10 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             btnOpenPairing.setBackgroundTintList(ColorStateList.valueOf(p.panelSoft));
             btnOpenPairing.setTextColor(p.text);
             btnOpenPairing.setIconTint(ColorStateList.valueOf(p.text));
+            if (btnConfigureAgent != null) {
+                btnConfigureAgent.setBackgroundTintList(ColorStateList.valueOf(p.panelSoft));
+                btnConfigureAgent.setTextColor(p.text);
+            }
 
             boolean isAr = "ar".equalsIgnoreCase(previewedLang[0]);
             btnLangEn.setBackgroundTintList(ColorStateList.valueOf(!isAr ? p.accent : p.panelSoft));
@@ -1835,6 +2176,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             applyCurrentTheme();
             applyLocalizedLabels();
             populateSavedUser();
+            refreshPinnedAgentCardUI();
             refreshRecentRoomsUI();
             refreshOnlineOrbsRow(mqttManager.getOnlineUsersList());
             refreshSavedMessagesWorkspace();
@@ -1941,6 +2283,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
                     applyCurrentTheme();
                     applyLocalizedLabels();
                     populateSavedUser();
+                    refreshPinnedAgentCardUI();
                     refreshRecentRoomsUI();
                     refreshSavedMessagesWorkspace();
                     Toast.makeText(MainActivity.this,
@@ -1975,6 +2318,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
                     applyCurrentTheme();
                     applyLocalizedLabels();
                     populateSavedUser();
+                    refreshPinnedAgentCardUI();
                     refreshRecentRoomsUI();
                     refreshSavedMessagesWorkspace();
                     Toast.makeText(this, ar ? "تم استيراد النسخة الاحتياطية بنجاح!" : "Backup imported!", Toast.LENGTH_SHORT).show();
@@ -2051,6 +2395,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
                 : "No saved messages yet. Long-press any message in a room and tap Save.");
 
         updateConnectionQualityUI(mqttManager.getConnectionQuality());
+        refreshPinnedAgentCardUI();
     }
 
     private void applyCurrentTheme() {
@@ -2072,7 +2417,6 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             rootMainFrame.setBackgroundColor(palette.bg);
         }
 
-        // "Run." brand logo with lime dot (Matches Design A 7196.png)
         tvAppTitle.setText(buildBrandLogoSpannable(palette));
         btnMoreMenu.setColorFilter(palette.text);
         btnAccountPairing.setColorFilter(palette.text);
@@ -2081,17 +2425,14 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         btnQuickLangToggle.setBackgroundTintList(ColorStateList.valueOf(palette.panelSoft));
         btnQuickLangToggle.setTextColor(palette.text);
 
-        // Top-right circular 'T' avatar orb (fresh GradientDrawable)
         GradientDrawable avatarOrbBg = new GradientDrawable();
         avatarOrbBg.setShape(GradientDrawable.OVAL);
         avatarOrbBg.setColor(palette.accent);
         tvMainAvatarFallback.setBackground(avatarOrbBg);
         tvMainAvatarFallback.setTextColor(palette.accentInk);
 
-        // One-line greeting directly on canvas
         tvGreetingName.setTextColor(palette.muted);
 
-        // Slim Join / Create bar
         cardQuickCodeBar.setCardBackgroundColor(palette.panel);
         cardQuickCodeBar.setStrokeColor(palette.panelHover);
         cardQuickCodeBar.setStrokeWidth((int) (1 * d));
@@ -2117,7 +2458,6 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         btnJoinByCodeSubmit.setBackgroundTintList(ColorStateList.valueOf(palette.accent));
         btnJoinByCodeSubmit.setTextColor(palette.accentInk);
 
-        // "Your rooms" overlapping highlighter bar (fresh GradientDrawable)
         tvRecentTitle.setTextColor(palette.text);
         GradientDrawable hiBg = new GradientDrawable();
         hiBg.setCornerRadius(4.5f * d);
@@ -2164,6 +2504,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
         fabNewSpace.setLayoutParams(fabLp);
 
         updateDockButtonsVisuals();
+        refreshPinnedAgentCardUI();
 
         if (getWindow() != null) {
             getWindow().setStatusBarColor(palette.bg);
@@ -2203,6 +2544,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             tvOnlineStatus.setText("● " + LocaleHelper.formatNumber(count, ar) + (ar ? " متصل الآن" : " online"));
             tvOnlineStripTitle.setText("● " + LocaleHelper.formatNumber(count, ar) + (ar ? " متصل" : " online"));
             updateConnectionQualityUI(mqttManager.getConnectionQuality());
+            refreshPinnedAgentCardUI();
         });
     }
 
@@ -2218,6 +2560,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
             int c = Math.max(1, onlineCount);
             tvOnlineStatus.setText("● " + LocaleHelper.formatNumber(c, ar) + (ar ? " متصل الآن" : " online"));
             tvOnlineStripTitle.setText("● " + LocaleHelper.formatNumber(c, ar) + (ar ? " متصل" : " online"));
+            refreshPinnedAgentCardUI();
         });
     }
 
@@ -2225,6 +2568,7 @@ public class MainActivity extends AppCompatActivity implements MqttRoomManager.G
     public void onOnlineUsersChanged(List<OnlineUser> onlineUsers) {
         runOnUiThread(() -> {
             refreshOnlineOrbsRow(onlineUsers);
+            refreshPinnedAgentCardUI();
             if (currentDockTab == 2) {
                 refreshPeopleWorkspaceUI();
             }

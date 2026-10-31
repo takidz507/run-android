@@ -18,7 +18,6 @@ import androidx.core.app.NotificationManagerCompat;
 import androidx.core.content.ContextCompat;
 
 import com.google.gson.Gson;
-import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.reflect.TypeToken;
@@ -33,6 +32,7 @@ import com.takidz.run.models.RoomData;
 import com.takidz.run.models.SignalMessage;
 import com.takidz.run.models.TaskItem;
 import com.takidz.run.ui.RoomActivity;
+import com.takidz.run.utils.AgentHelper;
 import com.takidz.run.utils.FeedbackTouchHelper;
 import com.takidz.run.utils.PrefsManager;
 import com.takidz.run.utils.RoomCryptoUtils;
@@ -61,17 +61,10 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
- * Run v3.0.0 Serverless Real-Time MQTT Synchronization Engine.
- * 100% byte-compatible with `current-web-index-v2pro.html` and Android `2.0.0-pro`.
- * Implements:
- * - #17: Per-room identity (color + background style) synced via RoomData.meta & retained /identity topic
- * - #18: Quick emoji reactions synced via Message.reactions & retained /reactions topic
- * - #20: Subtle vibration/sound touch integration on incoming messages
- * - #24: Hashed device serial deduplication so one physical device = one online user
- * - #25 & #30: Encrypted code-based phone-to-phone transfer & Web-to-App account pairing
- * - #26: Batched/throttled delivery & read indicators (/acks) + old-client presence/echo inference
- * - #27: Timed per-room notification mute enforcement
- * - #29: Live ConnectionQuality indicator (CONNECTED / WEAK / RECONNECTING)
+ * Run v3.3.0 Serverless Real-Time MQTT Synchronization Engine.
+ * 100% byte-compatible with `current-web-index-v2pro.html`, Android `2.0.0-pro`, and v3.2.0.
+ * Adds read-only observation helpers for v3.3.0 «Run Agent» (honest agent presence in room/<code>/presence/<agentUserId>,
+ * deliveredTo/readBy agent receipt propagation, and agent typing display name normalization).
  */
 public class MqttRoomManager {
     private static final String TAG = "MqttRoomManager";
@@ -91,7 +84,7 @@ public class MqttRoomManager {
     private static final long HEARTBEAT_INTERVAL_MS = 20_000L; // 20s heartbeat
     private static final long PRESENCE_TTL_MS = 60_000L;       // 60s offline threshold
     private static final long TYPING_THROTTLE_MS = 2_500L;     // 2.5s typing throttle
-    private static final long TYPING_EXPIRE_MS = 4_000L;       // 4s typing expiry
+    private static final long TYPING_EXPIRE_MS = 5_000L;       // 5s typing expiry
     private static final long ACK_BATCH_DELAY_MS = 1_500L;     // 1.5s batch throttle for #26 acks
 
     public enum ConnectionQuality {
@@ -127,7 +120,7 @@ public class MqttRoomManager {
     private RoomData activeRoomData = null;
     private boolean receivedInitialRoomState = false;
 
-    // #17 & #18: Cached subtopic states so Web normalization never strips room identity or reactions
+    // #17 & #18: Cached subtopic states
     private RoomData.RoomIdentity activeRoomIdentity = null;
     private final Map<String, Map<String, List<String>>> activeRoomReactions = new ConcurrentHashMap<>();
 
@@ -144,7 +137,7 @@ public class MqttRoomManager {
     private TransferRedeemCallback pendingTransferCallback = null;
     private Runnable pendingTransferTimeoutRunnable = null;
 
-    // Presence & Typing maps (keyed by userId, deduplicated by deviceHash in #24)
+    // Presence & Typing maps
     private final Map<String, Long> globalPresence = new ConcurrentHashMap<>();
     private final Map<String, OnlineUser> onlineUsersMap = new ConcurrentHashMap<>();
     private final Map<String, OnlineUser> roomPresenceUsers = new ConcurrentHashMap<>();
@@ -152,6 +145,11 @@ public class MqttRoomManager {
     private final Map<String, String> typingUsers = new ConcurrentHashMap<>();
     private final Map<String, Runnable> typingExpiryRunnables = new ConcurrentHashMap<>();
     private long lastTypingSentMs = 0L;
+
+    // v3.3.0 Read-only presence observer for the pinned Agent Room ("room/<agent_room_code>/presence/<agentUserId>")
+    private final Map<String, Map<String, Long>> observedRoomPresenceByRoom = new ConcurrentHashMap<>();
+    private final Map<String, Map<String, OnlineUser>> observedRoomUsersByRoom = new ConcurrentHashMap<>();
+    private String subscribedAgentRoomCode = null;
 
     public interface GlobalListener {
         void onConnectionChanged(boolean connected, String brokerUrl);
@@ -274,9 +272,6 @@ public class MqttRoomManager {
         return mqttClient != null && mqttClient.isConnected();
     }
 
-    /**
-     * #29: Computes live connection quality state (CONNECTED / WEAK / RECONNECTING).
-     */
     public ConnectionQuality getConnectionQuality() {
         if (!isConnected() || isConnecting) {
             return ConnectionQuality.RECONNECTING;
@@ -325,6 +320,115 @@ public class MqttRoomManager {
 
     public RoomData.RoomIdentity getActiveRoomIdentity() {
         return activeRoomIdentity;
+    }
+
+    /**
+     * v3.3.0 Requirement 2: Honest Agent Presence check for a room.
+     * Derives the Agent's status strictly from the room presence topic (runapp/v1/room/<code>/presence/<agentUserId>)
+     * and active room members. Recent heartbeat (<= 60s) = true ("متصل"); stale/absent = false ("غير متاح حالياً").
+     * Never returns a fake cosmetic "online".
+     */
+    public boolean isAgentOnlineInRoom(String roomCode) {
+        if (!isConnected() || roomCode == null || roomCode.trim().isEmpty()) {
+            return false;
+        }
+        String cleanCode = roomCode.trim().toUpperCase(Locale.US);
+        long cutoff = System.currentTimeMillis() - PRESENCE_TTL_MS;
+
+        // 1. Check room/<code>/presence/<agentUserId> observed map
+        Map<String, Long> roomPresMap = observedRoomPresenceByRoom.get(cleanCode);
+        Map<String, OnlineUser> roomUsrMap = observedRoomUsersByRoom.get(cleanCode);
+        if (roomPresMap != null) {
+            for (Map.Entry<String, Long> e : roomPresMap.entrySet()) {
+                String uid = e.getKey();
+                Long ts = e.getValue();
+                if (ts != null && ts >= cutoff) {
+                    OnlineUser u = roomUsrMap != null ? roomUsrMap.get(uid) : null;
+                    if (AgentHelper.isAgentUserId(uid) || (u != null && AgentHelper.isAgentDisplayName(u.name))) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        // 2. If this room is currently the active room, check roomPresenceUsers & roomPresence
+        if (cleanCode.equalsIgnoreCase(activeRoomCode)) {
+            for (Map.Entry<String, Long> e : roomPresence.entrySet()) {
+                String uid = e.getKey();
+                Long ts = e.getValue();
+                if (ts != null && ts >= cutoff) {
+                    OnlineUser u = roomPresenceUsers.get(uid);
+                    if (AgentHelper.isAgentUserId(uid) || (u != null && AgentHelper.isAgentDisplayName(u.name))) {
+                        return true;
+                    }
+                }
+            }
+        }
+
+        // 3. Also check if an agent-* member of this room has a fresh heartbeat on global presence
+        RoomData rData = cleanCode.equalsIgnoreCase(activeRoomCode) ? activeRoomData : prefs.getCachedRoomData(cleanCode);
+        for (Map.Entry<String, OnlineUser> e : onlineUsersMap.entrySet()) {
+            String uid = e.getKey();
+            OnlineUser u = e.getValue();
+            if (u != null && u.lastSeenTs >= cutoff && AgentHelper.isAgentUserId(uid)) {
+                if (rData == null || rData.avatars == null || rData.avatars.isEmpty() || rData.avatars.containsKey(uid)) {
+                    return true;
+                }
+            }
+        }
+
+        return false;
+    }
+
+    /**
+     * Returns the Agent's avatar URL if synced in the room's avatars map or presence payload, or "" if none.
+     */
+    public String getAgentAvatarUrl(String roomCode) {
+        if (roomCode == null || roomCode.trim().isEmpty()) return "";
+        String cleanCode = roomCode.trim().toUpperCase(Locale.US);
+        Map<String, OnlineUser> roomUsrMap = observedRoomUsersByRoom.get(cleanCode);
+        if (roomUsrMap != null) {
+            for (Map.Entry<String, OnlineUser> e : roomUsrMap.entrySet()) {
+                if (AgentHelper.isAgentUserId(e.getKey()) && e.getValue() != null
+                        && e.getValue().avatarUrl != null && !e.getValue().avatarUrl.isEmpty()) {
+                    return e.getValue().avatarUrl;
+                }
+            }
+        }
+        RoomData rData = cleanCode.equalsIgnoreCase(activeRoomCode) ? activeRoomData : prefs.getCachedRoomData(cleanCode);
+        if (rData != null && rData.avatars != null) {
+            for (Map.Entry<String, RoomData.AvatarProfile> e : rData.avatars.entrySet()) {
+                if (AgentHelper.isAgentUserId(e.getKey()) && e.getValue() != null
+                        && e.getValue().avatarUrl != null && !e.getValue().avatarUrl.isEmpty()) {
+                    return e.getValue().avatarUrl;
+                }
+            }
+        }
+        return "";
+    }
+
+    /**
+     * Subscribes to the configured agent_room_code's presence and state topics so the pinned Home card
+     * reflects real-time agent presence without requiring the user to enter the room first.
+     */
+    public void refreshAgentRoomSubscription() {
+        if (!isConnected()) return;
+        String newAgentCode = prefs.getAgentRoomCode();
+        if (subscribedAgentRoomCode != null && !subscribedAgentRoomCode.equalsIgnoreCase(newAgentCode)
+                && !subscribedAgentRoomCode.equalsIgnoreCase(activeRoomCode)) {
+            try {
+                String oldTopic = TOPIC_ROOM_PREFIX + subscribedAgentRoomCode;
+                mqttClient.unsubscribe(new String[]{oldTopic, oldTopic + "/presence/+"});
+            } catch (Exception ignored) {}
+        }
+        subscribedAgentRoomCode = newAgentCode.isEmpty() ? null : newAgentCode;
+        if (subscribedAgentRoomCode != null) {
+            try {
+                String agentTopic = TOPIC_ROOM_PREFIX + subscribedAgentRoomCode;
+                mqttClient.subscribe(agentTopic, 1);
+                mqttClient.subscribe(agentTopic + "/presence/+", 0);
+            } catch (Exception ignored) {}
+        }
     }
 
     public synchronized void ensureConnected() {
@@ -425,6 +529,7 @@ public class MqttRoomManager {
             if (activeRoomCode != null) {
                 subscribeRoomTopics(activeRoomCode);
             }
+            refreshAgentRoomSubscription();
             if (pendingTransferTopic != null) {
                 mqttClient.subscribe(pendingTransferTopic, 1);
             }
@@ -452,14 +557,24 @@ public class MqttRoomManager {
         if (!isConnected() || code == null) return;
         try {
             String roomTopic = TOPIC_ROOM_PREFIX + code;
-            mqttClient.unsubscribe(new String[]{
-                    roomTopic,
-                    roomTopic + "/typing",
-                    roomTopic + "/presence/+",
-                    roomTopic + "/identity",
-                    roomTopic + "/acks",
-                    roomTopic + "/reactions"
-            });
+            if (prefs.isAgentRoom(code)) {
+                // Keep presence & room state subscribed for the pinned Agent room on Home
+                mqttClient.unsubscribe(new String[]{
+                        roomTopic + "/typing",
+                        roomTopic + "/identity",
+                        roomTopic + "/acks",
+                        roomTopic + "/reactions"
+                });
+            } else {
+                mqttClient.unsubscribe(new String[]{
+                        roomTopic,
+                        roomTopic + "/typing",
+                        roomTopic + "/presence/+",
+                        roomTopic + "/identity",
+                        roomTopic + "/acks",
+                        roomTopic + "/reactions"
+                });
+            }
         } catch (Exception ignored) {}
     }
 
@@ -530,6 +645,12 @@ public class MqttRoomManager {
         activeRoomCode = cleanCode;
         roomPresence.clear();
         roomPresenceUsers.clear();
+        // Seed roomPresence from already-observed presence for this room (e.g. pinned Agent room)
+        Map<String, Long> obsTs = observedRoomPresenceByRoom.get(cleanCode);
+        Map<String, OnlineUser> obsUsers = observedRoomUsersByRoom.get(cleanCode);
+        if (obsTs != null) roomPresence.putAll(obsTs);
+        if (obsUsers != null) roomPresenceUsers.putAll(obsUsers);
+
         clearAllTypingTimers();
         knownMessageIds.clear();
         activeRoomReactions.clear();
@@ -543,7 +664,6 @@ public class MqttRoomManager {
             activeRoomData = initialCreatedRoom;
             activeRoomIdentity = initialCreatedRoom.identity;
         } else {
-            // Load local room cache immediately so upgrade/re-entry feels instant with zero data loss
             RoomData cached = prefs.getCachedRoomData(cleanCode);
             if (cached != null && cached.meta != null) {
                 activeRoomData = cached;
@@ -576,17 +696,7 @@ public class MqttRoomManager {
         if (activeRoomCode == null || activeRoomData == null) return;
         String rName = (activeRoomData.meta != null && activeRoomData.meta.name != null && !activeRoomData.meta.name.isEmpty())
                 ? activeRoomData.meta.name : ("Room " + activeRoomCode);
-        String preview = "";
-        if (activeRoomData.messages != null && !activeRoomData.messages.isEmpty()) {
-            Message last = activeRoomData.messages.get(activeRoomData.messages.size() - 1);
-            if (last != null) {
-                String author = (last.author != null && !last.author.isEmpty()) ? last.author : "Guest";
-                String body = last.isVoiceMessage() ? "🎙 Voice message"
-                        : ("file".equals(last.type) ? ("📎 " + (last.text != null ? last.text : "Attachment"))
-                        : (last.text != null ? last.text : ""));
-                preview = author + ": " + body;
-            }
-        }
+        String preview = buildRoomPreviewString(activeRoomData);
         String accent = (activeRoomIdentity != null) ? activeRoomIdentity.accentColor
                 : (activeRoomData.meta != null ? activeRoomData.meta.accentColor : null);
         String bg = (activeRoomIdentity != null) ? activeRoomIdentity.bgStyle
@@ -596,6 +706,29 @@ public class MqttRoomManager {
 
         prefs.saveRecentRoomDetailed(activeRoomCode, rName, preview, accent, bg, owner);
         prefs.saveCachedRoomData(activeRoomCode, activeRoomData);
+    }
+
+    private String buildRoomPreviewString(RoomData room) {
+        if (room != null && room.messages != null && !room.messages.isEmpty()) {
+            Message last = room.messages.get(room.messages.size() - 1);
+            if (last != null) {
+                String author = (last.author != null && !last.author.isEmpty()) ? last.author : "Guest";
+                if (AgentHelper.isAgentUserId(last.userId) || AgentHelper.isAgentDisplayName(author)) {
+                    author = "موس";
+                }
+                String body;
+                if (last.isVoiceMessage()) {
+                    String cap = last.getEffectiveVoiceCaption();
+                    body = cap.isEmpty() ? "🎙 Voice message" : ("🎙 " + cap);
+                } else if ("file".equals(last.type)) {
+                    body = "📎 " + (last.text != null ? last.text : "Attachment");
+                } else {
+                    body = last.text != null ? last.text : "";
+                }
+                return author + ": " + body;
+            }
+        }
+        return "";
     }
 
     public void leaveActiveRoom() {
@@ -751,12 +884,10 @@ public class MqttRoomManager {
         if (activeRoomData == null || fileAttachment == null) return null;
         Message msg = new Message();
         msg.id = RoomCryptoUtils.makeId("m");
-        // For Web v2 Pro interop: Web expects msg.type = "file" and file.voice = true for voice messages!
         boolean isVoice = "voice".equalsIgnoreCase(type) || fileAttachment.voice;
         msg.type = "file";
         fileAttachment.voice = isVoice;
 
-        // Ensure both dataUrl and url are populated properly for Web v2 Pro and Android v2 Pro
         String effective = fileAttachment.getEffectiveUrl();
         if (effective.startsWith("data:")) {
             fileAttachment.dataUrl = effective;
@@ -782,7 +913,6 @@ public class MqttRoomManager {
     private void appendMessageAndPublish(Message msg) {
         updateLocalAvatarInRoom(activeRoomData);
         knownMessageIds.add(msg.id);
-        // If another user is already active in the room right now, mark delivered once published
         if (getOtherUsersInRoomCount() > 0 && isConnected()) {
             deliveredMessageIds.add(msg.id);
             msg.ackState = 2;
@@ -898,7 +1028,7 @@ public class MqttRoomManager {
     }
 
     // ==========================================
-    // #26: Batched / Throttled Delivery & Read Acks
+    // #26 & v3.3.0 Requirement 5: Delivery & Read Acks
     // ==========================================
 
     private void queueAckForMessagesFromOthers(List<Message> messages, String status) {
@@ -969,6 +1099,19 @@ public class MqttRoomManager {
             }
             for (Message m : activeRoomData.messages) {
                 if (m != null && m.id != null && ack.messageIds.contains(m.id)) {
+                    // Populate deliveredTo / readBy with ack.fromUserId for v3.3.0 Requirement 5
+                    if (m.deliveredTo == null) m.deliveredTo = new ArrayList<>();
+                    if (!m.deliveredTo.contains(ack.fromUserId)) {
+                        m.deliveredTo.add(ack.fromUserId);
+                        changed = true;
+                    }
+                    if (isRead) {
+                        if (m.readBy == null) m.readBy = new ArrayList<>();
+                        if (!m.readBy.contains(ack.fromUserId)) {
+                            m.readBy.add(ack.fromUserId);
+                            changed = true;
+                        }
+                    }
                     int newState = isRead ? 3 : Math.max(m.ackState, 2);
                     if (m.ackState != newState) {
                         m.ackState = newState;
@@ -977,24 +1120,17 @@ public class MqttRoomManager {
                 }
             }
             if (changed) {
+                saveActiveRoomToPrefs();
                 mainHandler.post(this::notifyRoomStateUpdated);
             }
-        } catch (Exception ignored) {
-            // #26 contract: gracefully ignore unknown or malformed ack payloads
-        }
+        } catch (Exception ignored) {}
     }
 
-    /**
-     * #26: Updates ack states for our own messages when old clients (Web v2 Pro / Android v2 Pro)
-     * are in the room (inferring delivered when another user is online in the room, and read when
-     * another user replies, types, or posts a newer message).
-     */
     private void refreshAckStatesForActiveRoom(boolean peerJustTypedOrMessaged) {
         if (activeRoomData == null || activeRoomData.messages == null) return;
         String myId = prefs.getUserId();
         boolean hasOtherUserOnline = getOtherUsersInRoomCount() > 0;
 
-        // Find timestamp of latest message from another user
         String latestOtherMsgIso = "";
         for (Message m : activeRoomData.messages) {
             if (m != null && m.userId != null && !m.userId.equals(myId) && m.createdAt != null) {
@@ -1006,12 +1142,12 @@ public class MqttRoomManager {
 
         for (Message m : activeRoomData.messages) {
             if (m == null || m.id == null || m.userId == null || !m.userId.equals(myId)) continue;
-            if (readMessageIds.contains(m.id)) {
+            if (readMessageIds.contains(m.id) || (m.readBy != null && !m.readBy.isEmpty())) {
                 m.ackState = 3;
             } else if (peerJustTypedOrMessaged || (!latestOtherMsgIso.isEmpty() && m.createdAt != null && m.createdAt.compareTo(latestOtherMsgIso) <= 0)) {
                 readMessageIds.add(m.id);
                 m.ackState = 3;
-            } else if (deliveredMessageIds.contains(m.id) || hasOtherUserOnline) {
+            } else if (deliveredMessageIds.contains(m.id) || (m.deliveredTo != null && !m.deliveredTo.isEmpty()) || hasOtherUserOnline) {
                 deliveredMessageIds.add(m.id);
                 m.ackState = Math.max(m.ackState, 2);
             } else if (m.ackState == 0 && isConnected()) {
@@ -1082,7 +1218,6 @@ public class MqttRoomManager {
             return;
         }
         final String cleanCode = rawCode.trim().toUpperCase(Locale.US);
-        // Check if user pasted raw JSON backup directly
         if (rawCode.trim().startsWith("{")) {
             boolean ok = prefs.importTransferOrBackupJson(rawCode.trim(), true);
             if (ok) {
@@ -1280,7 +1415,6 @@ public class MqttRoomManager {
             onlineUsersMap.put(myId, self);
         }
 
-        // #24: Deduplicate by deviceHash (if present) or userId, keeping the freshest heartbeat
         Map<String, OnlineUser> deduped = new LinkedHashMap<>();
         for (OnlineUser u : onlineUsersMap.values()) {
             if (u == null || u.lastSeenTs < cutoff) continue;
@@ -1382,7 +1516,7 @@ public class MqttRoomManager {
             JsonObject obj = new JsonObject();
             obj.addProperty("userId", prefs.getUserId());
             obj.addProperty("name", prefs.getUserName().isEmpty() ? "Guest" : prefs.getUserName());
-            obj.addProperty("typing", true); // Required by current-web-index-v2pro.html!
+            obj.addProperty("typing", true);
             obj.addProperty("at", now);
             obj.addProperty("ts", now);
             String topic = TOPIC_ROOM_PREFIX + activeRoomCode + "/typing";
@@ -1402,14 +1536,14 @@ public class MqttRoomManager {
         try {
             JsonObject obj = new JsonObject();
             obj.addProperty("userId", userId);
-            obj.addProperty("deviceHash", deviceHash); // #24: Hashed per-device serial
+            obj.addProperty("deviceHash", deviceHash);
             obj.addProperty("name", userName);
             obj.addProperty("avatarUrl", avatarUrl);
-            obj.addProperty("avatar", avatarUrl);      // Web v2 Pro compatibility field
+            obj.addProperty("avatar", avatarUrl);
             obj.addProperty("bio", bio);
-            obj.addProperty("lastSeenTs", now);        // Web v2 Pro compatibility field
-            obj.addProperty("at", now);                // Web v2 Pro compatibility field
-            obj.addProperty("ts", now);                // Android v2 Pro compatibility field
+            obj.addProperty("lastSeenTs", now);
+            obj.addProperty("at", now);
+            obj.addProperty("ts", now);
             obj.addProperty("platform", "Android");
             byte[] bytes = obj.toString().getBytes(StandardCharsets.UTF_8);
 
@@ -1462,6 +1596,12 @@ public class MqttRoomManager {
         onlineUsersMap.entrySet().removeIf(e -> e.getValue().lastSeenTs < cutoff);
         roomPresence.entrySet().removeIf(e -> e.getValue() < cutoff);
         roomPresenceUsers.entrySet().removeIf(e -> e.getValue().lastSeenTs < cutoff);
+        for (Map<String, Long> rp : observedRoomPresenceByRoom.values()) {
+            rp.entrySet().removeIf(e -> e.getValue() < cutoff);
+        }
+        for (Map<String, OnlineUser> ru : observedRoomUsersByRoom.values()) {
+            ru.entrySet().removeIf(e -> e.getValue().lastSeenTs < cutoff);
+        }
 
         final int count = getGlobalOnlineCount();
         final List<OnlineUser> users = getOnlineUsersList();
@@ -1475,9 +1615,6 @@ public class MqttRoomManager {
         }
     }
 
-    /**
-     * #24: Counts unique devices (not sessions/tabs or renamed duplicates).
-     */
     public int getGlobalOnlineCount() {
         if (!isConnected()) return 0;
         List<OnlineUser> deduped = getOnlineUsersList();
@@ -1486,9 +1623,6 @@ public class MqttRoomManager {
         return count;
     }
 
-    /**
-     * #24: Counts unique devices in the active room.
-     */
     public int getRoomOnlineCount() {
         if (!isConnected()) return 0;
         long cutoff = System.currentTimeMillis() - PRESENCE_TTL_MS;
@@ -1520,7 +1654,6 @@ public class MqttRoomManager {
                     String topicToClear = pendingTransferTopic;
                     clearPendingTransferState();
                     if (decrypted != null && prefs.importTransferOrBackupJson(decrypted, true)) {
-                        // Clear one-time transfer payload from broker
                         if (isConnected() && topicToClear != null) {
                             try { mqttClient.publish(topicToClear, new byte[0], 1, true); } catch (Exception ignored) {}
                         }
@@ -1598,6 +1731,58 @@ public class MqttRoomManager {
             return;
         }
 
+        // v3.3.0: Observe any room/<roomCode>/presence/<uId> or room/<agentRoomCode> topic even while on Home
+        if (topic.startsWith(TOPIC_ROOM_PREFIX)) {
+            String tail = topic.substring(TOPIC_ROOM_PREFIX.length());
+            int slashIdx = tail.indexOf('/');
+            if (slashIdx > 0) {
+                String rCode = tail.substring(0, slashIdx).toUpperCase(Locale.US);
+                String sub = tail.substring(slashIdx);
+                if (sub.startsWith("/presence/")) {
+                    String uId = sub.substring("/presence/".length());
+                    Map<String, Long> obsTs = observedRoomPresenceByRoom.computeIfAbsent(rCode, k -> new ConcurrentHashMap<>());
+                    Map<String, OnlineUser> obsUsers = observedRoomUsersByRoom.computeIfAbsent(rCode, k -> new ConcurrentHashMap<>());
+                    updatePresenceMap(obsTs, obsUsers, uId, payload);
+
+                    if (prefs.isAgentRoom(rCode)) {
+                        mainHandler.post(() -> {
+                            int count = getGlobalOnlineCount();
+                            List<OnlineUser> users = getOnlineUsersList();
+                            for (GlobalListener l : new ArrayList<>(globalListeners)) {
+                                l.onGlobalPresenceChanged(count);
+                                l.onOnlineUsersChanged(users);
+                            }
+                        });
+                    }
+                }
+            } else {
+                String rCode = tail.toUpperCase(Locale.US);
+                if (prefs.isAgentRoom(rCode) && (activeRoomCode == null || !activeRoomCode.equalsIgnoreCase(rCode)) && !payload.isEmpty()) {
+                    try {
+                        RoomData remoteAgentRoom = gson.fromJson(payload, RoomData.class);
+                        if (remoteAgentRoom != null) {
+                            RoomData cached = prefs.getCachedRoomData(rCode);
+                            RoomData merged = mergeRoomData(remoteAgentRoom, cached, rCode);
+                            String preview = buildRoomPreviewString(merged);
+                            String rName = (merged.meta != null && merged.meta.name != null && !merged.meta.name.isEmpty())
+                                    ? merged.meta.name : AgentHelper.AGENT_ROOM_TITLE;
+                            prefs.saveRecentRoomDetailed(rCode, rName, preview,
+                                    merged.meta != null ? merged.meta.accentColor : null,
+                                    merged.meta != null ? merged.meta.bgStyle : null,
+                                    merged.meta != null ? merged.meta.ownerId : null);
+                            prefs.saveCachedRoomData(rCode, merged);
+                            mainHandler.post(() -> {
+                                List<OnlineUser> users = getOnlineUsersList();
+                                for (GlobalListener l : new ArrayList<>(globalListeners)) {
+                                    l.onOnlineUsersChanged(users);
+                                }
+                            });
+                        }
+                    } catch (Exception ignored) {}
+                }
+            }
+        }
+
         if (activeRoomCode == null) return;
         String expectedRoomTopic = TOPIC_ROOM_PREFIX + activeRoomCode;
 
@@ -1655,14 +1840,20 @@ public class MqttRoomManager {
             return;
         }
 
-        // 8. Room Typing Indicator
+        // 8. Room Typing Indicator (v3.3.0 Requirement 6: normalize agent typing display name to "موس")
         if (topic.equals(expectedRoomTopic + "/typing")) {
             try {
                 JsonObject obj = JsonParser.parseString(payload).getAsJsonObject();
-                String uId = obj.has("userId") ? obj.get("userId").getAsString() : "";
-                String name = obj.has("name") ? obj.get("name").getAsString() : "User";
+                String uId = obj.has("userId") && !obj.get("userId").isJsonNull() ? obj.get("userId").getAsString()
+                        : (obj.has("from") && !obj.get("from").isJsonNull() ? obj.get("from").getAsString()
+                        : (obj.has("id") && !obj.get("id").isJsonNull() ? obj.get("id").getAsString() : ""));
+                String name = obj.has("name") && !obj.get("name").isJsonNull() ? obj.get("name").getAsString()
+                        : (obj.has("author") && !obj.get("author").isJsonNull() ? obj.get("author").getAsString() : "User");
                 boolean isTyping = !obj.has("typing") || obj.get("typing").getAsBoolean();
                 if (!uId.isEmpty() && !uId.equals(prefs.getUserId())) {
+                    if (AgentHelper.isAgentUserId(uId) || AgentHelper.isAgentDisplayName(name)) {
+                        name = "موس";
+                    }
                     Runnable prev = typingExpiryRunnables.get(uId);
                     if (prev != null) {
                         mainHandler.removeCallbacks(prev);
@@ -1681,7 +1872,6 @@ public class MqttRoomManager {
                         typingExpiryRunnables.put(uId, expireTask);
                         notifyTypingChanged();
                         mainHandler.postDelayed(expireTask, TYPING_EXPIRE_MS);
-                        // #26: If a peer in the room is typing, our sent messages have been seen
                         refreshAckStatesForActiveRoom(true);
                         mainHandler.post(this::notifyRoomStateUpdated);
                     }
@@ -1736,6 +1926,12 @@ public class MqttRoomManager {
                                 boolean wasKnown = !knownMessageIds.add(m.id);
                                 if (!wasKnown && !wasInitialSync && m.userId != null && !m.userId.equals(myId)) {
                                     newlyArrivedFromOthers.add(m);
+                                    // Clear typing indicator immediately when user/agent posts their reply
+                                    Runnable prevTyping = typingExpiryRunnables.remove(m.userId);
+                                    if (prevTyping != null) mainHandler.removeCallbacks(prevTyping);
+                                    if (typingUsers.remove(m.userId) != null) {
+                                        notifyTypingChanged();
+                                    }
                                 }
                             }
                         }
@@ -1744,7 +1940,6 @@ public class MqttRoomManager {
                     RoomData merged = mergeRoomData(remote, activeRoomData, activeRoomCode);
                     activeRoomData = merged;
 
-                    // #26: Queue delivery/read acks for messages from others
                     if (merged.messages != null && !merged.messages.isEmpty()) {
                         String ackType = (appInForeground && chatActivelyVisible) ? "read" : "delivered";
                         queueAckForMessagesFromOthers(merged.messages, ackType);
@@ -1756,7 +1951,6 @@ public class MqttRoomManager {
                         Message latest = newlyArrivedFromOthers.get(newlyArrivedFromOthers.size() - 1);
                         String rName = (merged.meta != null && merged.meta.name != null) ? merged.meta.name : ("Room " + activeRoomCode);
                         if (chatActivelyVisible && appInForeground && !prefs.isRoomMuted(activeRoomCode)) {
-                            // #20: Subtle vibration/sound touch when message arrives in open room
                             FeedbackTouchHelper.onMessageReceived(appContext, prefs);
                         } else {
                             triggerLocalMessageNotification(activeRoomCode, rName, latest);
@@ -1832,7 +2026,6 @@ public class MqttRoomManager {
     }
 
     private void triggerLocalMessageNotification(String roomCode, String roomName, Message msg) {
-        // #27: Respect both global notification toggle AND per-room timed mute!
         if (!prefs.isNotificationsEnabled() || prefs.isRoomMuted(roomCode) || chatActivelyVisible) return;
         if (Build.VERSION.SDK_INT >= 33) {
             if (ContextCompat.checkSelfPermission(appContext, Manifest.permission.POST_NOTIFICATIONS)
@@ -1856,9 +2049,13 @@ public class MqttRoomManager {
 
             boolean ar = prefs.isArabic();
             String author = (msg.author != null && !msg.author.isEmpty()) ? msg.author : (ar ? "مستخدم" : "User");
+            if (AgentHelper.isAgentUserId(msg.userId) || AgentHelper.isAgentDisplayName(author)) {
+                author = "موس";
+            }
             String body;
             if (msg.isVoiceMessage()) {
-                body = ar ? "🎙 أرسل رسالة صوتية" : "🎙 Sent a voice message";
+                String cap = msg.getEffectiveVoiceCaption();
+                body = cap.isEmpty() ? (ar ? "🎙 أرسل رسالة صوتية" : "🎙 Sent a voice message") : ("🎙 " + cap);
             } else if ("file".equals(msg.type)) {
                 body = (ar ? "📎 مرفق: " : "📎 Attachment: ") + (msg.text != null ? msg.text : "");
             } else {
@@ -1890,6 +2087,17 @@ public class MqttRoomManager {
         }
         try {
             JsonObject obj = JsonParser.parseString(payload).getAsJsonObject();
+            if (obj.has("online") && !obj.get("online").isJsonNull() && !obj.get("online").getAsBoolean()) {
+                tsMap.remove(userId);
+                userMap.remove(userId);
+                return;
+            }
+            if (obj.has("status") && !obj.get("status").isJsonNull()
+                    && "offline".equalsIgnoreCase(obj.get("status").getAsString())) {
+                tsMap.remove(userId);
+                userMap.remove(userId);
+                return;
+            }
             long ts = System.currentTimeMillis();
             if (obj.has("lastSeenTs") && !obj.get("lastSeenTs").isJsonNull()) {
                 ts = obj.get("lastSeenTs").getAsLong();
@@ -1897,6 +2105,10 @@ public class MqttRoomManager {
                 ts = obj.get("at").getAsLong();
             } else if (obj.has("ts") && !obj.get("ts").isJsonNull()) {
                 ts = obj.get("ts").getAsLong();
+            }
+            // Convert Unix-seconds timestamps (e.g. from Python/Node agent bridges) to milliseconds
+            if (ts > 0L && ts < 10_000_000_000L) {
+                ts *= 1000L;
             }
 
             if (System.currentTimeMillis() - ts <= PRESENCE_TTL_MS) {
@@ -1915,7 +2127,6 @@ public class MqttRoomManager {
                 String platform = obj.has("platform") && !obj.get("platform").isJsonNull()
                         ? obj.get("platform").getAsString() : "Web";
 
-                // #24: Remove stale entries from the same physical device (deviceHash) so renaming/clearing data never duplicates!
                 if (!deviceHash.isEmpty()) {
                     for (Map.Entry<String, OnlineUser> entry : new ArrayList<>(userMap.entrySet())) {
                         OnlineUser existing = entry.getValue();
@@ -1960,7 +2171,6 @@ public class MqttRoomManager {
                     ? local.meta.name : ("Room " + code);
         }
 
-        // #17: Preserve Room Identity across merges even if a Web client normalized meta
         RoomData.RoomIdentity bestIdentity = activeRoomIdentity;
         if (remote != null && remote.identity != null) {
             if (bestIdentity == null || remote.identity.version >= bestIdentity.version) {
@@ -1991,7 +2201,7 @@ public class MqttRoomManager {
             out.meta.identityVersion = bestIdentity.version;
         }
 
-        // Merge Messages by ID
+        // Merge Messages by ID (preserving deliveredTo & readBy lists for v3.3.0 Requirement 5)
         Map<String, Message> msgMap = new LinkedHashMap<>();
         if (local != null && local.messages != null) {
             for (Message m : local.messages) {
@@ -2008,6 +2218,22 @@ public class MqttRoomManager {
                         m.ackState = Math.max(existing.ackState, m.ackState);
                         if ((m.reactions == null || m.reactions.isEmpty()) && existing.reactions != null) {
                             m.reactions = existing.reactions;
+                        }
+                        if (existing.deliveredTo != null && !existing.deliveredTo.isEmpty()) {
+                            if (m.deliveredTo == null) m.deliveredTo = new ArrayList<>();
+                            for (String uid : existing.deliveredTo) {
+                                if (uid != null && !m.deliveredTo.contains(uid)) {
+                                    m.deliveredTo.add(uid);
+                                }
+                            }
+                        }
+                        if (existing.readBy != null && !existing.readBy.isEmpty()) {
+                            if (m.readBy == null) m.readBy = new ArrayList<>();
+                            for (String uid : existing.readBy) {
+                                if (uid != null && !m.readBy.contains(uid)) {
+                                    m.readBy.add(uid);
+                                }
+                            }
                         }
                     }
                     if (activeRoomReactions.containsKey(m.id)) {
